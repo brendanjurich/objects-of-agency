@@ -1,0 +1,186 @@
+/* ============================================================
+   GLOBAL & BASE STYLES
+   ============================================================ */
+html {
+  overscroll-behavior-y: auto;
+  overflow-x: hidden;
+}
+
+[data-load-reset] {
+  opacity: 0;
+}
+
+/* Loader — hidden in Designer & no-JS fallback */
+html.wf-design-mode .loader,
+.no-js .loader {
+  display: none !important;
+}
+
+.section_main_wrap,
+footer.footer_main_wrap {
+  position: relative;
+  z-index: 1;
+  background-color: var(--_theme---background);
+}
+
+/* ============================================================
+   HERO & SLIDER ANIMATIONS
+   ============================================================ */
+/* Lock hero to viewport */
+.crisp-header {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* GPU compositing for hero media */
+.crisp-header .u-video,
+.crisp-header__slider-slide-inner,
+.crisp-header .u-image {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* SplitText H1 — prevent clipping on animated characters */
+.crisp-header__h1>* {
+  margin: -0.1em -0.05em;
+  padding: 0.1em 0.05em;
+}
+
+/* Slider nav button hover */
+.crisp-header__slider-nav-btn {
+  transition: border-color 0.75s cubic-bezier(0.625, 0.05, 0, 1);
+}
+
+.crisp-header__slider-nav-btn img {
+  transform: scale(1) rotate(0.001deg);
+  transition: transform 0.75s cubic-bezier(0.625, 0.05, 0, 1);
+}
+
+/* Scale all thumbs down when any is hovered */
+.crisp-header__slider-nav:has(.crisp-header__slider-nav-btn:hover) img {
+  transform: scale(0.825) rotate(0.001deg);
+}
+
+/* Scale the hovered thumb back up */
+.crisp-header__slider-nav:has(.crisp-header__slider-nav-btn:hover) .crisp-header__slider-nav-btn:hover img {
+  transform: scale(1) rotate(0.001deg);
+}
+
+/* Slider controls layout */
+.section_menu_wrap .slider_controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+}
+
+.section_menu_wrap .slider_bullet_list {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ============================================================
+   NAVIGATION — TABLET & MOBILE (max 1134px)
+   ============================================================ */
+@media screen and (max-width: 1134px) {
+
+  /* Default state — closed */
+  .nav_component {
+    mix-blend-mode: difference;
+  }
+
+  .nav_mobile_logo .logo_svg {
+    fill: #ffffff !important;
+    transition: fill 0.3s ease;
+  }
+
+  .nav_button_line {
+    background-color: #ffffff !important;
+    transition: background-color 0.3s ease;
+  }
+
+  body.menu-open {
+    overflow: hidden;
+  }
+
+  /* Active state — open */
+  .nav_component.is-open {
+    mix-blend-mode: normal !important;
+  }
+
+  .nav_component.is-open .nav_mobile_logo .logo_svg {
+    fill: #000000 !important;
+  }
+
+  .nav_component.is-open .nav_button_line {
+    background-color: #000000 !important;
+  }
+}
+
+/* ============================================================
+   CASCADING SLIDER
+   ============================================================ */
+[data-cascading-viewport] {
+  --gap: 0.5em;
+}
+
+[data-cascading-slide] {
+  --clip: 0;
+  --radius: 0.3em;
+}
+
+[data-cascading-slide][data-status="active"] {
+  cursor: default;
+}
+
+/* Slide label — hidden by default, revealed when active */
+[data-cascading-slide] .config_content_text {
+  transition-delay: 0ms;
+}
+
+[data-cascading-slide][data-status="active"] .config_content_text {
+  transition-delay: 400ms;
+  opacity: 1;
+  transform: translate(0px, 0em);
+}
+
+/* Webflow Designer preview overrides */
+.wf-design-mode [data-cascading-viewport] {
+  display: flex;
+  flex-direction: row;
+  gap: 1em;
+  overflow: auto;
+}
+
+.wf-design-mode [data-cascading-slide] {
+  position: relative;
+  width: 60%;
+  flex: 0 0 auto;
+}
+
+.wf-design-mode .cascading-slider__h {
+  opacity: 1;
+  transform: translate(0px, 0em);
+}
+
+/* ============================================================
+   CONFIGURATOR — RADIO & SWATCH STATES
+   ============================================================ */
+/* Remove square tap highlight on interactive configurator elements */
+.config_radio_element,
+.config_swatch_wrap,
+.config_variant_swatch,
+.config_slider_layout {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Unchecked size swatch — neutral state */
+.config_radio_element:has(input:not(:checked)) .config_size_swatch {
+  background-color: #e0e0e0 !important;
+}
