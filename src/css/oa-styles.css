@@ -184,3 +184,12 @@ footer.footer_main_wrap {
 .config_radio_element:has(input:not(:checked)) .config_size_swatch {
   background-color: #e0e0e0 !important;
 }
+
+/* Size slider — hide sibling strips (SVG drawings, centre-only display) */
+.config_size_wrap [data-cascading-slide] {
+  transition: opacity 0.3s ease;
+}
+.config_size_wrap [data-cascading-slide][data-status="inactive"] {
+  opacity: 0;
+  pointer-events: none;
+}
