@@ -52,23 +52,27 @@ VS Code (author) → GitHub (version + host) → jsDelivr (CDN) → Webflow (cus
 
 ### Webflow Custom Code — Sitewide
 
+URLs use a git version tag (e.g. `v1.0.0`). Update the tag in Webflow on each release.
+
 **Head tag:**
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@main/src/css/oa-styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.0/src/css/oa-styles.css">
 ```
 
 **Before </body>:**
 ```html
-<script src="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@main/src/js/oa-global.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.0/src/js/oa-global.js"></script>
 ```
 
 ### Webflow Custom Code — Product Pages Only
 
 `oa-configurator.js` is added at page level on product pages, not sitewide.
-URL pattern when ready:
 ```html
-<script src="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@main/src/js/oa-configurator.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.0/src/js/oa-configurator.js"></script>
 ```
+
+**Why tags, not `@main`:** jsDelivr caches branch URLs aggressively and purging is
+unreliable. Tagged URLs are immutable and served immediately with no caching issues.
 
 ---
 
@@ -76,31 +80,26 @@ URL pattern when ready:
 
 | Branch | Purpose |
 |---|---|
-| `main` | Production — stable, what jsDelivr serves |
+| `main` | Production — stable, source for all releases |
 | `dev` | Active development — all changes made here first |
-| `feature/configurator` | Isolated configurator work |
 
 Rule: never commit experimental work directly to `main`. Work on `dev`, confirm
-it works on the live site, then merge to `main`.
+it works, then merge to `main` and cut a release tag.
 
 ---
 
-## Daily Workflow
+## Release Workflow
 
-1. Make changes in VS Code
-2. `git add .`
+1. Make changes in VS Code on `dev`
+2. `git add src/css/oa-styles.css` (or relevant file)
 3. `git commit -m "type: description"`
-4. `git push`
-5. Purge jsDelivr cache (CSS and/or JS as needed)
-6. Republish Webflow
-7. Check browser console — confirm clean
+4. `git checkout main && git merge dev && git push origin main && git checkout dev`
+5. `git tag v1.x.x && git push origin v1.x.x`
+6. Update version tag in Webflow custom code (Site Settings → Custom Code)
+7. Republish Webflow
+8. Check browser console — confirm clean
 
-### jsDelivr Cache Purge URLs
-
-```
-https://purge.jsdelivr.net/gh/brendanjurich/objects-of-agency@main/src/css/oa-styles.css
-https://purge.jsdelivr.net/gh/brendanjurich/objects-of-agency@main/src/js/oa-global.js
-```
+### Commit Message Conventions
 
 ### Commit Message Conventions
 
