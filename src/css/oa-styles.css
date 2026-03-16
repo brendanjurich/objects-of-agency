@@ -190,7 +190,7 @@ footer.footer_main_wrap {
    Col 2: size label
    Col 3: CMS text block (class: config_size_description) */
 .config_size_element {
-  display: grid;
+  display: grid !important;
   grid-template-columns: auto auto 1fr;
   grid-template-rows: auto auto;
   column-gap: 1em;
