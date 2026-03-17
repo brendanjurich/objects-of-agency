@@ -181,7 +181,7 @@ footer.footer_main_wrap {
 }
 
 /* Unchecked size swatch — neutral state */
-.config_radio_element:has(input:not(:checked)) .config_size_swatch {
+.form_ui_item:has(input:not(:checked)) .config_size_swatch {
   background-color: #e0e0e0 !important;
 }
 

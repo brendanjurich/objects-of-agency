@@ -291,7 +291,7 @@ function initCascadingSlider() {
         const isActive = i === realIndex;
         input.checked = isActive;
         const customRadio = input.closest('label') &&
-          input.closest('label').querySelector('.config_radio_button');
+          input.closest('label').querySelector('.form_ui_input');
         if (customRadio) customRadio.classList.toggle('w--redirected-checked', isActive);
       });
       isSyncing = false;
@@ -418,7 +418,7 @@ function applyUniqueId(input, uniqueId) {
   const label = input.closest('label');
   if (label) {
     label.setAttribute('for', uniqueId);
-    const span = label.querySelector('.config_radio_label');
+    const span = label.querySelector('.form_ui_label');
     if (span) span.setAttribute('for', uniqueId);
   }
 }
