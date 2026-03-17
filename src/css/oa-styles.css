@@ -180,6 +180,14 @@ footer.footer_main_wrap {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Focus ring on radio cards when tabbing — mirrors site-wide focus style */
+.form_ui_item:has(input:focus-visible) .form_ui_input {
+  outline-color: var(--_theme---text);
+  outline-width: var(--focus--width);
+  outline-style: solid;
+  outline-offset: var(--focus--offset-outer);
+}
+
 /* Unchecked size swatch — neutral state */
 .form_ui_item:has(input:not(:checked)) .config_size_swatch {
   background-color: #e0e0e0 !important;
