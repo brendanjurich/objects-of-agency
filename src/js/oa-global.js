@@ -349,9 +349,11 @@ function initCascadingSlider() {
       });
     });
 
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'ArrowLeft') goTo(activeIndex - 1);
-      if (event.key === 'ArrowRight') goTo(activeIndex + 1);
+    // Scope arrow key nav to this wrapper so multiple sliders don't fire together
+    if (!wrapper.hasAttribute('tabindex')) wrapper.setAttribute('tabindex', '0');
+    wrapper.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); goTo(activeIndex - 1); }
+      if (event.key === 'ArrowRight') { event.preventDefault(); goTo(activeIndex + 1); }
     });
 
     // ResizeObserver handles desktop resize with single rAF
