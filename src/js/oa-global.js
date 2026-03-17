@@ -288,11 +288,10 @@ function initCascadingSlider() {
       const realIndex = activeIndex % originalCount;
       isSyncing = true;
       radioInputs.forEach(function (input, i) {
-        const isActive = i === realIndex;
-        input.checked = isActive;
-        const item = input.closest('.form_ui_item') || input.closest('label');
-        const customRadio = item && item.querySelector('.form_ui_input');
-        if (customRadio) customRadio.classList.toggle('w--redirected-checked', isActive);
+        const shouldBeChecked = i === realIndex;
+        input.checked = shouldBeChecked;
+        // click() lets Webflow's native handler update the visual state
+        if (shouldBeChecked) input.click();
       });
       isSyncing = false;
     }
@@ -349,9 +348,14 @@ function initCascadingSlider() {
       });
     });
 
-    // Scope arrow key nav to this wrapper so multiple sliders don't fire together
-    if (!wrapper.hasAttribute('tabindex')) wrapper.setAttribute('tabindex', '0');
-    wrapper.addEventListener('keydown', function (event) {
+    // Scope arrow key nav to this slider via hover/focus — no tabindex needed
+    let sliderHasFocus = false;
+    wrapper.addEventListener('mouseenter', function () { sliderHasFocus = true; });
+    wrapper.addEventListener('mouseleave', function () { sliderHasFocus = false; });
+    wrapper.addEventListener('focusin', function () { sliderHasFocus = true; });
+    wrapper.addEventListener('focusout', function () { sliderHasFocus = false; });
+    document.addEventListener('keydown', function (event) {
+      if (!sliderHasFocus) return;
       if (event.key === 'ArrowLeft') { event.preventDefault(); goTo(activeIndex - 1); }
       if (event.key === 'ArrowRight') { event.preventDefault(); goTo(activeIndex + 1); }
     });
