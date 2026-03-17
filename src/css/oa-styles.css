@@ -20,7 +20,6 @@ html.wf-design-mode .loader,
 footer.footer_main_wrap {
   position: relative;
   z-index: 1;
-  background-color: var(--_theme---background);
 }
 
 /* ============================================================
