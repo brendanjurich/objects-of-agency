@@ -290,9 +290,9 @@ function initCascadingSlider() {
       radioInputs.forEach(function (input, i) {
         const isActive = i === realIndex;
         input.checked = isActive;
-        const customRadio = input.closest('label') &&
-          input.closest('label').querySelector('.form_ui_input');
-        if (customRadio) customRadio.classList.toggle('w--redirected-checked', isActive);
+        // Dispatch change so Webflow's native handler updates the visual checked state.
+        // isSyncing guard above prevents our own listener from re-triggering goTo.
+        if (isActive) input.dispatchEvent(new Event('change', { bubbles: true }));
       });
       isSyncing = false;
     }
@@ -349,9 +349,16 @@ function initCascadingSlider() {
       });
     });
 
+    // Scope arrow keys to the hovered/focused slider only
+    let sliderHasFocus = false;
+    wrapper.addEventListener('mouseenter', function () { sliderHasFocus = true; });
+    wrapper.addEventListener('mouseleave', function () { sliderHasFocus = false; });
+    wrapper.addEventListener('focusin', function () { sliderHasFocus = true; });
+    wrapper.addEventListener('focusout', function () { sliderHasFocus = false; });
     document.addEventListener('keydown', function (event) {
-      if (event.key === 'ArrowLeft') goTo(activeIndex - 1);
-      if (event.key === 'ArrowRight') goTo(activeIndex + 1);
+      if (!sliderHasFocus) return;
+      if (event.key === 'ArrowLeft') { event.preventDefault(); goTo(activeIndex - 1); }
+      if (event.key === 'ArrowRight') { event.preventDefault(); goTo(activeIndex + 1); }
     });
 
     // ResizeObserver handles desktop resize with single rAF
