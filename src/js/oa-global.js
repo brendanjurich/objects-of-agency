@@ -290,8 +290,8 @@ function initCascadingSlider() {
       radioInputs.forEach(function (input, i) {
         const isActive = i === realIndex;
         input.checked = isActive;
-        const customRadio = input.closest('label') &&
-          input.closest('label').querySelector('.form_ui_input');
+        const item = input.closest('.form_ui_item') || input.closest('label');
+        const customRadio = item && item.querySelector('.form_ui_input');
         if (customRadio) customRadio.classList.toggle('w--redirected-checked', isActive);
       });
       isSyncing = false;
@@ -417,10 +417,10 @@ function initNavSafariFix() {
 // ============================================================
 function applyUniqueId(input, uniqueId) {
   input.id = uniqueId;
-  const label = input.closest('label');
-  if (label) {
-    label.setAttribute('for', uniqueId);
-    const span = label.querySelector('.form_ui_label');
+  const item = input.closest('.form_ui_item') || input.closest('label');
+  if (item) {
+    item.setAttribute('for', uniqueId);
+    const span = item.querySelector('.form_ui_label');
     if (span) span.setAttribute('for', uniqueId);
   }
 }
