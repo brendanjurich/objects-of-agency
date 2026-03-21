@@ -192,19 +192,6 @@ footer.footer_main_wrap {
   background-color: #e0e0e0 !important;
 }
 
-/* Summary card — bullet per item */
-.config_summary_item {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.config_summary_item::before {
-  content: "•";
-  color: var(--_theme---border);
-  flex-shrink: 0;
-}
-
 /* Size slider — hide sibling strips (SVG drawings, centre-only display) */
 .config_size_wrap [data-cascading-slide] {
   transition: opacity 0.3s ease;
