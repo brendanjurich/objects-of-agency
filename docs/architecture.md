@@ -154,6 +154,31 @@ Material variants include: top material, timber, anodised finish, size.
 
 ---
 
+## Configurator DOM Contract (Product Pages)
+
+### Pricing
+
+| Class | Role |
+|---|---|
+| `config_base_price` | Hidden element — holds the raw base price number (e.g. `1999`) |
+| `config_from_price` | Visible display — shows the static base price |
+| `configure_price` | Visible display — shows the calculated price (base + option modifiers) |
+
+Option price modifiers are read from the nearest ancestor with a `data-price` attribute on each checked radio input.
+
+### Summary Card — DOM IDs
+
+| ID | Updated on |
+|---|---|
+| `summary-size` | Size selection |
+| `summary-top-material` | Top material selection |
+| `summary-timber` | Timber selection |
+| `summary-anodising` | Anodised finish selection |
+
+Default value in each span: `—` (em dash). JS replaces text content on every radio change.
+
+---
+
 ## Security Rules
 
 Never commit to this repo:
