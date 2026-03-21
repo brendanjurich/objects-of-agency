@@ -53,8 +53,9 @@ function initSummaryUpdater() {
       const checked = document.querySelector('input[name="' + group.name + '"]:checked');
       if (!checked) return;
 
-      const labelEl = checked.closest('.form_ui_item') &&
-        checked.closest('.form_ui_item').querySelector('.form_ui_text');
+      const item = checked.closest('.form_ui_item');
+      if (!item) return;
+      const labelEl = item.querySelector('.form_ui_text') || item.querySelector('.config_content_text');
       if (labelEl) summaryEl.textContent = labelEl.textContent.trim();
     });
   }
