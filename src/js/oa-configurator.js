@@ -342,10 +342,22 @@ function initSummaryUpdater() {
       const checked = document.querySelector('input[name="' + group.name + '"]:checked');
       if (!checked) return;
 
-      const item = checked.closest('.form_ui_item');
-      if (!item) return;
-      const labelEl = item.querySelector('.form_ui_text') || item.querySelector('.config_content_text');
-      if (labelEl) summaryEl.textContent = labelEl.textContent.trim();
+      // Radio card structure (e.g. sizes) — label text is in .form_ui_text
+      const formItem = checked.closest('.form_ui_item');
+      if (formItem) {
+        const labelEl = formItem.querySelector('.form_ui_text');
+        if (labelEl) { summaryEl.textContent = labelEl.textContent.trim(); return; }
+      }
+
+      // Swatch slider structure — label text is in the active slide's .config_content_text
+      const sliderWrap = checked.closest('[data-cascading-slider-wrap]');
+      if (sliderWrap) {
+        const activeSlide = sliderWrap.querySelector('[data-cascading-slide][data-status="active"]');
+        if (activeSlide) {
+          const labelEl = activeSlide.querySelector('.config_content_text');
+          if (labelEl) summaryEl.textContent = labelEl.textContent.trim();
+        }
+      }
     });
   }
 
