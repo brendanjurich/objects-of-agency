@@ -321,8 +321,9 @@ function fixRadioIds() {
 // ============================================================
 function initPricingEngine() {
   const basePriceEl = document.querySelector('.config_base_price');
-  const displayEl = document.querySelector('.config_from_price');
-  if (!basePriceEl || !displayEl) return;
+  const fromPriceEl = document.querySelector('.config_from_price');
+  const configuredPriceEl = document.querySelector('.configure_price');
+  if (!basePriceEl || (!fromPriceEl && !configuredPriceEl)) return;
 
   const formatter = new Intl.NumberFormat('en-AU', {
     minimumFractionDigits: 0,
@@ -340,7 +341,8 @@ function initPricingEngine() {
       }
     });
 
-    displayEl.textContent = formatter.format(basePrice + modifier);
+    if (fromPriceEl) fromPriceEl.textContent = formatter.format(basePrice);
+    if (configuredPriceEl) configuredPriceEl.textContent = formatter.format(basePrice + modifier);
   }
 
   // Recalculate on every radio change across the page
