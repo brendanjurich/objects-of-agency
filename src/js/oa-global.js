@@ -88,6 +88,13 @@ function initLogoRevealLoader() {
   const progressBar = wrap.querySelector('[data-load-progress]');
   const logo = wrap.querySelector('[data-load-logo]');
   const resetTargets = Array.from(wrap.querySelectorAll('[data-load-reset]'));
+  const nav = document.querySelector('.nav_component');
+
+  // Take ownership of nav visibility — keep it hidden for the full loader
+  // duration regardless of IX2 init timing, then reveal it ourselves.
+  // Requires the IX2 page-load interaction on nav_component to be removed
+  // in the Webflow Designer.
+  if (nav) gsap.set(nav, { autoAlpha: 0 });
 
   const loadTimeline = gsap.timeline({ defaults: { ease: 'loader', duration: 2.2 } })
     .set(wrap, { display: 'block' })
@@ -97,7 +104,12 @@ function initLogoRevealLoader() {
     .to(progressBar, { scaleX: 0, transformOrigin: 'right center', duration: 0.5 }, '<')
     .add('hideContent', '<')
     .to(bg, { yPercent: -101, duration: 1 }, 'hideContent')
-    .set(wrap, { display: 'none' });
+    .set(wrap, { display: 'none' })
+    .call(() => {
+      // Unlock the Webflow IX3 visibility gate, then fade the nav in.
+      document.documentElement.classList.add('w-mod-ix3');
+      if (nav) gsap.to(nav, { autoAlpha: 1, duration: 0.25, ease: 'none' });
+    });
 
   if (resetTargets.length) {
     loadTimeline.set(resetTargets, { autoAlpha: 1 }, 0);
