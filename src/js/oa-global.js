@@ -80,13 +80,21 @@ function initSlideShow(el) {
 // ============================================================
 // 5. LOADER
 // ============================================================
+function revealAfterLoader() {
+  document.documentElement.classList.add('w-mod-ix3');
+  document.documentElement.classList.add('loader-complete');
+}
+
 function initLogoRevealLoader() {
   const wrap = document.querySelector('[data-load-wrap]');
-  if (!wrap) return;
+  if (!wrap) { revealAfterLoader(); return; }
+
+  // Pages without the full animated loader (no inner elements) — reveal immediately.
+  const progressBar = wrap.querySelector('[data-load-progress]');
+  if (!progressBar) { revealAfterLoader(); return; }
 
   const container = wrap.querySelector('[data-load-container]');
   const bg = wrap.querySelector('[data-load-bg]');
-  const progressBar = wrap.querySelector('[data-load-progress]');
   const logo = wrap.querySelector('[data-load-logo]');
   const resetTargets = Array.from(wrap.querySelectorAll('[data-load-reset]'));
 
@@ -99,13 +107,7 @@ function initLogoRevealLoader() {
     .add('hideContent', '<')
     .to(bg, { yPercent: -101, duration: 1 }, 'hideContent')
     .set(wrap, { display: 'none' })
-    .call(() => {
-      // Unlock the Webflow IX3 visibility gate and mark the loader complete.
-      // The nav fade-in is handled by a CSS transition on .loader-complete
-      // so no GSAP inline styles land on the nav — preserving mix-blend-mode.
-      document.documentElement.classList.add('w-mod-ix3');
-      document.documentElement.classList.add('loader-complete');
-    });
+    .call(revealAfterLoader);
 
   if (resetTargets.length) {
     loadTimeline.set(resetTargets, { autoAlpha: 1 }, 0);
