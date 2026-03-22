@@ -82,18 +82,19 @@ footer.footer_main_wrap {
 /* ============================================================
    HERO & SLIDER ANIMATIONS
    ============================================================ */
-/* Lock hero to viewport */
+/* Lock hero to viewport.
+   svh (small viewport height) is static — it never changes as browser chrome
+   shows/hides on scroll, so there is no layout shift.
+   __content overrides min-height to 100% so it can't overflow the parent
+   and trigger the overflow:hidden clip on Chrome iOS. */
 .crisp-header {
   position: sticky;
   top: 0;
-  height: var(--hero-height, 100dvh);
+  height: 100svh;
   overflow: hidden;
   z-index: 0;
 }
 
-/* Webflow CSS sets min-height: 100svh on __content — Chrome iOS calculates svh
-   incorrectly (ignores bottom tab bar), making content taller than parent and
-   clipping the swatch strip. Override to fill parent height only. */
 .crisp-header__content {
   min-height: 100%;
 }
