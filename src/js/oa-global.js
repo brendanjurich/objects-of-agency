@@ -102,6 +102,15 @@ function initLogoRevealLoader() {
   if (resetTargets.length) {
     loadTimeline.set(resetTargets, { autoAlpha: 1 }, 0);
   }
+
+  // On mobile, Webflow IX2 (w-mod-ix3) can take several seconds to initialise
+  // because of the number of GSAP plugins loading. The nav stays hidden until
+  // IX2 adds that class. Force it here once the loader is done so the nav is
+  // never blocked by IX2 init time. classList.add is idempotent — no-op if
+  // IX2 has already set it.
+  loadTimeline.call(() => {
+    document.documentElement.classList.add('w-mod-ix3');
+  });
 }
 
 // ============================================================
