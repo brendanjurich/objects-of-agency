@@ -50,29 +50,36 @@ objects-of-agency/
 VS Code (author) → GitHub (version + host) → jsDelivr (CDN) → Webflow (custom code)
 ```
 
-### Webflow Custom Code — Sitewide
+### Webflow Custom Code — Sitewide (Site Settings only, no per-page embeds)
 
-URLs use a git version tag (e.g. `v1.0.0`). Update the tag in Webflow on each release.
+URLs use a git version tag (e.g. `v1.0.32`). Update the tag in Webflow on each release.
 
 **Head tag:**
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.0/src/css/oa-styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.32/src/css/oa-styles.css">
 ```
 
 **Before </body>:**
 ```html
-<script src="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.0/src/js/oa-global.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.32/src/js/oa-global.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.18/src/js/oa-configurator.js"></script>
 ```
 
-### Webflow Custom Code — Product Pages Only
-
-`oa-configurator.js` is added at page level on product pages, not sitewide.
-```html
-<script src="https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.0/src/js/oa-configurator.js"></script>
-```
+No other custom code embeds — everything lives in the CDN files.
 
 **Why tags, not `@main`:** jsDelivr caches branch URLs aggressively and purging is
 unreliable. Tagged URLs are immutable and served immediately with no caching issues.
+
+### jsDelivr Cache Purge
+
+After tagging, purge to force CDN refresh:
+```
+https://purge.jsdelivr.net/gh/brendanjurich/objects-of-agency@vX.X.X/src/css/oa-styles.css
+https://purge.jsdelivr.net/gh/brendanjurich/objects-of-agency@vX.X.X/src/js/oa-global.js
+```
+
+**Known gotcha:** jsDelivr rate-limits repos that push many tags quickly. New tags may
+return 404 for several hours. Purge helps but is not always instant.
 
 ---
 
@@ -93,13 +100,11 @@ it works, then merge to `main` and cut a release tag.
 1. Make changes in VS Code on `dev`
 2. `git add src/css/oa-styles.css` (or relevant file)
 3. `git commit -m "type: description"`
-4. `git checkout main && git merge dev && git push origin main && git checkout dev`
-5. `git tag v1.x.x && git push origin v1.x.x`
-6. Update version tag in Webflow custom code (Site Settings → Custom Code)
+4. `git tag vX.X.X && git push origin dev && git push origin vX.X.X`
+5. Purge jsDelivr cache URLs (above)
+6. Update version tag in Webflow Site Settings → Custom Code
 7. Republish Webflow
 8. Check browser console — confirm clean
-
-### Commit Message Conventions
 
 ### Commit Message Conventions
 
@@ -142,6 +147,101 @@ per variant and do not change dynamically.
 lives in `oa-styles.css` under clearly marked sections.
 **Reason:** Lumos embed content is wiped on Lumos updates. Anything written there
 is unrecoverable. The CSS master file is the single source of truth.
+
+---
+
+## Nav Visibility — Architecture
+
+### Approach: CSS class toggle, no GSAP on nav
+
+The nav is hidden on page load and revealed after the loader completes via a CSS class
+toggle on `<html>`. No GSAP inline styles are ever applied to the nav.
+
+**Why no GSAP:** GSAP `autoAlpha` sets `opacity` and `visibility` as inline styles,
+which creates a stacking context. This breaks `mix-blend-mode: difference` on the
+logo and hamburger icon.
+
+**Why no Webflow IX2 interaction on nav:** A page-load interaction previously animated
+the nav in but conflicted with loader timing and broke mix-blend-mode. Removed entirely.
+
+### CSS (in oa-styles.css)
+
+```css
+/* Hidden until loader completes */
+html.w-mod-js:not(.wf-design-mode):not(.loader-complete) .nav_component {
+  opacity: 0;
+}
+/* Revealed after loader */
+html.w-mod-js:not(.wf-design-mode).loader-complete .nav_component {
+  opacity: 1;
+  visibility: visible;  /* overrides any GSAP inline visibility:hidden */
+}
+html.w-mod-js:not(.wf-design-mode) .nav_component {
+  transition: opacity 0.25s;
+}
+```
+
+### JS trigger (in oa-global.js)
+
+```javascript
+function revealAfterLoader() {
+  document.documentElement.classList.add('w-mod-ix3');     // satisfies IX2 guard
+  document.documentElement.classList.add('loader-complete'); // triggers CSS reveal
+}
+```
+
+`revealAfterLoader()` is called:
+- At the end of the loader exit animation (pages with full loader)
+- Immediately on pages with `[data-load-wrap]` but no `[data-load-progress]`
+- Immediately on pages with no `[data-load-wrap]` at all (e.g. product pages)
+
+---
+
+## Loader — Architecture
+
+### Approach: entrance + exit split with Promise.all gate
+
+The loader animation is split into two phases:
+
+**Entrance** — plays immediately on `DOMContentLoaded` (1.5s):
+- Progress bar fills (scaleX 0 → 1)
+- Logo reveals (clipPath)
+
+**Exit** — gated on `Promise.all([minDelay, pageReady])`:
+- `minDelay`: 1.5s minimum branding moment
+- `pageReady`: resolves when `document.readyState === 'complete'` or `window.load` fires
+- Whichever takes longer wins — fast connections exit at 1.5s, slow connections wait
+  until assets are genuinely ready
+
+**Why:** The old loader was a fixed ~3.7s timer with no connection to actual asset
+readiness. Fast connections waited unnecessarily; slow connections got no real benefit.
+The Promise.all approach makes the loader functional while preserving the branding moment.
+
+### The loader is decorative on fast connections, functional on slow ones.
+
+---
+
+## Hero — Architecture
+
+### height: 100svh (not dvh)
+
+`.crisp-header` uses `height: 100svh`.
+
+**Why svh not dvh:** `dvh` (dynamic viewport height) changes as browser chrome
+(address bar, tab bar) shows and hides on scroll, causing the entire page layout
+to shift. `svh` (small viewport height) is static — it never changes, so there
+is no layout shift on scroll.
+
+### min-height: 100% override on __content
+
+`.crisp-header__content` is set to `min-height: 100%` in oa-styles.css.
+
+**Why:** Webflow's generated CSS sets `min-height: 100svh` on `__content`. On
+Chrome iOS, `svh` is calculated without subtracting the bottom tab bar, so
+`100svh` on `__content` exceeds the parent's `height: 100svh`, and content
+overflows the parent's `overflow: hidden` boundary — clipping the bottom of the
+hero (e.g. swatch strip). Overriding to `min-height: 100%` constrains content
+to the parent.
 
 ---
 
@@ -191,4 +291,4 @@ Never commit to this repo:
 
 ---
 
-*Last updated: project setup session — VS Code, GitHub, jsDelivr chain established.*
+*Last updated: nav/loader architecture session — CSS class toggle nav reveal, Promise.all loader, svh hero fix, Chrome iOS clipping fix.*
