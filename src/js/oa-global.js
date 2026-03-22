@@ -10,7 +10,14 @@ CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
 CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
 
 // ============================================================
-// 3. SLIDESHOW
+// 3. NAV PRE-HIDE
+// Runs immediately at script parse time — before IX2 can add
+// w-mod-ix3 and unlock the nav. The loader timeline reveals it.
+// ============================================================
+gsap.set('.nav_component', { autoAlpha: 0 });
+
+// ============================================================
+// 4. SLIDESHOW
 // ============================================================
 function initSlideShow(el) {
   const ui = {
@@ -77,7 +84,7 @@ function initSlideShow(el) {
 }
 
 // ============================================================
-// 4. LOADER
+// 5. LOADER
 // ============================================================
 function initLogoRevealLoader() {
   const wrap = document.querySelector('[data-load-wrap]');
@@ -89,12 +96,6 @@ function initLogoRevealLoader() {
   const logo = wrap.querySelector('[data-load-logo]');
   const resetTargets = Array.from(wrap.querySelectorAll('[data-load-reset]'));
   const nav = document.querySelector('.nav_component');
-
-  // Take ownership of nav visibility — keep it hidden for the full loader
-  // duration regardless of IX2 init timing, then reveal it ourselves.
-  // Requires the IX2 page-load interaction on nav_component to be removed
-  // in the Webflow Designer.
-  if (nav) gsap.set(nav, { autoAlpha: 0 });
 
   const loadTimeline = gsap.timeline({ defaults: { ease: 'loader', duration: 2.2 } })
     .set(wrap, { display: 'block' })
@@ -117,7 +118,7 @@ function initLogoRevealLoader() {
 }
 
 // ============================================================
-// 5. SAFARI WEBKIT NAV FIX
+// 6. SAFARI WEBKIT NAV FIX
 // ============================================================
 function initNavSafariFix() {
   const navButton = document.querySelector('.w-nav-button');
@@ -142,7 +143,7 @@ function initNavSafariFix() {
 }
 
 // ============================================================
-// 6. INIT ON DOM READY
+// 7. INIT ON DOM READY
 // ============================================================
 document.querySelectorAll('.config_svg_embed').forEach(function (el) {
   el.innerHTML = el.textContent;
