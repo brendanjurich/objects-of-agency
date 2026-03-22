@@ -9,12 +9,6 @@ gsap.registerPlugin(CustomEase);
 CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
 CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
 
-// ============================================================
-// 3. NAV PRE-HIDE
-// Runs immediately at script parse time — before IX2 can add
-// w-mod-ix3 and unlock the nav. The loader timeline reveals it.
-// ============================================================
-gsap.set('.nav_component', { autoAlpha: 0 });
 
 // ============================================================
 // 4. SLIDESHOW
@@ -95,7 +89,6 @@ function initLogoRevealLoader() {
   const progressBar = wrap.querySelector('[data-load-progress]');
   const logo = wrap.querySelector('[data-load-logo]');
   const resetTargets = Array.from(wrap.querySelectorAll('[data-load-reset]'));
-  const nav = document.querySelector('.nav_component');
 
   const loadTimeline = gsap.timeline({ defaults: { ease: 'loader', duration: 2.2 } })
     .set(wrap, { display: 'block' })
@@ -107,9 +100,11 @@ function initLogoRevealLoader() {
     .to(bg, { yPercent: -101, duration: 1 }, 'hideContent')
     .set(wrap, { display: 'none' })
     .call(() => {
-      // Unlock the Webflow IX3 visibility gate, then fade the nav in.
+      // Unlock the Webflow IX3 visibility gate and mark the loader complete.
+      // The nav fade-in is handled by a CSS transition on .loader-complete
+      // so no GSAP inline styles land on the nav — preserving mix-blend-mode.
       document.documentElement.classList.add('w-mod-ix3');
-      if (nav) gsap.to(nav, { autoAlpha: 1, duration: 0.25, ease: 'none' });
+      document.documentElement.classList.add('loader-complete');
     });
 
   if (resetTargets.length) {

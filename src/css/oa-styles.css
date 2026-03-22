@@ -10,12 +10,14 @@ html {
   opacity: 0;
 }
 
-/* Pre-hide nav from first paint so it can't flash before the loader JS
-   takes control. opacity (no !important) is overridden by GSAP's inline
-   style when the loader reveals it. Scoped to w-mod-js so it has no effect
-   without JS, and doesn't apply in the Webflow Designer. */
-html.w-mod-js:not(.wf-design-mode) .nav_component {
+/* Pre-hide nav from first paint. Revealed by the loader adding
+   .loader-complete to <html> via a CSS transition — no GSAP inline
+   styles on the nav so mix-blend-mode effects are preserved. */
+html.w-mod-js:not(.wf-design-mode):not(.loader-complete) .nav_component {
   opacity: 0;
+}
+html.w-mod-js:not(.wf-design-mode) .nav_component {
+  transition: opacity 0.25s;
 }
 
 /* Loader — hidden in Designer & no-JS fallback */
