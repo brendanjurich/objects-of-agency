@@ -98,20 +98,31 @@ function initLogoRevealLoader() {
   const logo = wrap.querySelector('[data-load-logo]');
   const resetTargets = Array.from(wrap.querySelectorAll('[data-load-reset]'));
 
-  const loadTimeline = gsap.timeline({ defaults: { ease: 'loader', duration: 2.2 } })
-    .set(wrap, { display: 'block' })
-    .to(progressBar, { scaleX: 1 })
-    .to(logo, { clipPath: 'inset(0% 0% 0% 0%)' }, '<')
-    .to(container, { autoAlpha: 0, duration: 0.5 })
-    .to(progressBar, { scaleX: 0, transformOrigin: 'right center', duration: 0.5 }, '<')
-    .add('hideContent', '<')
-    .to(bg, { yPercent: -101, duration: 1 }, 'hideContent')
-    .set(wrap, { display: 'none' })
-    .call(revealAfterLoader);
-
   if (resetTargets.length) {
-    loadTimeline.set(resetTargets, { autoAlpha: 1 }, 0);
+    gsap.set(resetTargets, { autoAlpha: 1 });
   }
+
+  // Entrance: branding moment plays immediately (1.5s).
+  gsap.set(wrap, { display: 'block' });
+  gsap.timeline({ defaults: { ease: 'loader', duration: 1.5 } })
+    .to(progressBar, { scaleX: 1 })
+    .to(logo, { clipPath: 'inset(0% 0% 0% 0%)' }, '<');
+
+  // Exit: waits for whichever is longer — the 1.5s minimum or window.load.
+  const minDelay = new Promise(resolve => setTimeout(resolve, 1500));
+  const pageReady = new Promise(resolve => {
+    if (document.readyState === 'complete') resolve();
+    else window.addEventListener('load', resolve, { once: true });
+  });
+
+  Promise.all([minDelay, pageReady]).then(function () {
+    gsap.timeline({ defaults: { ease: 'loader' } })
+      .to(container, { autoAlpha: 0, duration: 0.5 })
+      .to(progressBar, { scaleX: 0, transformOrigin: 'right center', duration: 0.5 }, '<')
+      .to(bg, { yPercent: -101, duration: 1 }, '<')
+      .set(wrap, { display: 'none' })
+      .call(revealAfterLoader);
+  });
 }
 
 // ============================================================
