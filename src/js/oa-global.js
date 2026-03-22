@@ -130,11 +130,32 @@ function initNavSafariFix() {
 }
 
 // ============================================================
-// 6. INIT ON DOM READY
+// 6. HERO HEIGHT LOCK
+// Locks hero to a pixel value at load so the browser chrome
+// showing/hiding on scroll never triggers a layout shift.
+// Only re-measures on genuine orientation changes (width change).
+// ============================================================
+function initHeroHeight() {
+  function set() {
+    document.documentElement.style.setProperty('--hero-height', window.innerHeight + 'px');
+  }
+  set();
+  let lastWidth = window.innerWidth;
+  window.addEventListener('resize', function () {
+    if (window.innerWidth !== lastWidth) {
+      lastWidth = window.innerWidth;
+      set();
+    }
+  });
+}
+
+// ============================================================
+// 7. INIT ON DOM READY
 // ============================================================
 document.querySelectorAll('.config_svg_embed').forEach(function (el) {
   el.innerHTML = el.textContent;
 });
+initHeroHeight();
 document.addEventListener('DOMContentLoaded', function () {
   initLogoRevealLoader();
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));

@@ -86,9 +86,16 @@ footer.footer_main_wrap {
 .crisp-header {
   position: sticky;
   top: 0;
-  height: 100svh;
+  height: var(--hero-height, 100dvh);
   overflow: hidden;
   z-index: 0;
+}
+
+/* Webflow CSS sets min-height: 100svh on __content — Chrome iOS calculates svh
+   incorrectly (ignores bottom tab bar), making content taller than parent and
+   clipping the swatch strip. Override to fill parent height only. */
+.crisp-header__content {
+  min-height: 100%;
 }
 
 /* GPU compositing for hero media */
