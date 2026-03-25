@@ -18,6 +18,7 @@ html.w-mod-js:not(.wf-design-mode):not(.loader-complete) .nav_component {
 }
 html.w-mod-js:not(.wf-design-mode).loader-complete .nav_component {
   opacity: 1;
+  visibility: visible;
 }
 html.w-mod-js:not(.wf-design-mode) .nav_component {
   transition: opacity 0.25s;
@@ -160,6 +161,11 @@ footer.footer_main_wrap {
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
+}
+
+/* Hide controls entirely when Swiper locks pagination (all slides fit — nothing to paginate) */
+.section_menu_wrap .slider_controls:has(.swiper-pagination-lock) {
+  display: none;
 }
 
 /* ============================================================
