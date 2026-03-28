@@ -189,8 +189,7 @@ footer.footer_main_wrap {
    Uses :has() to target the visual container from a
    descendant's focus state.
    ============================================================ */
-.card_product_wrap:has(.clickable_link:focus-visible) .card_product_visual,
-.card_product_wrap:has(.clickable_btn:focus-visible) .card_product_visual {
+.card_product_wrap:has(.clickable_link:focus-visible) .card_product_visual {
   box-shadow: 3px 5px 13px 1px var(--swatch--box-shadow-2);
   transform: scale(1.015);
   outline: var(--focus--width) solid var(--_theme---text);
