@@ -169,6 +169,35 @@ footer.footer_main_wrap {
 }
 
 /* ============================================================
+   PRODUCT SLIDER — MOBILE ACTIVE CARD STATE
+   Auto-applies the hover scale/shadow to the in-view card
+   on touch devices where hover doesn't work.
+   Targets only no-hover devices to avoid conflicting with
+   the desktop :hover rule.
+   ============================================================ */
+@media (hover: none) {
+  .card_product_wrap.is-active .card_product_visual {
+    box-shadow: 3px 5px 13px 1px var(--swatch--box-shadow-2);
+    transform: scale(1.015);
+  }
+}
+
+/* ============================================================
+   PRODUCT CARD — KEYBOARD FOCUS STATE
+   Applies the same scale/shadow as hover when the card's
+   interactive children receive keyboard focus.
+   Uses :has() to target the visual container from a
+   descendant's focus state.
+   ============================================================ */
+.card_product_wrap:has(.clickable_link:focus-visible) .card_product_visual,
+.card_product_wrap:has(.clickable_btn:focus-visible) .card_product_visual {
+  box-shadow: 3px 5px 13px 1px var(--swatch--box-shadow-2);
+  transform: scale(1.015);
+  outline: var(--focus--width) solid var(--_theme---text);
+  outline-offset: var(--focus--offset-outer);
+}
+
+/* ============================================================
    NAVIGATION — TABLET & MOBILE (max 1134px)
    ============================================================ */
 @media screen and (max-width: 1134px) {
