@@ -299,3 +299,65 @@ footer.footer_main_wrap {
   opacity: 0;
   pointer-events: none;
 }
+
+/* ============================================================
+   CARD — ALL PRODUCTS
+   ============================================================ */
+.card_all-products_wrap {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* 4:5 image zone with skeleton placeholder */
+.card_all-products_wrap .visual_wrap {
+  aspect-ratio: 4 / 5;
+  background-color: #e8e8e8; /* TODO: replace with Lumos skeleton/surface token */
+  overflow: hidden;
+  position: relative;
+}
+
+.card_all-products_image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+
+/* Swatch row — Finsweet injects dots here */
+.card_all-products_wrap .swatch_wrap {
+  display: flex;
+  flex-direction: row;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.card_all-products_wrap .swatch_more {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+/* Label + title stack */
+.card_all-products_wrap .info_wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Price — faded, pushed to bottom of flex column */
+.card_all-products_wrap .price_wrap {
+  opacity: 0.55;
+  margin-top: auto;
+}
+
+/* Configurator swatch source list — hidden, used only as Finsweet data source */
+.config_swatch-source_wrap {
+  display: none;
+}
+
+/* Category labels — hidden on All Products page (redundant within section grouping) */
+.card_all-products_category {
+  display: none;
+}

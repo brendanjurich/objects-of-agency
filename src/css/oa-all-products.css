@@ -1,0 +1,88 @@
+/* ============================================================
+   FILTER BUTTONS
+   ============================================================ */
+[data-filter-target] {
+  color: var(--_theme---text);
+  background-color: transparent;
+  border-color: var(--_theme---border);
+  transition: background-color 0.3s cubic-bezier(0.625, 0.05, 0, 1),
+              color 0.3s cubic-bezier(0.625, 0.05, 0, 1),
+              border-color 0.3s cubic-bezier(0.625, 0.05, 0, 1);
+}
+
+[data-filter-target][data-filter-status="active"] {
+  background-color: var(--_theme---text);
+  color: var(--_theme---bg);
+  border-color: var(--_theme---text);
+}
+
+/* ============================================================
+   FILTER ITEM STATES
+   Prevents grid escape on not-active items (display:none +
+   position:static undoes any absolute/fixed remnants).
+   transition-out gives a brief fade before removal.
+   ============================================================ */
+.filter-list__item[data-filter-status="not-active"] {
+  display: none;
+  position: static;
+}
+
+.filter-list__item[data-filter-status="transition-out"] {
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.625, 0.05, 0, 1);
+}
+
+.filter-list__item[data-filter-status="active"] {
+  display: block;
+}
+
+/* ============================================================
+   RESPONSIVE PRODUCT GRID
+   --col drives grid-template-columns at each breakpoint.
+   Replace .all-products_grid with the actual Webflow class
+   once confirmed in Designer.
+   ============================================================ */
+.all-products_grid {
+  display: grid;
+  grid-template-columns: repeat(var(--col, 4), 1fr);
+  gap: var(--site--gutter);
+}
+
+@media screen and (max-width: 991px) {
+  .all-products_grid { --col: 3; }
+}
+
+@media screen and (max-width: 767px) {
+  .all-products_grid { --col: 2; }
+}
+
+@media screen and (max-width: 479px) {
+  .all-products_grid { --col: 1; }
+}
+
+/* ============================================================
+   CMS WRAPPER FIX — TABLES SECTION
+   Makes w-dyn-list and w-dyn-items transparent to the grid
+   so w-dyn-item becomes a direct grid child.
+   Replace class names with actual Webflow classes once confirmed.
+   ============================================================ */
+.tables_collection { display: contents; }
+.tables_list       { display: contents; }
+
+/* ============================================================
+   FINSWEET LIST NEST — SWATCH ROW FIX
+   material_ref_item (w-dyn-item block) is injected as a flex
+   child of card_all-products_swatch_wrap. display:contents
+   makes the wrapper transparent so the card_all-products_swatch
+   link becomes the direct flex item at its 1rem × 1rem size.
+   ============================================================ */
+.card_all-products_swatch_wrap .material_ref_item {
+  display: contents;
+}
+
+.card_all-products_swatch_img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
