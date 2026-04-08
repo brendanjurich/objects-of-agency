@@ -20,8 +20,8 @@
    OSMO FILTER — BUTTONS
    ============================================================ */
 [data-filter-target][data-filter-status="active"] .button_main_element {
-  --_trigger---on: 0;
-  --_trigger---off: 1;
+  --_trigger---on: 1;
+  --_trigger---off: 0;
 }
 
 /* ============================================================
