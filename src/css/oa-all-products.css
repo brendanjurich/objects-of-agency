@@ -28,10 +28,6 @@ section[id] {
    OSMO FILTER — BUTTONS
    ============================================================ */
 [data-filter-target][data-filter-status="active"] .button_main_element {
-  border-bottom-color: var(--_theme---text) !important;
-}
-
-.all_tables_title-wrap [data-filter-target][data-filter-status="active"] .button_main_element {
   border-bottom-color: #d66740 !important;
 }
 
