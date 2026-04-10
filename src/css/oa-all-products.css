@@ -31,13 +31,13 @@ section[id] {
    (same specificity, later source order), so we override the vars instead.
    ============================================================ */
 [data-filter-target][data-filter-status="active"] .button_main_element {
-  --_theme---text-link--border: var(--_theme---text);
-  --_theme---text-link--border-hover: var(--_theme---text);
+  --_theme---text-link--border: var(--_theme---text) !important;
+  --_theme---text-link--border-hover: var(--_theme---text) !important;
 }
 
 .all_tables_title-wrap [data-filter-target][data-filter-status="active"] .button_main_element {
-  --_theme---text-link--border: #d66740;
-  --_theme---text-link--border-hover: #d66740;
+  --_theme---text-link--border: #d66740 !important;
+  --_theme---text-link--border-hover: #d66740 !important;
 }
 
 /* ============================================================
