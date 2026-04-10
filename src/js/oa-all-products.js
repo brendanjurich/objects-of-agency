@@ -88,6 +88,10 @@ function initBasicFilterSetupMultiMatch() {
       const btn = e.target.closest('[data-filter-target]');
       if (btn && group.contains(btn)) paint(btn.getAttribute('data-filter-target'));
     });
+
+    // Apply filter from URL param on load, otherwise default to "all"
+    const urlFilter = new URLSearchParams(window.location.search).get('filter');
+    paint(urlFilter || 'all');
   });
 }
 

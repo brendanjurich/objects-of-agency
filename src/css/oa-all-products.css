@@ -26,13 +26,18 @@ section[id] {
 
 /* ============================================================
    OSMO FILTER — BUTTONS
+   Override Webflow's color-mix via the source variables it feeds from.
+   !important on border-bottom-color loses to Webflow's shared CSS
+   (same specificity, later source order), so we override the vars instead.
    ============================================================ */
 [data-filter-target][data-filter-status="active"] .button_main_element {
-  border-bottom-color: var(--_theme---text) !important;
+  --_theme---text-link--border: var(--_theme---text);
+  --_theme---text-link--border-hover: var(--_theme---text);
 }
 
 .all_tables_title-wrap [data-filter-target][data-filter-status="active"] .button_main_element {
-  border-bottom-color: #d66740 !important;
+  --_theme---text-link--border: #d66740;
+  --_theme---text-link--border-hover: #d66740;
 }
 
 /* ============================================================
