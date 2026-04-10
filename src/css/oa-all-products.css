@@ -1,4 +1,12 @@
 /* ============================================================
+   ANCHOR SCROLL OFFSET — fixed nav clearance
+   ============================================================ */
+a.section_link_wrap,
+section[id] {
+  scroll-margin-top: 130px;
+}
+
+/* ============================================================
    FINSWEET LIST NEST — SWATCH ROW FIX
    material_ref_item (w-dyn-item block) is injected as a flex
    child of card_all-products_swatch_wrap. display:contents
