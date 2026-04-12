@@ -89,9 +89,11 @@ function initBasicFilterSetupMultiMatch() {
       if (btn && group.contains(btn)) paint(btn.getAttribute('data-filter-target'));
     });
 
-    // Apply filter from URL param on load, otherwise default to "all"
+    // Only apply a non-default filter from the URL param on load
     const urlFilter = new URLSearchParams(window.location.search).get('filter');
-    paint(urlFilter || 'all');
+    if (urlFilter && urlFilter.toLowerCase() !== 'all') {
+      paint(urlFilter);
+    }
   });
 }
 
