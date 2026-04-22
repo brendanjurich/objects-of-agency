@@ -361,3 +361,16 @@ footer.footer_main_wrap {
 .card_all-products_category {
   display: none;
 }
+
+/* ============================================================
+   PRODUCT TEMPLATE — STATIC SLIDER EASING
+   ============================================================ */
+:root {
+  --ease-osmo: cubic-bezier(0.625, 0.05, 0, 1);
+}
+
+/* Swiper writes transition-timing-function inline on every slide change;
+   !important is required to override it. Scoped to .slider_element only. */
+.slider_element .swiper-wrapper {
+  transition-timing-function: var(--ease-osmo) !important;
+}

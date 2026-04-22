@@ -161,3 +161,12 @@ document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
 });
+
+// Patch Lumos-initialized Swiper on the product static slider to use 800ms speed.
+// Lumos init runs before window.load, so the instance is available by then.
+window.addEventListener('load', function () {
+  const sliderEl = document.querySelector('.slider_element');
+  if (sliderEl && sliderEl.swiper) {
+    sliderEl.swiper.params.speed = 800;
+  }
+});
