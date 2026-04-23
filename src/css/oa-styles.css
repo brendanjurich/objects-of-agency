@@ -172,20 +172,24 @@ footer.footer_main_wrap {
    MOBILE / TOUCH — raise the active product card ONLY when the slider
    has fully settled. Gated by body.is-slider-transitioning (toggled in
    oa-global.js) so the raise doesn't compete with in-flight slides.
+
+   Targets .card_product_group (same element as the desktop :hover rule)
+   so the image AND text content scale together, matching desktop.
+   Values mirror the desktop :hover state: scale(1.02), 15px shadow.
    Easing matches the slider's --ease-osmo for visual cohesion.
    ===================================================================== */
 @media (hover: none) {
-  .card_product_wrap.is-active .card_product_visual {
+  .card_product_wrap.is-active .card_product_group {
     transition:
-      transform  0.35s cubic-bezier(0.22, 0.36, 0.1, 1) 0.05s,
-      box-shadow 0.35s cubic-bezier(0.22, 0.36, 0.1, 1) 0.05s;
+      transform  0.35s cubic-bezier(0.22, 0.36, 0.1, 1) 0.03s,
+      box-shadow 0.35s cubic-bezier(0.22, 0.36, 0.1, 1) 0.03s;
   }
 
   body:not(.is-slider-transitioning)
     .card_product_wrap.is-active
-    .card_product_visual {
-    box-shadow: 3px 5px 13px 1px var(--swatch--box-shadow-2);
-    transform: scale(1.015);
+    .card_product_group {
+    box-shadow: 3px 5px 15px 1px var(--swatch--box-shadow-2);
+    transform: scale(1.02);
   }
 }
 
