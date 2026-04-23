@@ -168,15 +168,22 @@ footer.footer_main_wrap {
   display: none;
 }
 
-/* ============================================================
-   PRODUCT SLIDER — MOBILE ACTIVE CARD STATE
-   Auto-applies the hover scale/shadow to the in-view card
-   on touch devices where hover doesn't work.
-   Targets only no-hover devices to avoid conflicting with
-   the desktop :hover rule.
-   ============================================================ */
+/* =====================================================================
+   MOBILE / TOUCH — raise the active product card ONLY when the slider
+   has fully settled. Gated by body.is-slider-transitioning (toggled in
+   oa-global.js) so the raise doesn't compete with in-flight slides.
+   Easing matches the slider's --ease-osmo for visual cohesion.
+   ===================================================================== */
 @media (hover: none) {
   .card_product_wrap.is-active .card_product_visual {
+    transition:
+      transform  0.35s cubic-bezier(0.22, 0.36, 0.1, 1) 0.05s,
+      box-shadow 0.35s cubic-bezier(0.22, 0.36, 0.1, 1) 0.05s;
+  }
+
+  body:not(.is-slider-transitioning)
+    .card_product_wrap.is-active
+    .card_product_visual {
     box-shadow: 3px 5px 13px 1px var(--swatch--box-shadow-2);
     transform: scale(1.015);
   }

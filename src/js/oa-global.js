@@ -164,9 +164,47 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Patch Lumos-initialized Swiper on the product static slider to use 800ms speed.
 // Lumos init runs before window.load, so the instance is available by then.
+// Patch Lumos-initialized Swipers after window.load.
+// Lumos init runs before window.load, so instances are available by then.
 window.addEventListener('load', function () {
-  const sliderEl = document.querySelector('.slider_element');
-  if (sliderEl && sliderEl.swiper) {
-    sliderEl.swiper.params.speed = 800;
+  // --- Static product slider: 800ms desktop / 700ms touch ---
+  // Scoped to .static_slider-wrap so we don't accidentally grab the first
+  // .slider_element on pages that have multiple sliders.
+  const staticSliderEl = document.querySelector(
+    '.static_slider-wrap .slider_element'
+  );
+  if (staticSliderEl && staticSliderEl.swiper) {
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    staticSliderEl.swiper.params.speed = isTouch ? 700 : 800;
   }
+
+  // --- Home Products slider: gate the mobile "raise on settle" ---
+  // Toggles body.is-slider-transitioning while Swiper is animating or the
+  // user is actively dragging, so the CSS only raises the active card once
+  // motion has fully stopped. Prevents outgoing/incoming cards from
+  // competing for the raised state during a swipe (visible jitter with
+  // slidesPerView: 1.1).
+  document
+    .querySelectorAll('.section_menu_wrap .slider_element')
+    .forEach(function (el) {
+      const sw = el.swiper;
+      if (!sw) return;
+
+      const addFlag = function () {
+        document.body.classList.add('is-slider-transitioning');
+      };
+      const clearFlag = function () {
+        document.body.classList.remove('is-slider-transitioning');
+      };
+
+      sw.on('transitionStart', addFlag);
+      sw.on('transitionEnd', clearFlag);
+      sw.on('touchStart', addFlag);
+      sw.on('touchEnd', function () {
+        // If the touch ended without triggering a slide transition
+        // (e.g. a tap), clear the flag immediately. Otherwise
+        // transitionEnd will clear it after the snap animation.
+        if (!sw.animating) clearFlag();
+      });
+    });
 });
