@@ -385,3 +385,30 @@ footer.footer_main_wrap {
 .slider_element .swiper-wrapper {
   transition-timing-function: var(--ease-osmo) !important;
 }
+
+/* Bunny Background Video Player */
+[data-bunny-background-init] :is(.bunny-bg__placeholder, .bunny-bg__loading) {
+  transition: opacity 0.3s linear, visibility 0.3s linear;
+}
+
+[data-bunny-background-init][data-player-status="playing"] .bunny-bg__placeholder,
+[data-bunny-background-init][data-player-status="paused"] .bunny-bg__placeholder,
+[data-bunny-background-init][data-player-activated="true"][data-player-status="ready"] .bunny-bg__placeholder {
+  opacity: 0;
+  visibility: hidden;
+}
+
+[data-bunny-background-init][data-player-status="playing"] .bunny-bg__play-svg,
+[data-bunny-background-init][data-player-status="loading"] .bunny-bg__play-svg {
+  display: none;
+}
+
+[data-bunny-background-init][data-player-status="playing"] .bunny-bg__pause-svg,
+[data-bunny-background-init][data-player-status="loading"] .bunny-bg__pause-svg {
+  display: block;
+}
+
+[data-bunny-background-init][data-player-status="loading"] .bunny-bg__loading {
+  opacity: 1;
+  visibility: visible;
+}
