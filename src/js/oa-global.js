@@ -14,11 +14,12 @@ CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
 // 4. SLIDESHOW
 // ============================================================
 function initSlideShow(el) {
+  const thumbsInEl = el.querySelectorAll('[data-slideshow="thumb"]');
   const ui = {
     el,
     slides: Array.from(el.querySelectorAll('[data-slideshow="slide"]')),
     inner: Array.from(el.querySelectorAll('[data-slideshow="parallax"]')),
-    thumbs: Array.from(el.querySelectorAll('[data-slideshow="thumb"]')),
+    thumbs: Array.from(thumbsInEl.length ? thumbsInEl : document.querySelectorAll('[data-slideshow="thumb"]')),
   };
 
   let current = 0;

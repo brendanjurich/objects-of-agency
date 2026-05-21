@@ -1,0 +1,55 @@
+## Name Collect — Explained
+
+This is a **filter tag auto-builder** feature, specifically designed as a convenience for **Webflow** users (though it works anywhere with the right setup).
+
+---
+
+### The Problem It Solves
+
+In a normal filter setup, you'd manually write something like:
+
+```html
+<div class="demo-card" data-filter-name="mammals aquatic">
+```
+
+But in **Webflow**, collection lists are generated dynamically — you can't easily write a combined string like `"mammals aquatic"` directly on the parent element, because each category comes from a separate collection item rendered individually.
+
+---
+
+### How `[data-filter-name-collect]` Works
+
+Instead of setting `data-filter-name` manually on the parent card, you place `data-filter-name-collect` attributes on **child elements** (typically inside a Webflow Collection List). The script then:
+
+1. Scans all children that have `data-filter-name-collect`
+2. Collects each of their values as tokens
+3. Deduplicates them (so `"mammals mammals aquatic"` becomes `"mammals aquatic"`)
+4. Writes the final combined string back to the **parent's** `data-filter-name` attribute automatically
+
+---
+
+### Concrete Example
+
+**Before (what's in the HTML):**
+```html
+<div class="demo-card" data-filter-name="">
+  <!-- Webflow renders a Collection List of categories -->
+  <div data-filter-name-collect="mammals"></div>
+  <div data-filter-name-collect="aquatic"></div>
+  <div data-filter-name-collect="mammals"></div>  <!-- duplicate! -->
+</div>
+```
+
+**After the script runs:**
+```html
+<div class="demo-card" data-filter-name="mammals aquatic">
+  ...
+</div>
+```
+
+The duplicate `"mammals"` is ignored, and the parent now has a clean, space-separated filter string ready to be matched by the filter system.
+
+---
+
+### Why This Is Useful
+
+In Webflow, a product or card might belong to **multiple categories** pulled from a multi-reference field. Each reference renders as its own Collection Item in a list. Without this feature, you'd have no clean way to consolidate those into a single `data-filter-name` value on the card. This feature bridges that gap automatically.
