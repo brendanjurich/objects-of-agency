@@ -154,13 +154,13 @@ footer.footer_main_wrap {
    marker pulse in oa-australia-map.svg (same 1.8s cadence,
    same cubic-bezier(0.16, 1, 0.3, 1) enter easing).
    ============================================================ */
-.hero_feed_title {
+.hero_feed_greetings {
   display: grid;
   place-items: start;
   overflow: visible;
 }
 
-.hero_feed_title .greeting {
+.hero_feed_greetings .greeting {
   grid-area: 1 / 1;
   opacity: 0;
   transform: translateY(5px);
@@ -168,15 +168,15 @@ footer.footer_main_wrap {
   animation: oa-greeting-cycle 16.2s linear infinite both;
 }
 
-.hero_feed_title .greeting:nth-child(1) { animation-delay: 0s; }
-.hero_feed_title .greeting:nth-child(2) { animation-delay: 1.8s; }
-.hero_feed_title .greeting:nth-child(3) { animation-delay: 3.6s; }
-.hero_feed_title .greeting:nth-child(4) { animation-delay: 5.4s; }
-.hero_feed_title .greeting:nth-child(5) { animation-delay: 7.2s; }
-.hero_feed_title .greeting:nth-child(6) { animation-delay: 9.0s; }
-.hero_feed_title .greeting:nth-child(7) { animation-delay: 10.8s; }
-.hero_feed_title .greeting:nth-child(8) { animation-delay: 12.6s; }
-.hero_feed_title .greeting:nth-child(9) { animation-delay: 14.4s; }
+.hero_feed_greetings .greeting:nth-child(1) { animation-delay: 0s; }
+.hero_feed_greetings .greeting:nth-child(2) { animation-delay: 1.8s; }
+.hero_feed_greetings .greeting:nth-child(3) { animation-delay: 3.6s; }
+.hero_feed_greetings .greeting:nth-child(4) { animation-delay: 5.4s; }
+.hero_feed_greetings .greeting:nth-child(5) { animation-delay: 7.2s; }
+.hero_feed_greetings .greeting:nth-child(6) { animation-delay: 9.0s; }
+.hero_feed_greetings .greeting:nth-child(7) { animation-delay: 10.8s; }
+.hero_feed_greetings .greeting:nth-child(8) { animation-delay: 12.6s; }
+.hero_feed_greetings .greeting:nth-child(9) { animation-delay: 14.4s; }
 
 @keyframes oa-greeting-cycle {
   0% {
@@ -210,12 +210,12 @@ footer.footer_main_wrap {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero_feed_title .greeting {
+  .hero_feed_greetings .greeting {
     animation: none;
     opacity: 0;
     transform: none;
   }
-  .hero_feed_title .greeting:nth-child(1) {
+  .hero_feed_greetings .greeting:nth-child(1) {
     opacity: 1;
   }
 }
