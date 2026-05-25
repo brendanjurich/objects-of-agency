@@ -446,6 +446,27 @@ footer.footer_main_wrap {
 }
 
 /* ============================================================
+   HERO FEED TOP — SWIPER CREATIVE
+   ============================================================ */
+.hero_feed_top {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Swiper writes transition-timing-function inline on every slide change;
+   !important overrides it — same pattern as .slider_element */
+.hero_feed_top .hero_feed_top-wrap {
+  transition-timing-function: var(--ease-osmo) !important;
+}
+
+/* GPU compositing for slide images */
+.hero_feed_top .hero_feed_top-slide-img-wrap img {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* ============================================================
    PRODUCT TEMPLATE — STATIC SLIDER EASING
    ============================================================ */
 :root {
