@@ -467,6 +467,24 @@ footer.footer_main_wrap {
 }
 
 /* ============================================================
+   HERO FEED RIGHT — SWIPER CREATIVE
+   ============================================================ */
+.hero_feed_right {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.hero_feed_right .hero_feed_right-wrap {
+  transition-timing-function: var(--ease-osmo) !important;
+}
+
+.hero_feed_right .hero_feed_right_slide-img {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* ============================================================
    PRODUCT TEMPLATE — STATIC SLIDER EASING
    ============================================================ */
 :root {

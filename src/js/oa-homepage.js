@@ -30,6 +30,38 @@ function initHeroFeedTopSwiper() {
   });
 }
 
+function initHeroFeedRightSwiper() {
+  var el = document.querySelector('.hero_feed_right');
+  if (!el || typeof Swiper === 'undefined') return;
+
+  new Swiper(el, {
+    wrapperClass: 'hero_feed_right-wrap',
+    slideClass: 'hero_feed_right-slide',
+    grabCursor: true,
+    direction: 'vertical',
+    loop: true,
+    speed: 900,
+    autoplay: {
+      delay: 5000,
+      disableOnInteraction: false
+    },
+    effect: 'creative',
+    creativeEffect: {
+      prev: {
+        shadow: false,
+        opacity: 0.1,
+        scale: 1.1,
+        translate: [0, '-125%', -500]
+      },
+      next: {
+        translate: [0, '125%', -500],
+        opacity: 0.1,
+        scale: 1.1
+      }
+    }
+  });
+}
+
 function initBunnyPlayerBackground() {
   document.querySelectorAll('[data-bunny-background-init]').forEach(function(player) {
     var src = player.getAttribute('data-player-src');
@@ -180,4 +212,5 @@ function initBunnyPlayerBackground() {
 document.addEventListener('DOMContentLoaded', function() {
   initBunnyPlayerBackground();
   initHeroFeedTopSwiper();
+  initHeroFeedRightSwiper();
 });
