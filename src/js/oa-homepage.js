@@ -7,7 +7,9 @@ function initHeroFeedTopSwiper() {
     slideClass: 'hero_feed_top-slide',
     allowTouchMove: false,
     direction: 'vertical',
-    rewind: true,
+    loop: true,
+    slidesPerView: 1,
+    watchSlidesProgress: true,
     speed: 900,
     observer: true,
     observeParents: true,
@@ -17,14 +19,16 @@ function initHeroFeedTopSwiper() {
     },
     effect: 'creative',
     creativeEffect: {
+      limitProgress: 1,
+      perspective: true,
       prev: {
         shadow: false,
         opacity: 0.1,
         scale: 1.1,
-        translate: [0, '-125%', 0]
+        translate: [0, '-125%', -500]
       },
       next: {
-        translate: [0, '125%', 0],
+        translate: [0, '125%', -500],
         opacity: 0.1,
         scale: 1.1
       }
