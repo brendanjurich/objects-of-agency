@@ -1,8 +1,12 @@
+import Swiper from 'swiper';
+import { Autoplay, EffectCreative } from 'swiper/modules';
+
 function initHeroFeedTopSwiper() {
   var el = document.querySelector('.hero_feed_top');
-  if (!el || typeof Swiper === 'undefined') return;
+  if (!el) return;
 
   new Swiper(el, {
+    modules: [Autoplay, EffectCreative],
     wrapperClass: 'hero_feed_top-wrap',
     slideClass: 'hero_feed_top-slide',
     allowTouchMove: false,
@@ -38,9 +42,10 @@ function initHeroFeedTopSwiper() {
 
 function initHeroFeedRightSwiper() {
   var el = document.querySelector('.hero_feed_right');
-  if (!el || typeof Swiper === 'undefined') return;
+  if (!el) return;
 
   new Swiper(el, {
+    modules: [Autoplay, EffectCreative],
     wrapperClass: 'hero_feed_right-wrap',
     slideClass: 'hero_feed_right-slide',
     allowTouchMove: false,

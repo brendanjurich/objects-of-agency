@@ -450,6 +450,7 @@ footer.footer_main_wrap {
    ============================================================ */
 .hero_feed_top {
   position: relative;
+  overflow: hidden;
 }
 
 /* Glass background layer — ::before keeps backdrop-filter off the Swiper
@@ -473,6 +474,7 @@ footer.footer_main_wrap {
 /* Swiper writes transition-timing-function inline on every slide change;
    !important overrides it — same pattern as .slider_element */
 .hero_feed_top .hero_feed_top-wrap {
+  overflow: visible !important;
   transition-timing-function: var(--ease-osmo) !important;
 }
 
@@ -491,8 +493,14 @@ footer.footer_main_wrap {
 
 /* Scope slide transitions to what Swiper controls — guards against Webflow
    transition:all on link blocks interfering with loopFix repositioning */
-.hero_feed_top-slide {
+.swiper-creative .hero_feed_top-slide {
+  backface-visibility: hidden;
+  overflow: hidden;
+  pointer-events: none;
   transition-property: opacity, transform !important;
+}
+.swiper-creative .hero_feed_top-slide.swiper-slide-active {
+  pointer-events: auto;
 }
 
 /* ============================================================
@@ -500,8 +508,7 @@ footer.footer_main_wrap {
    ============================================================ */
 .hero_feed_right {
   position: relative;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  overflow: hidden;
 }
 
 .hero_feed_right::before {
@@ -526,6 +533,7 @@ footer.footer_main_wrap {
 }
 
 .hero_feed_right .hero_feed_right-wrap {
+  overflow: visible !important;
   transition-timing-function: var(--ease-osmo) !important;
 }
 
@@ -541,6 +549,16 @@ footer.footer_main_wrap {
 .hero_feed_right_slide-inner {
   transition: none !important;
   z-index: auto !important;
+}
+
+.swiper-creative .hero_feed_right-slide {
+  backface-visibility: hidden;
+  overflow: hidden;
+  pointer-events: none;
+  transition-property: opacity, transform !important;
+}
+.swiper-creative .hero_feed_right-slide.swiper-slide-active {
+  pointer-events: auto;
 }
 
 /* ============================================================
