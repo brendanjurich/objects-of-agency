@@ -5,9 +5,11 @@ function initHeroFeedTopSwiper() {
   new Swiper(el, {
     wrapperClass: 'hero_feed_top-wrap',
     slideClass: 'hero_feed_top-slide',
-    grabCursor: true,
+    allowTouchMove: false,
     direction: 'vertical',
     loop: true,
+    loopedSlides: 3,
+    watchSlidesProgress: true,
     speed: 900,
     observer: true,
     observeParents: true,
@@ -21,10 +23,10 @@ function initHeroFeedTopSwiper() {
         shadow: false,
         opacity: 0.1,
         scale: 1.1,
-        translate: [0, '-125%', -500]
+        translate: [0, '-125%', 0]
       },
       next: {
-        translate: [0, '125%', -500],
+        translate: [0, '125%', 0],
         opacity: 0.1,
         scale: 1.1
       }
