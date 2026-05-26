@@ -493,6 +493,21 @@ footer.footer_main_wrap {
 
 /* Scope slide transitions to what Swiper controls — guards against Webflow
    transition:all on link blocks interfering with loopFix repositioning */
+/* Hide slides before Swiper init to prevent FOUC — opacity:0 preserves
+   layout so Swiper can measure heights before applying creative transforms */
+.hero_feed_top .hero_feed_top-wrap {
+  visibility: hidden;
+}
+.hero_feed_top .hero_feed_top-slide {
+  opacity: 0;
+}
+.hero_feed_top.swiper-initialized .hero_feed_top-wrap {
+  visibility: visible;
+}
+.hero_feed_top.swiper-initialized .hero_feed_top-slide {
+  opacity: 1;
+}
+
 .swiper-creative .hero_feed_top-slide {
   backface-visibility: hidden;
   overflow: hidden;
