@@ -449,8 +449,27 @@ footer.footer_main_wrap {
    HERO FEED TOP — SWIPER CREATIVE
    ============================================================ */
 .hero_feed_top {
+  position: relative;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+
+/* Glass background layer — ::before keeps backdrop-filter off the Swiper
+   container so child 3D transforms (creative effect) are not flattened */
+.hero_feed_top::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: background-color 250ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero_feed_top:hover::before {
+  background-color: rgba(0, 0, 0, 0.9);
 }
 
 /* Swiper writes transition-timing-function inline on every slide change;
@@ -476,8 +495,30 @@ footer.footer_main_wrap {
    HERO FEED RIGHT — SWIPER CREATIVE
    ============================================================ */
 .hero_feed_right {
+  position: relative;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+
+.hero_feed_right::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: background-color 250ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero_feed_right:hover::before {
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+.hero_feed_right,
+.hero_feed_right * {
+  cursor: default !important;
 }
 
 .hero_feed_right .hero_feed_right-wrap {
@@ -496,6 +537,29 @@ footer.footer_main_wrap {
 .hero_feed_right_slide-inner {
   transition: none !important;
   z-index: auto !important;
+}
+
+/* ============================================================
+   HERO FEED MAP
+   ============================================================ */
+.hero_feed_map {
+  position: relative;
+}
+
+.hero_feed_map::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: background-color 250ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero_feed_map:hover::before {
+  background-color: rgba(0, 0, 0, 0.9);
 }
 
 /* ============================================================

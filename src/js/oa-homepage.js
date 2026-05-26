@@ -39,7 +39,7 @@ function initHeroFeedRightSwiper() {
   new Swiper(el, {
     wrapperClass: 'hero_feed_right-wrap',
     slideClass: 'hero_feed_right-slide',
-    grabCursor: true,
+    allowTouchMove: false,
     direction: 'vertical',
     loop: true,
     speed: 900,
