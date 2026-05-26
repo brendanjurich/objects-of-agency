@@ -465,7 +465,7 @@ footer.footer_main_wrap {
   -webkit-backdrop-filter: blur(20px);
   transition: background-color 250ms ease;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 .hero_feed_top:hover::before {
@@ -542,23 +542,15 @@ footer.footer_main_wrap {
 /* ============================================================
    HERO FEED MAP
    ============================================================ */
+/* No Swiper 3D — apply directly so element's own border-radius is respected */
 .hero_feed_map {
-  position: relative;
-}
-
-.hero_feed_map::before {
-  content: '';
-  position: absolute;
-  inset: 0;
   background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   transition: background-color 250ms ease;
-  pointer-events: none;
-  z-index: 0;
 }
 
-.hero_feed_map:hover::before {
+.hero_feed_map:hover {
   background-color: rgba(0, 0, 0, 0.9);
 }
 
