@@ -9,6 +9,8 @@ function initHeroFeedTopSwiper() {
     direction: 'vertical',
     loop: true,
     speed: 900,
+    observer: true,
+    observeParents: true,
     autoplay: {
       delay: 5000,
       disableOnInteraction: false
@@ -41,6 +43,8 @@ function initHeroFeedRightSwiper() {
     direction: 'vertical',
     loop: true,
     speed: 900,
+    observer: true,
+    observeParents: true,
     autoplay: {
       delay: 5000,
       disableOnInteraction: false

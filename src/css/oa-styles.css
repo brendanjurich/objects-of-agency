@@ -466,6 +466,12 @@ footer.footer_main_wrap {
   transform: translateZ(0);
 }
 
+/* Webflow sets transition:all on inner — kills it to prevent title animating
+   independently from the slide 3D transform/opacity */
+.hero_feed_top_slide-inner {
+  transition: none !important;
+}
+
 /* ============================================================
    HERO FEED RIGHT — SWIPER CREATIVE
    ============================================================ */
@@ -482,6 +488,14 @@ footer.footer_main_wrap {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transform: translateZ(0);
+}
+
+/* Webflow sets transition:all and z-index:1 on inner — both break the
+   creative effect. transition:all causes title to pop independently;
+   z-index:1 creates a stacking context that blocks parent opacity cascade. */
+.hero_feed_right_slide-inner {
+  transition: none !important;
+  z-index: auto !important;
 }
 
 /* ============================================================
