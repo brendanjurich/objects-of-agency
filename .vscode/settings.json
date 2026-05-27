@@ -1,0 +1,9 @@
+{
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "package.json": "package-lock.json, rollup.config.mjs, .prettierrc"
+  },
+  "files.exclude": {
+    ".playwright-mcp/": true
+  }
+}

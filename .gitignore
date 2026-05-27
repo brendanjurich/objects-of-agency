@@ -3,3 +3,12 @@ node_modules/
 .env
 *.env
 .env.local
+
+# Debug screenshots
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Playwright MCP artifacts
+.playwright-mcp/
