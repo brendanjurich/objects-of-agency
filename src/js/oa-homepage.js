@@ -6,6 +6,7 @@ function initHeroFeedTopSwiper() {
   if (!el) return;
 
   new Swiper(el, {
+    // EffectCreative MUST be in this array — omitting it silently falls back to default slide behaviour
     modules: [Autoplay, EffectCreative],
     wrapperClass: 'hero_feed_top-wrap',
     slideClass: 'hero_feed_top-slide',
@@ -45,6 +46,7 @@ function initHeroFeedRightSwiper() {
   if (!el) return;
 
   new Swiper(el, {
+    // EffectCreative MUST be in this array — omitting it silently falls back to default slide behaviour
     modules: [Autoplay, EffectCreative],
     wrapperClass: 'hero_feed_right-wrap',
     slideClass: 'hero_feed_right-slide',
@@ -113,6 +115,7 @@ function initBunnyPlayerBackground() {
 
     var isSafariNative = !!video.canPlayType('application/vnd.apple.mpegurl');
     var canUseHlsJs    = !!(window.Hls && Hls.isSupported()) && !isSafariNative;
+    if (!window.Hls && !isSafariNative) { console.warn('[OA] HLS.js not loaded — falling back to direct video.src. Adaptive streaming unavailable.'); }
 
     var isAttached = false;
     var userInteracted = false;

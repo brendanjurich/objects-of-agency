@@ -163,8 +163,6 @@ document.addEventListener('DOMContentLoaded', function () {
   initNavSafariFix();
 });
 
-// Patch Lumos-initialized Swiper on the product static slider to use 800ms speed.
-// Lumos init runs before window.load, so the instance is available by then.
 // Patch Lumos-initialized Swipers after window.load.
 // Lumos init runs before window.load, so instances are available by then.
 window.addEventListener('load', function () {
