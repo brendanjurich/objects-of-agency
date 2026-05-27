@@ -19,7 +19,7 @@ function initSlideShow(el) {
     el,
     slides: Array.from(el.querySelectorAll('[data-slideshow="slide"]')),
     inner: Array.from(el.querySelectorAll('[data-slideshow="parallax"]')),
-    thumbs: Array.from(thumbsInEl.length ? thumbsInEl : document.querySelectorAll('[data-slideshow="thumb"]')),
+    thumbs: Array.from(thumbsInEl.length ? thumbsInEl : document.querySelectorAll('[data-slideshow="thumb"]')), // Intentional: thumbs are siblings of the slideshow element, not children — document scope is correct
   };
 
   let current = 0;
@@ -186,8 +186,12 @@ window.addEventListener('load', function () {
   document
     .querySelectorAll('.section_menu_wrap .slider_element')
     .forEach(function (el) {
+      if (!el.swiper) {
+        console.warn('[OA] Lumos Swiper patch: .swiper instance not found on', el,
+          '— patch skipped. Lumos may have changed its init timing.');
+        return;
+      }
       const sw = el.swiper;
-      if (!sw) return;
 
       const addFlag = function () {
         document.body.classList.add('is-slider-transitioning');
