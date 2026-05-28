@@ -276,6 +276,10 @@ function applyUniqueId(input, uniqueId) {
   }
 }
 
+// Option names are hardcoded intentionally — the list is stable and a code release
+// is already required for any configurator change. If a new option type is added,
+// update BOTH fixRadioIds() and initSummaryUpdater() below.
+// Current options: Sizes, Top-Material, Timber, Anodised-Finish
 function fixRadioIds() {
   document.querySelectorAll('input[name="Sizes"]')
     .forEach(function (input, index) { applyUniqueId(input, 'size-' + index); });

@@ -68,3 +68,55 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 - `paint(target)` in `oa-all-products.js` — the filter activation function; also pre-fires on page load from `URLSearchParams('filter')`
 - Swiper carousels use custom `wrapperClass` and `slideClass` (not default `.swiper-wrapper` / `.swiper-slide`) to avoid conflicts with Webflow's own Swiper instance
 - GSAP `CustomEase` is registered globally in `oa-global.js` before any page scripts run
+
+---
+
+## Dependency Versions and Constraints
+
+### Script Load Order
+
+`oa-global.js` **must** load before `oa-configurator.js`. Both depend on `gsap` being present on `window`. The required load order in Webflow Site Settings → Custom Code is:
+
+1. GSAP CDN script (with CustomEase)
+2. `oa-global.js`
+3. `oa-configurator.js` (page-level embed on product pages only)
+
+`oa-homepage.js` and `oa-all-products.js` are page-level embeds with no dependency on `oa-global.js` load order.
+
+### GSAP Version
+
+GSAP is not tracked in `package.json`. Version is controlled entirely by the CDN URL in Webflow custom code.
+
+```
+GSAP CDN: [RECORD THE EXACT URL FROM WEBFLOW CUSTOM CODE SETTINGS]
+```
+
+Do not change the GSAP version without testing all animations (loader, nav, slideshow, configurator cascading slider). `oa-global.js` registers `CustomEase` as a GSAP plugin at top-level execution — the CDN script must include CustomEase.
+
+### Lumos Version
+
+Lumos version is controlled in Webflow, not in this repo.
+
+```
+Lumos version: [RECORD FROM WEBFLOW]
+```
+
+`oa-global.js` patches Lumos-initialized Swipers at `window.load` (lines 166–213). A Lumos update that changes Swiper initialization timing or Swiper class names requires re-testing the speed patch and the `is-slider-transitioning` body class behavior.
+
+### Finsweet Version
+
+Finsweet Attributes `listnest` is loaded via:
+
+```html
+<script defer src="https://cdn.jsdelivr.net/npm/@finsweet/attributes-listnest@1/listnest.js"></script>
+```
+
+Version is major-pinned (`@1`). `oa-styles.css` assumes Finsweet injects swatch dots at line 412. A Finsweet major version bump requires re-testing swatch display on the All Products page.
+
+### Greeting Animation Constraint
+
+The greeting rotation animation in `oa-styles.css` is hardcoded for exactly **9 greetings** (`nth-child` 1–9, total cycle duration 36s, lines 171–179). If the CMS greeting count changes, the CSS at those lines **must** be updated manually. This is not data-driven.
+
+### Dist File Note
+
+`dist/oa-homepage.js` is a build artifact tracked in git. Before creating a release tag, always run `npm run build` and verify `dist/oa-homepage.js` was regenerated from the current `src/js/oa-homepage.js`. A tag pushed without rebuilding will serve a stale bundle from the CDN.
