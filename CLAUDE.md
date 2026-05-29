@@ -1,8 +1,15 @@
 # Objects of Agency — Claude Context
 
+> Source of truth for Claude Code. Loaded every session — keep it to durable
+> rules and facts. One-off rationale belongs in `docs/DECISIONS.md`, not here.
+
 ## Project
 
-Webflow site (oa-v5.webflow.io) with custom JavaScript injected via jsDelivr CDN. The JS/CSS source lives in this repo; Webflow loads it from tagged releases.
+Webflow site (staging: `oa-v5.webflow.io`) with custom JS/CSS served from this
+repo via jsDelivr. Webflow loads tagged releases.
+
+Repo: `brendanjurich/objects-of-agency` (public). **Never commit secrets, API
+keys, tokens, or `.env` files.**
 
 ---
 
@@ -43,7 +50,7 @@ npm run build
 5. Update the URL(s) in Webflow → Site Settings → Custom Code (or page-level settings)
 6. Force jsDelivr cache purge: `https://purge.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.X/[path]`
 
-When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@v1.0.Y`** for each changed file.
+When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@v1.0.Y`** for each changed file. Only the files that changed need their URL bumped; unchanged files can stay on their current tag.
 
 ---
 
@@ -51,6 +58,28 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 
 - `dev` — all active work
 - `main` — release branch; merge dev → main after tagging
+
+---
+
+## Script Load Order & Placement (Webflow Custom Code)
+
+**Head code:**
+- `oa-styles.css` `<link>`
+
+**Footer code (sitewide), in this order:**
+1. `hls.js` (npm, exact-pinned `@1.6.11`)
+2. `oa-global.js`
+3. `oa-configurator.js`
+
+`oa-global.js` **must** load before `oa-configurator.js` (both read `window.gsap`). GSAP and its plugins are injected by Webflow ahead of the footer code, so `window.gsap` is available when these run.
+
+**Page-level embeds** (no dependency on the order above):
+- `oa-homepage.js` — homepage
+- `oa-all-products.js` + `oa-all-products.css` — /all-products
+
+> Note: `oa-configurator.js` currently loads sitewide but is only needed on
+> product pages. Scoping it to product pages would drop one script request on
+> every other page (perf optimisation, not a blocker).
 
 ---
 
@@ -68,55 +97,81 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 - `paint(target)` in `oa-all-products.js` — the filter activation function; also pre-fires on page load from `URLSearchParams('filter')`
 - Swiper carousels use custom `wrapperClass` and `slideClass` (not default `.swiper-wrapper` / `.swiper-slide`) to avoid conflicts with Webflow's own Swiper instance
 - GSAP `CustomEase` is registered globally in `oa-global.js` before any page scripts run
+- Animation components are frequently sourced from **osmo.supply**: I paste the Webflow HTML, Claude Code adapts the JS with my tweaks
 
 ---
 
-## Dependency Versions and Constraints
+## Dependencies & Constraints
 
-### Script Load Order
+### GSAP (managed by Webflow)
 
-`oa-global.js` **must** load before `oa-configurator.js`. Both depend on `gsap` being present on `window`. The required load order in Webflow Site Settings → Custom Code is:
+GSAP is provided by Webflow's **native GSAP integration** (Site Settings → GSAP), not a CDN `<script>`. There is no GSAP URL in custom code, and GSAP is not in `package.json`.
 
-1. GSAP CDN script (with CustomEase)
-2. `oa-global.js`
-3. `oa-configurator.js` (page-level embed on product pages only)
+- GSAP Core: **enabled**.
+- Enabled plugins — code depends on these; do not disable without checking usage:
+  `Flip`, `ScrollTrigger`, `SplitText`, `Inertia`, `Observer`, `ScrollSmoother`,
+  `ScrollTo`, `Text`, `CustomEase`, `CustomBounce`, `CustomWiggle`, `EasePack`.
+- `oa-global.js` registers `CustomEase` at top-level execution — **CustomEase must stay enabled.**
+- Webflow auto-updates GSAP (and plugins) to the latest version on **every publish**. The version cannot be pinned. If a publish coincides with a GSAP release, re-verify all animations: loader, nav, slideshow, configurator cascading slider.
 
-`oa-homepage.js` and `oa-all-products.js` are page-level embeds with no dependency on `oa-global.js` load order.
+### Lumos
 
-### GSAP Version
+Version: **v2.2.1**. Controlled in Webflow, not this repo.
 
-GSAP is not tracked in `package.json`. Version is controlled entirely by the CDN URL in Webflow custom code.
+`oa-global.js` patches Lumos-initialized Swipers at `window.load` (search the source for `is-slider-transitioning`). A Lumos update that changes Swiper init timing or class names requires re-testing the speed patch and the `is-slider-transitioning` body-class behaviour.
 
-```
-GSAP CDN: [RECORD THE EXACT URL FROM WEBFLOW CUSTOM CODE SETTINGS]
-```
-
-Do not change the GSAP version without testing all animations (loader, nav, slideshow, configurator cascading slider). `oa-global.js` registers `CustomEase` as a GSAP plugin at top-level execution — the CDN script must include CustomEase.
-
-### Lumos Version
-
-Lumos version is controlled in Webflow, not in this repo.
-
-```
-Lumos version: [RECORD FROM WEBFLOW]
-```
-
-`oa-global.js` patches Lumos-initialized Swipers at `window.load` (lines 166–213). A Lumos update that changes Swiper initialization timing or Swiper class names requires re-testing the speed patch and the `is-slider-transitioning` body class behavior.
-
-### Finsweet Version
-
-Finsweet Attributes `listnest` is loaded via:
+### Finsweet Attributes (listnest)
 
 ```html
 <script defer src="https://cdn.jsdelivr.net/npm/@finsweet/attributes-listnest@1/listnest.js"></script>
 ```
 
-Version is major-pinned (`@1`). `oa-styles.css` assumes Finsweet injects swatch dots at line 412. A Finsweet major version bump requires re-testing swatch display on the All Products page.
+Major-pinned (`@1`). `oa-styles.css` assumes Finsweet injects swatch dots (search for the swatch-dot rules; add a `/* FINSWEET: swatch dots */` marker if one isn't present). A Finsweet major version bump requires re-testing swatch display on the All Products page.
 
-### Greeting Animation Constraint
+### hls.js
 
-The greeting rotation animation in `oa-styles.css` is hardcoded for exactly **9 greetings** (`nth-child` 1–9, total cycle duration 36s, lines 171–179). If the CMS greeting count changes, the CSS at those lines **must** be updated manually. This is not data-driven.
+```html
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.11"></script>
+```
 
-### Dist File Note
+Loaded first in the sitewide footer. **Exact-pinned.** Used for HLS video playback. Bumping the version requires re-testing video.
 
-`dist/oa-homepage.js` is a build artifact tracked in git. Before creating a release tag, always run `npm run build` and verify `dist/oa-homepage.js` was regenerated from the current `src/js/oa-homepage.js`. A tag pushed without rebuilding will serve a stale bundle from the CDN.
+### Swiper
+
+v12. Used for the homepage hero carousels. ES6 imports bundled into `dist/oa-homepage.js` via Rollup (see Key Patterns for the custom class-name convention).
+
+### Greeting Animation
+
+The greeting rotation in `oa-styles.css` is hardcoded for exactly **9 greetings** (`nth-child` 1–9, 36s total cycle). It is **not data-driven**. If the CMS greeting count changes, the keyframes must be updated manually (search for the greeting `nth-child` rules; add a `/* GREETINGS: hardcoded 9-item, 36s cycle */` marker).
+
+### Dist File (build artifact)
+
+`dist/oa-homepage.js` is a build artifact tracked in git. Before creating a release tag, always run `npm run build` and verify `dist/oa-homepage.js` was regenerated from the current `src/js/oa-homepage.js`. A tag pushed without rebuilding serves a stale bundle from the CDN.
+
+---
+
+## Scope
+
+Until launch, stay focused on finishing the site. Out of scope for now: business
+strategy, marketing, and new features — capture stray ideas elsewhere rather than
+acting on them mid-build.
+
+---
+
+## How to Work With Me
+
+- I'm the lead creative director and designer; I own design direction.
+- Push back on design decisions that stray from convention or best practice when they'd hurt the goal — a premium, high-performing, beautifully designed site that designers love. I value your opinion here.
+- You're my technical lead and engineer. I'm not a developer, but explain technical jargon so I understand the objective and the outcome.
+- Use direct shorthand. Give tightly constrained recommendations over option lists. Surface trade-offs, then recommend one path.
+
+---
+
+## Engineering Conduct
+
+Behavioural guardrails for Claude Code on this repo. Bias toward caution over speed; use judgment on trivial changes.
+
+- **Think before coding.** State assumptions. If a *requirement* is genuinely ambiguous, name the ambiguity and ask — don't guess silently. (For *approach*, still recommend one path with trade-offs, not a menu.)
+- **Simplicity first.** Write the minimum that solves the problem. No speculative features, no abstractions for single-use code, no configurability or error handling that wasn't asked for. If it could be half the lines, rewrite it.
+- **Surgical changes.** Touch only what the task requires. Don't "improve," refactor, or reformat adjacent working code; match the existing style even if you'd do it differently. Remove only the imports/variables *your own* change orphaned — flag pre-existing dead code, don't delete it. Every changed line should trace to the request. *Especially here: jsDelivr serves these files by path and Webflow pins exact tags, so an unrequested edit can ship straight to the live site.*
+- **Verify before "done."** Turn the task into a success criterion and confirm it's met before declaring completion. Verification on this project is visual/behavioural on staging or the published site, plus `npm run build` and the deploy checklist for shipped changes — there is no test suite to lean on.
