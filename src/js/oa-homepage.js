@@ -78,6 +78,12 @@ function initHeroFeedRightSwiper() {
 }
 
 function initBunnyPlayerBackground() {
+  var loaderReady = document.documentElement.classList.contains('loader-complete')
+    ? Promise.resolve()
+    : new Promise(function(resolve) {
+        document.addEventListener('oa:loader-complete', resolve, { once: true });
+      });
+
   document.querySelectorAll('[data-bunny-background-init]').forEach(function(player) {
     var src = player.getAttribute('data-player-src');
     if (!src) return;
@@ -102,6 +108,11 @@ function initBunnyPlayerBackground() {
     var initialMuted = player.getAttribute('data-player-muted') === 'true';
 
     var pendingPlay = false;
+
+    var videoReadyResolve;
+    var videoReady = new Promise(function(resolve) { videoReadyResolve = resolve; });
+    if (video.readyState >= 3) videoReadyResolve();
+    video.addEventListener('canplay', videoReadyResolve);
 
     if (autoplay) { video.muted = true; video.loop = true; }
     else { video.muted = initialMuted; }
@@ -194,9 +205,13 @@ function initBunnyPlayerBackground() {
           if (inView) {
             if (isLazyTrue && !isAttached) attachMediaOnce();
             if ((lastPauseBy === 'io') || (video.paused && lastPauseBy !== 'manual')) {
-              setStatus('loading');
-              if (video.paused) togglePlay();
               lastPauseBy = '';
+              Promise.all([loaderReady, videoReady]).then(function() {
+                if (video.paused && lastPauseBy !== 'manual') {
+                  setStatus('loading');
+                  togglePlay();
+                }
+              });
             }
           } else {
             if (!video.paused && !video.ended) {

@@ -84,6 +84,7 @@ function initSlideShow(el) {
 function revealAfterLoader() {
   document.documentElement.classList.add('w-mod-ix3');
   document.documentElement.classList.add('loader-complete');
+  document.dispatchEvent(new CustomEvent('oa:loader-complete'));
 }
 
 function initLogoRevealLoader() {
