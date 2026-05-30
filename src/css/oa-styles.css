@@ -468,8 +468,10 @@ footer.footer_main_wrap {
   z-index: -1;
 }
 
-.hero_feed_top:hover::before {
-  background-color: rgba(0, 0, 0, 0.9);
+@media (hover: hover) {
+  .hero_feed_top:hover::before {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
 }
 
 /* Swiper writes transition-timing-function inline on every slide change;
@@ -539,8 +541,10 @@ footer.footer_main_wrap {
   z-index: 0;
 }
 
-.hero_feed_right:hover::before {
-  background-color: rgba(0, 0, 0, 0.9);
+@media (hover: hover) {
+  .hero_feed_right:hover::before {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
 }
 
 .hero_feed_right,
@@ -588,8 +592,10 @@ footer.footer_main_wrap {
   transition: background-color 250ms ease;
 }
 
-.hero_feed_map:hover {
-  background-color: rgba(0, 0, 0, 0.9);
+@media (hover: hover) {
+  .hero_feed_map:hover {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
 }
 
 /* ============================================================
