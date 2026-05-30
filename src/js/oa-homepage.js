@@ -109,11 +109,6 @@ function initBunnyPlayerBackground() {
 
     var pendingPlay = false;
 
-    var videoReadyResolve;
-    var videoReady = new Promise(function(resolve) { videoReadyResolve = resolve; });
-    if (video.readyState >= 3) videoReadyResolve();
-    video.addEventListener('canplay', videoReadyResolve);
-
     if (autoplay) { video.muted = true; video.loop = true; }
     else { video.muted = initialMuted; }
 
@@ -206,7 +201,7 @@ function initBunnyPlayerBackground() {
             if (isLazyTrue && !isAttached) attachMediaOnce();
             if ((lastPauseBy === 'io') || (video.paused && lastPauseBy !== 'manual')) {
               lastPauseBy = '';
-              Promise.all([loaderReady, videoReady]).then(function() {
+              loaderReady.then(function() {
                 if (video.paused && lastPauseBy !== 'manual') {
                   setStatus('loading');
                   togglePlay();
