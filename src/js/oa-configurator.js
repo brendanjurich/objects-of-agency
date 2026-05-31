@@ -137,6 +137,10 @@ function initCascadingSlider() {
         const offset = getOffset(index);
 
         if (offset < -3 || offset > 3) {
+          // Clear status on off-screen slides — a slide jumping straight from
+          // active (offset 0) to off-screen would otherwise keep a stale
+          // data-status="active", leaving multiple slides marked active.
+          slide.setAttribute('data-status', 'inactive');
           if (animate && previousIndex !== undefined) {
             const previousOffset = getOffset(index, previousIndex);
             if (previousOffset >= -2 && previousOffset <= 2) {
