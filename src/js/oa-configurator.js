@@ -51,6 +51,7 @@ function initCascadingSlider() {
 
     let activeIndex = 0;
     let isAnimating = false;
+    let pendingTarget = null;
     let slideWidth = 0;
     let slotCenters = {};
     let slotWidths = {};
@@ -186,8 +187,10 @@ function initCascadingSlider() {
 
     function goTo(targetIndex) {
       const normalizedTarget = ((targetIndex % totalSlides) + totalSlides) % totalSlides;
-      if (isAnimating || normalizedTarget === activeIndex) return;
+      if (normalizedTarget === activeIndex) { pendingTarget = null; return; }
+      if (isAnimating) { pendingTarget = normalizedTarget; return; }
       isAnimating = true;
+      pendingTarget = null;
 
       const previousIndex = activeIndex;
       const travelDirection = getOffset(normalizedTarget, previousIndex) > 0 ? 1 : -1;
@@ -211,9 +214,18 @@ function initCascadingSlider() {
       });
 
       activeIndex = normalizedTarget;
-      syncRadio();
       layout(true, previousIndex);
-      gsap.delayedCall(duration + 0.05, function () { isAnimating = false; });
+      syncRadio();
+      gsap.delayedCall(duration + 0.05, function () {
+        isAnimating = false;
+        if (pendingTarget !== null && pendingTarget !== activeIndex) {
+          var next = pendingTarget;
+          pendingTarget = null;
+          goTo(next);
+        } else {
+          pendingTarget = null;
+        }
+      });
     }
 
     if (prevButton) prevButton.addEventListener('click', function () { goTo(activeIndex - 1); });
@@ -245,19 +257,16 @@ function initCascadingSlider() {
     });
     ro.observe(viewport);
 
-    window.addEventListener('orientationchange', function () {
-      var fired = false;
-      function onResize() {
-        if (fired) return;
-        fired = true;
-        window.removeEventListener('resize', onResize);
+    var portraitMQ = window.matchMedia('(orientation: portrait)');
+    function onOrientationFlip() {
+      requestAnimationFrame(function () {
         measure();
         layout(false);
         syncRadio();
-      }
-      window.addEventListener('resize', onResize);
-      setTimeout(onResize, 500);
-    });
+      });
+    }
+    if (portraitMQ.addEventListener) portraitMQ.addEventListener('change', onOrientationFlip);
+    else portraitMQ.addListener(onOrientationFlip); // legacy iOS Safari <14
 
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
