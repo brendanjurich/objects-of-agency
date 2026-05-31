@@ -162,7 +162,7 @@ acting on them mid-build.
 
 - I'm the lead creative director and designer; I own design direction.
 - Push back on design decisions that stray from convention or best practice when they'd hurt the goal — a premium, high-performing, beautifully designed site that designers love. I value your opinion here.
-- You're my technical lead and engineer. I'm not a developer, but explain technical jargon so I understand the objective and the outcome.
+- You're my technical lead and engineer. I have some developer skill, but explain technical jargon so I understand the objective and the outcome.
 - Use direct shorthand. Give tightly constrained recommendations over option lists. Surface trade-offs, then recommend one path.
 
 ---
