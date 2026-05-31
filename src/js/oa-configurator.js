@@ -246,11 +246,17 @@ function initCascadingSlider() {
     ro.observe(viewport);
 
     window.addEventListener('orientationchange', function () {
-      setTimeout(function () {
+      var fired = false;
+      function onResize() {
+        if (fired) return;
+        fired = true;
+        window.removeEventListener('resize', onResize);
         measure();
         layout(false);
         syncRadio();
-      }, 150);
+      }
+      window.addEventListener('resize', onResize);
+      setTimeout(onResize, 500);
     });
 
     requestAnimationFrame(function () {
