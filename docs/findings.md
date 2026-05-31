@@ -78,8 +78,9 @@ The swatch radio labels contain only an `<img>` (no text), so `initSummaryUpdate
 
 - `goTo()` had `if (isAnimating) return;` — a swatch click landing during the 650ms animation was silently dropped. The browser still natively checks the clicked radio, but the slider never moved and `syncRadio()` never reconciled, so radio + slider + summary diverged (summary stuck on the previous/default material). Fix: queue the last requested index (`pendingTarget`) and run it when the animation completes, instead of dropping.
 - `syncRadio()` (which dispatches the `change` that drives the summary) must run **after** `layout()` (which sets `data-status="active"`), or the summary reads the previous active slide. Single clicks self-corrected via the original event's bubble-phase re-read, masking the bug; rapid/queued clicks did not.
+- **Multiple slides could be marked `active` at once.** `layout()`'s off-screen branch (`|offset| > 3`) returned early *without* touching `data-status`. A slide jumping straight from active (offset 0) to off-screen — which happens on big jumps between distant swatches, but never on single-step moves — kept a stale `data-status="active"`. The summary's `querySelector('[data-status="active"]')` then returned whichever stale-or-current active slide came first in DOM order. Fix: off-screen slides are explicitly set `inactive`, guaranteeing exactly one active slide. This was why sequential clicks tested fine but real users (clicking distant swatches) saw wrong/default summaries.
 
-If summary behaviour regresses, check both the `goTo()` ordering and that clicks aren't being dropped mid-animation.
+If summary behaviour regresses, check: (1) `goTo()` ordering (`layout` before `syncRadio`), (2) clicks aren't dropped mid-animation, (3) exactly one slide has `data-status="active"` after a transition.
 
 ---
 
