@@ -5,7 +5,7 @@ function initHeroFeedTopSwiper() {
   var el = document.querySelector('.hero_feed_top');
   if (!el) return;
 
-  new Swiper(el, {
+  return new Swiper(el, {
     // EffectCreative MUST be in this array — omitting it silently falls back to default slide behaviour
     modules: [Autoplay, EffectCreative],
     wrapperClass: 'hero_feed_top-wrap',
@@ -45,7 +45,7 @@ function initHeroFeedRightSwiper() {
   var el = document.querySelector('.hero_feed_right');
   if (!el) return;
 
-  new Swiper(el, {
+  return new Swiper(el, {
     // EffectCreative MUST be in this array — omitting it silently falls back to default slide behaviour
     modules: [Autoplay, EffectCreative],
     wrapperClass: 'hero_feed_right-wrap',
@@ -238,13 +238,19 @@ function initBunnyPlayerBackground() {
 document.addEventListener('DOMContentLoaded', function() {
   initBunnyPlayerBackground();
 
+  // Init Swipers immediately so elements are visible; hold autoplay until video plays
+  var topSwiper   = initHeroFeedTopSwiper();
+  var rightSwiper = initHeroFeedRightSwiper();
+  if (topSwiper)   topSwiper.autoplay.stop();
+  if (rightSwiper) rightSwiper.autoplay.stop();
+
   var started = false;
   function startHeroFeed() {
     if (started) return;
     started = true;
     document.documentElement.classList.add('hero-playing');
-    initHeroFeedTopSwiper();
-    initHeroFeedRightSwiper();
+    if (topSwiper)   topSwiper.autoplay.start();
+    if (rightSwiper) rightSwiper.autoplay.start();
   }
 
   var bgVideo = document.querySelector('[data-bunny-background-init] video');
