@@ -237,6 +237,27 @@ function initBunnyPlayerBackground() {
 
 document.addEventListener('DOMContentLoaded', function() {
   initBunnyPlayerBackground();
-  initHeroFeedTopSwiper();
-  initHeroFeedRightSwiper();
+
+  var started = false;
+  function startHeroFeed() {
+    if (started) return;
+    started = true;
+    document.documentElement.classList.add('hero-playing');
+    initHeroFeedTopSwiper();
+    initHeroFeedRightSwiper();
+  }
+
+  var bgVideo = document.querySelector('[data-bunny-background-init] video');
+  if (bgVideo) {
+    bgVideo.addEventListener('playing', startHeroFeed, { once: true });
+    // Fallback: if video never plays, start hero feed 4s after loader completes
+    var loaderDone = document.documentElement.classList.contains('loader-complete')
+      ? Promise.resolve()
+      : new Promise(function(resolve) {
+          document.addEventListener('oa:loader-complete', resolve, { once: true });
+        });
+    loaderDone.then(function() { setTimeout(startHeroFeed, 4000); });
+  } else {
+    startHeroFeed();
+  }
 });

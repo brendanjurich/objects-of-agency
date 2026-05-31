@@ -179,6 +179,11 @@ footer.footer_main_wrap {
 .hero_feed_greetings .greeting:nth-child(8) { animation-delay: 28s; }
 .hero_feed_greetings .greeting:nth-child(9) { animation-delay: 32s; }
 
+/* Greetings paused until background video starts playing */
+html:not(.hero-playing) .hero_feed_greetings .greeting {
+  animation: none;
+}
+
 @keyframes oa-greeting-cycle {
   0% {
     opacity: 0;
