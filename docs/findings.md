@@ -52,6 +52,30 @@ Decision: keep hardcoded. Comment above `fixRadioIds()` documents the coupling a
 
 `dist/oa-homepage.js` is the CDN-served bundle. Tagging without rebuilding serves stale code. Run `npm run build` and verify the bundle before `git tag`. Now documented in CLAUDE.md under Dependency Versions and Constraints.
 
+### iOS Safari orientationchange fires before layout settles — wait for resize
+
+`orientationchange` fires at the start of rotation, before the browser has updated viewport dimensions. Any DOM measurement (`getBoundingClientRect`, `offsetWidth`) or Swiper `update()` call made immediately after — even with a 150ms debounce — can return pre-rotation values on iOS Safari, leaving transforms/positions stale.
+
+The reliable pattern is to wait for the `resize` event that iOS fires *after* reflow completes, with a safety fallback timeout:
+
+```js
+window.addEventListener('orientationchange', function () {
+  var fired = false;
+  function onResize() {
+    if (fired) return;
+    fired = true;
+    window.removeEventListener('resize', onResize);
+    // measure / update here
+  }
+  window.addEventListener('resize', onResize);
+  setTimeout(onResize, 500);
+});
+```
+
+Applied in `oa-configurator.js` (cascading slider re-measure) and `oa-homepage.js` (`swiper.update()` on both hero feed carousels) in v1.0.84–85.
+
+---
+
 ### Exact GSAP and Lumos versions still need recording
 
 CLAUDE.md has placeholders for the GSAP CDN URL and Lumos version — both loaded by Webflow, not npm. Record the exact URLs from Webflow → Site Settings → Custom Code before any library-touching changes.
