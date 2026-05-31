@@ -244,6 +244,19 @@ document.addEventListener('DOMContentLoaded', function() {
   if (topSwiper)   topSwiper.autoplay.stop();
   if (rightSwiper) rightSwiper.autoplay.stop();
 
+  window.addEventListener('orientationchange', function () {
+    var fired = false;
+    function onResize() {
+      if (fired) return;
+      fired = true;
+      window.removeEventListener('resize', onResize);
+      if (topSwiper) topSwiper.update();
+      if (rightSwiper) rightSwiper.update();
+    }
+    window.addEventListener('resize', onResize);
+    setTimeout(onResize, 500);
+  });
+
   var started = false;
   function startHeroFeed() {
     if (started) return;
