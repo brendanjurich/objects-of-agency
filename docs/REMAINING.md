@@ -41,6 +41,14 @@ Ordered by dependency. Work top-to-bottom where possible: foundation before SEO,
 ## Features & UI Polish
 
 - [ ] Landing page options — decision needed, then build
+- [ ] Scroll reveal animations — build on the Lenis engine (shipped v1.0.89).
+      Aker-style approach: ScrollTrigger `fromTo` reveals with
+      `toggleActions: 'play reset play reset'` (fire-on-enter, replay on re-enter)
+      + SplitText for text reveals. No scrub/pin. Mobile differences are
+      per-animation params via an `isMobile = innerWidth <= 768` flag (axis swap,
+      scale, translate direction), not a separate scroll system. ScrollTrigger +
+      SplitText already enabled in Webflow; Lenis is wired to `gsap.ticker` so
+      these stay smooth. Separate art-direction pass per animation.
 - [ ] Osmo flippy text animation
 - [ ] Rolling inso design quotes — CSS marquee
 - [ ] Video screen recording of configurator
