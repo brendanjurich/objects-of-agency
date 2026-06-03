@@ -59,7 +59,7 @@ function initPageTransition() {
     if (loaderWillRun || reduce) {
       gsap.set(content, { autoAlpha: 1 });
     } else {
-      gsap.to(content, { autoAlpha: 1, duration: 0.6, ease: 'power1.out' });
+      gsap.to(content, { autoAlpha: 1, duration: 0.6, ease: 'slideshow-wipe' });
     }
   };
   if (document.documentElement.classList.contains('loader-complete')) {
@@ -85,8 +85,8 @@ function initPageTransition() {
     if (reduce) { location.href = url.href; return; }
     gsap.to(content, {
       autoAlpha: 0,
-      duration: 0.4,
-      ease: 'power1.in',
+      duration: 0.45,
+      ease: 'slideshow-wipe',
       onComplete: function () { location.href = url.href; },
     });
   });
