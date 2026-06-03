@@ -21,7 +21,7 @@ function initSmoothScroll() {
     autoRaf: false,   // gsap.ticker drives the loop instead (single RAF)
     syncTouch: false, // native touch scroll on mobile — no Swiper conflict
     anchors: true,    // smooth in-page anchor links (/all-products)
-    // lerp: 0.1 default (floatier). Tune on staging if needed (lower = smoother).
+    lerp: 0.2,        // smoothing intensity (0.1 default is floatier; lower = smoother)
   });
   window.lenis = lenis; // expose for the menu scroll-lock in initNavSafariFix
 
