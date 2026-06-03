@@ -107,3 +107,19 @@ The leave handler calls `window.lenis.stop()` before navigating. Back/forward fr
 ### Reference: aker.companies is a heavy branded-loader cover, not a fade-through
 
 Audited live (akercompanies.com). aker is **not** Barba and **not** a fade-through: a custom script intercepts every `<a>` click → fires a Webflow IX2 animation playing a full-screen `.page-loader` (z999) with a logo Lottie (`akersymbol3_white.json`) → hard `setTimeout(1200ms)` before navigating. So every internal click costs ~1.2s + a Lottie render — the "heavy logo on every click" feel. Their Lenis (`lerp:0.2`) and ScrollTrigger+SplitText reveals match our stack. Our fade-through is deliberately lighter and keeps the branded loader to first-visit/home only.
+
+---
+
+## 2026-06-03 — Page transition pivot to overlay cover + load-gate
+
+### The pop-in bug was a reveal-timing bug, not an easing one
+
+The content fade-through felt smooth on cached pages but "lost the timing" on uncached ones — images popped in *behind* the fade. Root cause: on internal (no-loader) pages, `initLogoRevealLoader()` calls `revealAfterLoader()` synchronously during `DOMContentLoaded`, firing `oa:loader-complete` → the enter fade ran **before images decoded**. Cached pages painted instantly at that moment (looked fine); uncached pages didn't (pop-in). The fix is to gate the reveal on `window.load` (images decoded), capped by `setTimeout(go, 1200)` so a slow asset never hangs it. Loader pages were always correct because the loader already waits for `window.load`. **If a future change reintroduces a `DOMContentLoaded`-timed reveal on no-loader pages, the pop-in returns.**
+
+### Overlay cover replaces content-fade as the reveal mechanism (when present)
+
+`initPageTransition()` now drives an optional `[data-page-cover]` div (Webflow: fixed, inset 0, pointer-events none, z **above** nav, bg colour, default `opacity:0`). oa-styles.css makes it opaque from first paint on published JS pages (`html.w-mod-js:not(.wf-design-mode) [data-page-cover]{opacity:1;visibility:visible}`); JS lifts it once painted. The cover lifting *is* the reveal ("fade in from colour"); leave fades it back in then navigates. The old `[data-page-transition]` content guard stays as the **fallback** when no cover div exists (gated content fade) — so JS can ship before the Webflow div is added without breaking anything.
+
+### Cover fail-blank risk is bigger than the content guard's
+
+Same risk *class* as the nav/content guards (opaque-by-CSS, lifted-by-JS → blank if `oa-global.js` fails), but a full-screen cover fails *bigger* than content-only. A pure-CSS deadman fade-out was considered and rejected (a CSS animation fights GSAP's inline opacity control). Accepted as-is given jsDelivr reliability. On loader pages the cover is snapped hidden at init so it never sits on top of the branded loader. bfcache `pageshow.persisted` must reset the cover to `autoAlpha:0` (the leave-fade left it opaque) alongside the existing content + Lenis restart, or the back button lands on a covered/blank page.

@@ -31,6 +31,15 @@ html.w-mod-js:not(.wf-design-mode) [data-page-transition] {
   opacity: 0;
 }
 
+/* Page-swap cover. Opaque from first paint on published JS pages so the new
+   page paints behind it; initPageTransition() lifts it once images decode.
+   Hidden in Designer & no-JS (cover default opacity:0) so editing and the
+   fallback always show content. Color/layout live in Webflow. */
+html.w-mod-js:not(.wf-design-mode) [data-page-cover] {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* Loader — hidden in Designer & no-JS fallback */
 html.wf-design-mode .loader,
 .no-js .loader {
