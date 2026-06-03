@@ -24,6 +24,13 @@ html.w-mod-js:not(.wf-design-mode) .nav_component {
   transition: opacity 0.25s;
 }
 
+/* Pre-hide page content from first paint so the transition can fade it in.
+   Revealed by initPageTransition() (oa-global.js). Scoped to JS + published
+   site so the Designer and no-JS fallback always show content. */
+html.w-mod-js:not(.wf-design-mode) [data-page-transition] {
+  opacity: 0;
+}
+
 /* Loader — hidden in Designer & no-JS fallback */
 html.wf-design-mode .loader,
 .no-js .loader {

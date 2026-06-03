@@ -43,7 +43,63 @@ function initSmoothScroll() {
 
 
 // ============================================================
-// 4. SLIDESHOW
+// 4. PAGE TRANSITION (content fade-through)
+// ============================================================
+function initPageTransition() {
+  const content = document.querySelectorAll('[data-page-transition]');
+  if (!content.length) return; // not tagged — feature is a no-op
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // --- ENTER: fade content in once the page is ready ---
+  // Content starts hidden via the CSS guard in oa-styles.css. On pages that run
+  // the branded loader, the loader owns the reveal moment — snap content visible
+  // (no double fade). Detection reuses the loader's own gate.
+  const loaderWillRun = !!document.querySelector('[data-load-wrap] [data-load-progress]');
+  const reveal = function () {
+    if (loaderWillRun || reduce) {
+      gsap.set(content, { autoAlpha: 1 });
+    } else {
+      gsap.to(content, { autoAlpha: 1, duration: 0.6, ease: 'power1.out' });
+    }
+  };
+  if (document.documentElement.classList.contains('loader-complete')) {
+    reveal();
+  } else {
+    document.addEventListener('oa:loader-complete', reveal, { once: true });
+  }
+
+  // --- LEAVE: fade content out, then navigate. Nav stays put. ---
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest('a');
+    if (!a || !a.href || a.target === '_blank' || a.hasAttribute('download')) return;
+    if (a.closest('[data-transition-prevent]')) return;
+    let url;
+    try { url = new URL(a.href, location.href); } catch (_) { return; }
+    if (url.origin !== location.origin) return;                  // external
+    if (url.pathname === location.pathname && url.hash) return;  // same-page anchor → Lenis
+    if (url.href === location.href) return;                      // same page
+
+    e.preventDefault();
+    if (window.lenis) window.lenis.stop();
+    if (reduce) { location.href = url.href; return; }
+    gsap.to(content, {
+      autoAlpha: 0,
+      duration: 0.4,
+      ease: 'power1.in',
+      onComplete: function () { location.href = url.href; },
+    });
+  });
+
+  // --- bfcache: a restored page must come back visible ---
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) gsap.set(content, { autoAlpha: 1 });
+  });
+}
+
+
+// ============================================================
+// 5. SLIDESHOW
 // ============================================================
 function initSlideShow(el) {
   const thumbsInEl = el.querySelectorAll('[data-slideshow="thumb"]');
@@ -111,7 +167,7 @@ function initSlideShow(el) {
 }
 
 // ============================================================
-// 5. LOADER
+// 6. LOADER
 // ============================================================
 function revealAfterLoader() {
   document.documentElement.classList.add('w-mod-ix3');
@@ -160,7 +216,7 @@ function initLogoRevealLoader() {
 }
 
 // ============================================================
-// 6. SAFARI WEBKIT NAV FIX
+// 7. SAFARI WEBKIT NAV FIX
 // ============================================================
 function initNavSafariFix() {
   const navButton = document.querySelector('.w-nav-button');
@@ -187,13 +243,14 @@ function initNavSafariFix() {
 }
 
 // ============================================================
-// 7. INIT ON DOM READY
+// 8. INIT ON DOM READY
 // ============================================================
 document.querySelectorAll('.config_svg_embed').forEach(function (el) {
   el.innerHTML = el.textContent;
 });
 document.addEventListener('DOMContentLoaded', function () {
   initSmoothScroll();
+  initPageTransition();
   initLogoRevealLoader();
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
