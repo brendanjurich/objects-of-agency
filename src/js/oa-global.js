@@ -91,9 +91,13 @@ function initPageTransition() {
     });
   });
 
-  // --- bfcache: a restored page must come back visible ---
+  // --- bfcache: a restored page must come back visible AND scrollable.
+  // The leave handler stopped Lenis before navigating; a bfcache restore keeps
+  // the same JS heap, so Lenis returns stopped unless we restart it. ---
   window.addEventListener('pageshow', function (e) {
-    if (e.persisted) gsap.set(content, { autoAlpha: 1 });
+    if (!e.persisted) return;
+    gsap.set(content, { autoAlpha: 1 });
+    if (window.lenis) window.lenis.start();
   });
 }
 
