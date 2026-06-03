@@ -47,30 +47,24 @@ function initSmoothScroll() {
 // ============================================================
 function initPageTransition() {
   const content = document.querySelectorAll('[data-page-transition]');
-  const cover = document.querySelector('[data-page-cover]'); // full-screen wipe (optional)
-  if (!content.length && !cover) return; // nothing to drive — feature is a no-op
+  if (!content.length) return; // not tagged — feature is a no-op
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const loaderWillRun = !!document.querySelector('[data-load-wrap] [data-load-progress]');
 
-  // On loader pages the branded loader owns the first-visit moment — hide the
-  // cover up front so it never sits on top of the loader animation.
-  if (cover && loaderWillRun) gsap.set(cover, { autoAlpha: 0 });
-
-  // --- ENTER: reveal once the page is actually painted (images decoded). ---
-  // Content + cover start hidden/opaque via the CSS guards in oa-styles.css.
-  // The cover lifting IS the reveal ("fade in from colour"); without a cover we
-  // fall back to fading the content itself in.
+  // --- ENTER: fade content in once the page is actually painted. ---
+  // Content starts hidden via the CSS guard in oa-styles.css. Loader pages let
+  // the loader own the reveal moment (snap, no double fade); same for reduced
+  // motion. Otherwise fade it in.
   const reveal = function () {
-    gsap.set(content, { autoAlpha: 1 }); // content always ends visible
-    if (cover) {
-      if (loaderWillRun || reduce) { gsap.set(cover, { autoAlpha: 0 }); return; }
-      gsap.to(cover, { autoAlpha: 0, duration: 0.6, ease: 'slideshow-wipe' });
-    } else if (!loaderWillRun && !reduce) {
-      gsap.fromTo(content, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6, ease: 'slideshow-wipe' });
+    if (loaderWillRun || reduce) {
+      gsap.set(content, { autoAlpha: 1 });
+    } else {
+      gsap.to(content, { autoAlpha: 1, duration: 0.6, ease: 'slideshow-wipe' });
     }
   };
 
-  // Gate the reveal on real readiness, not DOMContentLoaded:
+  // Gate the reveal on real readiness, not DOMContentLoaded (which fires before
+  // images decode → reveals half-painted content on uncached pages):
   //  - loader pages already wait for window.load → reuse their gate
   //  - other pages → window.load (images decoded), capped so a slow asset
   //    never blocks the reveal; reduced-motion reveals immediately
@@ -86,7 +80,7 @@ function initPageTransition() {
     setTimeout(go, 1200); // safety cap — never hang on a slow asset
   }
 
-  // --- LEAVE: cover the screen (or fade content out), then navigate. ---
+  // --- LEAVE: fade content out, then navigate. Nav stays put. ---
   document.addEventListener('click', function (e) {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = e.target.closest('a');
@@ -101,21 +95,20 @@ function initPageTransition() {
     e.preventDefault();
     if (window.lenis) window.lenis.stop();
     if (reduce) { location.href = url.href; return; }
-    const go = function () { location.href = url.href; };
-    if (cover) {
-      gsap.to(cover, { autoAlpha: 1, duration: 0.45, ease: 'slideshow-wipe', onComplete: go });
-    } else {
-      gsap.to(content, { autoAlpha: 0, duration: 0.45, ease: 'slideshow-wipe', onComplete: go });
-    }
+    gsap.to(content, {
+      autoAlpha: 0,
+      duration: 0.45,
+      ease: 'slideshow-wipe',
+      onComplete: function () { location.href = url.href; },
+    });
   });
 
-  // --- bfcache: a restored page must come back uncovered, visible AND scrollable.
-  // The leave handler covered the screen and stopped Lenis before navigating; a
-  // bfcache restore keeps the same JS heap, so both stay applied unless reset. ---
+  // --- bfcache: a restored page must come back visible AND scrollable.
+  // The leave handler stopped Lenis before navigating; a bfcache restore keeps
+  // the same JS heap, so Lenis returns stopped unless we restart it. ---
   window.addEventListener('pageshow', function (e) {
     if (!e.persisted) return;
     gsap.set(content, { autoAlpha: 1 });
-    if (cover) gsap.set(cover, { autoAlpha: 0 });
     if (window.lenis) window.lenis.start();
   });
 }
