@@ -87,3 +87,23 @@ If summary behaviour regresses, check: (1) `goTo()` ordering (`layout` before `s
 ### Exact GSAP and Lumos versions still need recording
 
 CLAUDE.md has placeholders for the GSAP CDN URL and Lumos version — both loaded by Webflow, not npm. Record the exact URLs from Webflow → Site Settings → Custom Code before any library-touching changes.
+
+---
+
+## 2026-06-03 — Page transition (content fade-through), v1.0.90 / v1.0.91
+
+### Page transitions: Barba was rejected — this site can't be an SPA
+
+The osmo "cross-fade page transition" resource ships a Barba.js SPA integration. It is the wrong tool here and should not be revisited. **Every interactive module inits on `DOMContentLoaded`/`window.load`** — events that fire once and never re-fire after a Barba container swap: `oa-homepage.js` (Swipers + bunny video), `oa-all-products.js` (Finsweet filter), `oa-configurator.js` (cascading slider), `oa-global.js` (slideshow + Lumos patch). Two of those are **page-level embeds Barba won't even execute on nav**, and Webflow IX2 / Lumos / Finsweet would each need bespoke re-init per swap. Barba's bundle also re-loads `gsap@3.15` + `lenis@1.3.17` (we already get GSAP from Webflow and ship `lenis@1.3.23`) and calls `gsap.defaults({ease:"osmo"})`, which would silently rewrite tween defaults site-wide. Chosen instead: a no-Barba **content fade-through** on normal full page loads (`initPageTransition()` in oa-global.js §4) — zero re-init risk.
+
+### `data-page-transition` is an invisible attribute dependency (fail-blank risk)
+
+The fade-through fades any element carrying `data-page-transition` (in Webflow, the main content wrapper(s) — `.section_main_wrap` + `footer.footer_main_wrap`; nav is a sibling *outside* so it persists). oa-styles.css pre-hides those elements (`html.w-mod-js:not(.wf-design-mode) [data-page-transition] { opacity:0 }`) and `initPageTransition()` fades them in. **If `oa-global.js` fails to load, tagged content stays `opacity:0` → blank page.** This is the same risk class the nav already carries (same guard pattern), not a new failure mode — but any change to the loader-complete flow or the attribute must keep the reveal path intact. Feature is a silent no-op if nothing is tagged.
+
+### Leave-fade stops Lenis → must restart it on bfcache restore
+
+The leave handler calls `window.lenis.stop()` before navigating. Back/forward from **bfcache reuses the same JS heap**, so Lenis returns *stopped* and the restored page won't scroll. Fix: the `pageshow` handler restarts Lenis (and restores `autoAlpha:1`) when `e.persisted`. Any future leave logic that touches Lenis/scroll-lock must mirror a restore in `pageshow.persisted`.
+
+### Reference: aker.companies is a heavy branded-loader cover, not a fade-through
+
+Audited live (akercompanies.com). aker is **not** Barba and **not** a fade-through: a custom script intercepts every `<a>` click → fires a Webflow IX2 animation playing a full-screen `.page-loader` (z999) with a logo Lottie (`akersymbol3_white.json`) → hard `setTimeout(1200ms)` before navigating. So every internal click costs ~1.2s + a Lottie render — the "heavy logo on every click" feel. Their Lenis (`lerp:0.2`) and ScrollTrigger+SplitText reveals match our stack. Our fade-through is deliberately lighter and keeps the branded loader to first-visit/home only.
