@@ -11,6 +11,38 @@ CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
 
 
 // ============================================================
+// 3. SMOOTH SCROLL (Lenis)
+// ============================================================
+function initSmoothScroll() {
+  if (typeof Lenis === 'undefined') return; // CDN failed — fall back to native scroll
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const lenis = new Lenis({
+    autoRaf: false,   // gsap.ticker drives the loop instead (single RAF)
+    syncTouch: false, // native touch scroll on mobile — no Swiper conflict
+    anchors: true,    // smooth in-page anchor links (/all-products)
+    // lerp: 0.1 default (floatier). Tune on staging if needed (lower = smoother).
+  });
+  window.lenis = lenis; // expose for the menu scroll-lock in initNavSafariFix
+
+  if (typeof ScrollTrigger !== 'undefined') {
+    lenis.on('scroll', ScrollTrigger.update); // future-ready glue, no-op until ScrollTrigger is used
+  }
+  gsap.ticker.add(function (time) { lenis.raf(time * 1000); });
+  gsap.ticker.lagSmoothing(0);
+
+  // Lock scroll during the loader; release when it completes. Robust to the
+  // loader being skipped (event already fired synchronously → class present).
+  lenis.stop();
+  if (document.documentElement.classList.contains('loader-complete')) {
+    lenis.start();
+  } else {
+    document.addEventListener('oa:loader-complete', function () { lenis.start(); }, { once: true });
+  }
+}
+
+
+// ============================================================
 // 4. SLIDESHOW
 // ============================================================
 function initSlideShow(el) {
@@ -139,8 +171,10 @@ function initNavSafariFix() {
     if (navButton.classList.contains('w--open')) {
       navComponent.classList.add('is-open');
       document.body.classList.add('menu-open');
+      if (window.lenis) window.lenis.stop();
     } else {
       document.body.classList.remove('menu-open');
+      if (window.lenis) window.lenis.start();
       setTimeout(function () {
         if (!navButton.classList.contains('w--open')) {
           navComponent.classList.remove('is-open');
@@ -159,6 +193,7 @@ document.querySelectorAll('.config_svg_embed').forEach(function (el) {
   el.innerHTML = el.textContent;
 });
 document.addEventListener('DOMContentLoaded', function () {
+  initSmoothScroll();
   initLogoRevealLoader();
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
