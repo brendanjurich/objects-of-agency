@@ -221,7 +221,7 @@ function initLogoRevealLoader() {
       if (document.readyState === 'complete') resolve();
       else window.addEventListener('load', resolve, { once: true });
     }),
-    new Promise(resolve => setTimeout(resolve, 3000)) // cap: never hold the loader past 3s waiting on a slow asset
+    new Promise(resolve => setTimeout(resolve, 1200)) // cap the window.load wait; the 1.5s brand minimum below is the real floor
   ]);
 
   Promise.all([minDelay, pageReady]).then(function () {
