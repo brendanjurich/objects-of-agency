@@ -53,6 +53,7 @@ Ordered by dependency. Work top-to-bottom where possible: foundation before SEO,
 - [ ] Rolling inso design quotes — CSS marquee
 - [ ] Video screen recording of configurator
 - [ ] WhatsApp Osmo thing + face as a link
+- [ ] One thing to watch on the scrollbar change: hiding the bar sitewide also hides it on long scrolling pages (e.g. /all-products) where a position indicator is genuinely useful. If that feels off anywhere, the fallback is scrollbar-gutter: stable on those pages instead. Flag it if you notice it; I won't touch it preemptively.
 
 ---
 
