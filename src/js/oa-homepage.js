@@ -122,8 +122,12 @@ function initBunnyPlayerBackground() {
     if (typeof video.disableRemotePlayback !== 'undefined') video.disableRemotePlayback = true;
     if (autoplay) video.autoplay = false;
 
-    var isSafariNative = !!video.canPlayType('application/vnd.apple.mpegurl');
-    var canUseHlsJs    = !!(window.Hls && Hls.isSupported()) && !isSafariNative;
+    // Prefer hls.js wherever it's supported; native HLS is the Safari-only fallback.
+    // Chrome returns "maybe" for canPlayType('application/vnd.apple.mpegurl'), so gating
+    // on canPlayType wrongly flagged Chrome as Safari-native and bypassed hls.js entirely —
+    // taking our ABR config + error recovery offline with it.
+    var canUseHlsJs    = !!(window.Hls && Hls.isSupported());
+    var isSafariNative = !canUseHlsJs && !!video.canPlayType('application/vnd.apple.mpegurl');
     if (!window.Hls && !isSafariNative) { console.warn('[OA] HLS.js not loaded — falling back to direct video.src. Adaptive streaming unavailable.'); }
 
     var isAttached = false;
