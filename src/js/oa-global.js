@@ -216,10 +216,13 @@ function initLogoRevealLoader() {
 
   // Exit: waits for whichever is longer — the 1.5s minimum or window.load.
   const minDelay = new Promise(resolve => setTimeout(resolve, 1500));
-  const pageReady = new Promise(resolve => {
-    if (document.readyState === 'complete') resolve();
-    else window.addEventListener('load', resolve, { once: true });
-  });
+  const pageReady = Promise.race([
+    new Promise(resolve => {
+      if (document.readyState === 'complete') resolve();
+      else window.addEventListener('load', resolve, { once: true });
+    }),
+    new Promise(resolve => setTimeout(resolve, 3000)) // cap: never hold the loader past 3s waiting on a slow asset
+  ]);
 
   Promise.all([minDelay, pageReady]).then(function () {
     gsap.timeline({ defaults: { ease: 'loader' } })

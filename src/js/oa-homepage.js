@@ -143,11 +143,29 @@ function initBunnyPlayerBackground() {
           readyIfIdle(player, pendingPlay);
         }, { once: true });
       } else if (canUseHlsJs) {
-        var hls = new Hls({ maxBufferLength: 10 });
+        var hls = new Hls({
+          maxBufferLength: 10,
+          abrEwmaDefaultEstimate: 3000000, // seed ~3Mbps so ABR cold-starts on a sharp rung, not the lowest (kills the blurry first 1-2s)
+          capLevelToPlayerSize: true        // backdrop never needs 1080p — caps wasted bytes
+        });
         hls.attachMedia(video);
         hls.on(Hls.Events.MEDIA_ATTACHED, function() { hls.loadSource(src); });
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
           readyIfIdle(player, pendingPlay);
+        });
+        // hls.js self-heal: without an ERROR handler a fatal network/media error
+        // (e.g. a connection drop mid-playback) halts fragment loading for good and
+        // the video never resumes. Recover per hls.js's documented pattern.
+        hls.on(Hls.Events.ERROR, function(_, data) {
+          if (!data.fatal) return;
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+          else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { if (navigator.onLine) hls.startLoad(); }
+          else { try { hls.destroy(); } catch(_) {} }
+        });
+        // Connection restored after a full drop: restart loading and resume — but
+        // only if it was still mid-playback (not manually paused / scrolled away).
+        window.addEventListener('online', function() {
+          if (player._hls && !video.paused) { player._hls.startLoad(); safePlay(video); }
         });
         player._hls = hls;
       } else {
