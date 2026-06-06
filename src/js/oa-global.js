@@ -267,10 +267,17 @@ function initNavSafariFix() {
 document.querySelectorAll('.config_svg_embed').forEach(function (el) {
   el.innerHTML = el.textContent;
 });
+
+// Run the loader immediately, NOT on DOMContentLoaded. This is a footer script so
+// the loader markup (near the top of <body>) is already parsed, and GSAP is injected
+// ahead of footer code — both ready. DOMContentLoaded is itself held back until the
+// heavy footer scripts (hls.js, ~157KB) finish, which delayed the loader ~15s on slow
+// connections. Requires oa-global.js to load before hls.js in the footer.
+initLogoRevealLoader();
+
 document.addEventListener('DOMContentLoaded', function () {
   initSmoothScroll();
   initPageTransition();
-  initLogoRevealLoader();
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
 });
