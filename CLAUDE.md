@@ -68,11 +68,13 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 - `oa-styles.css` `<link>`
 
 **Footer code (sitewide), in this order:**
-1. `hls.js` (npm, exact-pinned `@1.6.11`)
-2. `oa-global.js`
+1. `oa-global.js`
+2. `hls.js` (npm, exact-pinned `@1.6.11`)
 3. `oa-configurator.js`
 
 `oa-global.js` **must** load before `oa-configurator.js` (both read `window.gsap`). GSAP and its plugins are injected by Webflow ahead of the footer code, so `window.gsap` is available when these run.
+
+`oa-global.js` **must also load before `hls.js`** — load-bearing, do not reorder. `oa-global.js` runs the loader at execution (not on `DOMContentLoaded`), and `DOMContentLoaded` is held back until the ~157KB parser-blocking `hls.js` finishes (~17s on Slow 4G). Putting `hls.js` first delays the loader dismissal to ~21s. `oa-global.js` has no dependency on `hls.js`, so it is safe ahead of it; `oa-homepage.js`/`oa-configurator.js` (which read `window.Hls`) stay after it.
 
 **Page-level embeds** (no dependency on the order above):
 - `oa-homepage.js` — homepage
