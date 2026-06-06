@@ -4,6 +4,11 @@
 html {
   overscroll-behavior-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none;            /* Firefox — hide native bar (Lenis drives scroll) */
+}
+html::-webkit-scrollbar {           /* Chrome / Safari — hide native bar */
+  width: 0;
+  height: 0;
 }
 
 [data-load-reset] {

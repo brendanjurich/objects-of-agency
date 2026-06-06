@@ -210,8 +210,8 @@ function initBunnyPlayerBackground() {
       else if (type === 'mute') toggleMute();
     });
 
-    video.addEventListener('play', function() { setActivated(true); setStatus('playing'); });
-    video.addEventListener('playing', function() { pendingPlay = false; setStatus('playing'); });
+    video.addEventListener('play', function() { setStatus('playing'); });
+    video.addEventListener('playing', function() { pendingPlay = false; setActivated(true); setStatus('playing'); });
     video.addEventListener('pause', function() { pendingPlay = false; setStatus('paused'); });
     video.addEventListener('waiting', function() { setStatus('loading'); });
     video.addEventListener('canplay', function() { readyIfIdle(player, pendingPlay); });
