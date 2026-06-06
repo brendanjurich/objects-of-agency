@@ -53,6 +53,9 @@ function initHeroFeedRightSwiper() {
     allowTouchMove: false,
     direction: 'vertical',
     loop: true,
+    // FIXME: Swiper bug — lazyPreloadPrevNext may not reliably strip loading="lazy"
+    // on neighbour slides under loop mode. No workaround applied; revisit if blanks persist.
+    lazyPreloadPrevNext: 1,
     speed: 900,
     observer: true,
     observeParents: true,

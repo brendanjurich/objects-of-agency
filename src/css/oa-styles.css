@@ -624,13 +624,14 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 }
 
 /* Bunny Background Video Player */
-[data-bunny-background-init] :is(.bunny-bg__placeholder, .bunny-bg__loading) {
+[data-bunny-background-init] .bunny-bg__placeholder {
   transition: opacity 0.3s linear, visibility 0.3s linear;
 }
 
-[data-bunny-background-init][data-player-status="playing"] .bunny-bg__placeholder,
-[data-bunny-background-init][data-player-status="paused"] .bunny-bg__placeholder,
-[data-bunny-background-init][data-player-activated="true"][data-player-status="ready"] .bunny-bg__placeholder {
+/* Once the video has rendered its first frame (activated), keep the placeholder
+   hidden permanently — a mid-playback stall (status="loading") must hold the
+   video's last frame, not flash the frame-0 placeholder back over it. */
+[data-bunny-background-init][data-player-activated="true"] .bunny-bg__placeholder {
   opacity: 0;
   visibility: hidden;
 }
@@ -643,9 +644,4 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 [data-bunny-background-init][data-player-status="playing"] .bunny-bg__pause-svg,
 [data-bunny-background-init][data-player-status="loading"] .bunny-bg__pause-svg {
   display: block;
-}
-
-[data-bunny-background-init][data-player-status="loading"] .bunny-bg__loading {
-  opacity: 1;
-  visibility: visible;
 }
