@@ -8,6 +8,7 @@ gsap.registerPlugin(CustomEase);
 // ============================================================
 CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
 CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
+CustomEase.create("button-046-ease", "0.32, 0.72, 0, 1");
 
 
 // ============================================================
@@ -275,11 +276,74 @@ document.querySelectorAll('.config_svg_embed').forEach(function (el) {
 // connections. Requires oa-global.js to load before hls.js in the footer.
 initLogoRevealLoader();
 
+// ============================================================
+// BUTTON 046 — magnetic radial wipe (glass CTA in .hero_feed_cta-wrap)
+// Orange circle grows from the cursor and follows it. Desktop-pointer only;
+// touch/reduced-motion fall back to the static glass button (no wipe).
+// ============================================================
+function initButton046() {
+  const buttons = document.querySelectorAll('[data-button-046]');
+  if (!buttons.length) return;
+
+  const mm = gsap.matchMedia();
+
+  buttons.forEach((button) => {
+    const circle = button.querySelector('[data-button-046-circle]');
+    if (!circle) return;
+
+    mm.add('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)', () => {
+      const xSet = gsap.quickSetter(circle, 'xPercent');
+      const ySet = gsap.quickSetter(circle, 'yPercent');
+
+      function getXY(e) {
+        const { left, top, width, height } = button.getBoundingClientRect();
+        const xT = gsap.utils.pipe(gsap.utils.mapRange(0, width, 0, 100), gsap.utils.clamp(0, 100));
+        const yT = gsap.utils.pipe(gsap.utils.mapRange(0, height, 0, 100), gsap.utils.clamp(0, 100));
+        return { x: xT(e.clientX - left), y: yT(e.clientY - top) };
+      }
+
+      function onEnter(e) {
+        const { x, y } = getXY(e);
+        xSet(x);
+        ySet(y);
+        gsap.to(circle, { scale: 1, duration: 1.25, ease: 'button-046-ease', overwrite: 'auto' });
+      }
+      function onLeave(e) {
+        const { x, y } = getXY(e);
+        gsap.killTweensOf(circle);
+        gsap.to(circle, {
+          xPercent: x > 90 ? x + 25 : x < 12.5 ? x - 25 : x,
+          yPercent: y > 90 ? y + 25 : y < 12.5 ? y - 25 : y,
+          scale: 0,
+          duration: 0.45,
+          ease: 'button-046-ease',
+          overwrite: 'auto',
+        });
+      }
+      function onMove(e) {
+        const { x, y } = getXY(e);
+        gsap.to(circle, { xPercent: x, yPercent: y, duration: 0.5, ease: 'power1', overwrite: 'auto' });
+      }
+
+      button.addEventListener('pointerenter', onEnter);
+      button.addEventListener('pointerleave', onLeave);
+      button.addEventListener('pointermove', onMove);
+
+      return () => {
+        button.removeEventListener('pointerenter', onEnter);
+        button.removeEventListener('pointerleave', onLeave);
+        button.removeEventListener('pointermove', onMove);
+      };
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   initSmoothScroll();
   initPageTransition();
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
+  initButton046();
 });
 
 // Patch Lumos-initialized Swipers after window.load.

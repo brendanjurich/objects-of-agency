@@ -652,27 +652,26 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 }
 
 /* ============================================================
-   GLASS-097 CTA — Osmo "Button 097" (clip-path dot→fill hover)
-   fused with Osmo "Glass Effect (Background)" 7-layer frosted stack.
-   Used in .hero_feed_cta-wrap over the full-screen slider.
-   097 vars scoped to .button-097 (not :root). Dot + hover fill = #d66740.
+   GLASS-046 CTA — Osmo "Button 046" magnetic radial wipe fused
+   with the Osmo "Glass Effect (Background)" frosted stack.
+   In .hero_feed_cta-wrap over the slider. Wipe = #d66740 (GSAP-driven,
+   see initButton046 in oa-global.js). No hover grow; press-shrink kept.
    ============================================================ */
-.button-097 {
-  --button-097-color: #131313;
-  --button-097-color-background: #fff;
-  --button-097-hover-color: #fff;
-  --button-097-hover-color-background: #d66740; /* orange dot + fill */
-  --button-097-color-focus: #131313;
-  --button-097-border-radius: 1.5em;
-  --button-097-dot-border-radius: 0.25em;
-  --button-097-padding-right: 0.75em;
-  --button-097-padding-left: 1em;
-  --button-097-gap: 0.375em;
-  --button-097-dot-size: 0.5em;
-  --button-097-focus-inset: -0.125em;
-  --button-097-ease-hover: cubic-bezier(0.32, 0.72, 0, 1);
-  --button-097-ease-focus: cubic-bezier(0.32, 0.72, 0, 1);
+.button-046 {
+  --button-046-color: #fff;                 /* label white at rest */
+  --button-046-hover-color: #fff;           /* label stays white on wipe */
+  --button-046-hover-color-background: #d66740; /* orange wipe */
+  --button-046-color-focus: #fff;
+  --button-046-padding: 0.75em 1em;
+  --button-046-border-radius: 2.5em;        /* full pill; confirm vs prior look on staging */
+  --button-046-focus-inset: -0.125em;
+  --button-046-hover-scale: 1 1;            /* NO hover grow (stock: 1.065 1.095) */
+  --button-046-click-scale: 0.955, 0.925;   /* press-shrink kept */
+  --button-046-ease-click: cubic-bezier(0.4, 0, 0.2, 1);
+  --button-046-ease-hover: cubic-bezier(0.34, 2.27, 0.64, 1);
+  --button-046-ease-focus: cubic-bezier(0.32, 0.72, 0, 1);
 
+  color: var(--button-046-color);
   -webkit-user-select: none;
   user-select: none;
   background-color: #0000;
@@ -682,91 +681,75 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   text-decoration: none;
   display: inline-grid;
   position: relative;
-  --button-097-padding: 0.75em calc(var(--button-097-padding-right) + var(--button-097-gap) + var(--button-097-dot-size)) 0.75em var(--button-097-padding-left);
-  --button-097-offset: calc((var(--button-097-padding-right) + var(--button-097-gap) + var(--button-097-dot-size) - var(--button-097-padding-left)) / 2);
   -webkit-tap-highlight-color: transparent;
+  transition: color 0.25s ease-out;
 }
-
-.button-097::after {
+.button-046::after {
   content: '';
   display: block;
   position: absolute;
-  inset: var(--button-097-focus-inset);
-  border-radius: var(--button-097-border-radius);
-  transition: box-shadow 0.3s var(--button-097-ease-focus);
+  inset: var(--button-046-focus-inset);
+  border-radius: var(--button-046-border-radius);
+  transition: box-shadow 0.3s var(--button-046-ease-focus), scale 0.4s var(--button-046-ease-hover);
   pointer-events: none;
   z-index: 1;
 }
-
-.button-097:is(:focus-visible)::after {
-  box-shadow: 0 0 0 0.125em var(--button-097-color-focus);
+.button-046:is(:hover, :focus-visible),
+[data-hover]:is(:hover, :focus-visible) .button-046 {
+  color: var(--button-046-hover-color);
 }
-
-.button-097__hover {
-  color: var(--button-097-hover-color);
+.button-046:is(:focus-visible)::after {
+  box-shadow: 0 0 0 0.125em var(--button-046-color-focus);
+  scale: var(--button-046-hover-scale); /* = 1 1, no grow */
+}
+.button-046__bg-circle {
   z-index: 1;
-  will-change: clip-path;
+  border-radius: var(--button-046-border-radius);
   grid-area: 1 / 1;
   place-self: center;
-  width: calc(100% + 2px);
-  height: calc(100% + 2px);
-  display: grid;
-  clip-path: inset(calc(50% - var(--button-097-dot-size) * 0.5) var(--button-097-padding-right) calc(50% - var(--button-097-dot-size) * 0.5) calc(100% - (var(--button-097-dot-size) + var(--button-097-padding-right))) round var(--button-097-dot-border-radius));
-  transition: clip-path 0.55s var(--button-097-ease-hover);
+  width: calc(100% + 1px);
+  height: calc(100% + 1px);
+  position: relative;
+  overflow: clip;
+  transition: scale 0.4s var(--button-046-ease-hover), transform 0.15s var(--button-046-ease-click);
 }
-
-.button-097__bg {
-  border-radius: var(--button-097-border-radius);
-  grid-area: 1 / 1;
+.button-046:active .button-046__bg-circle {
+  transform: scale(var(--button-046-click-scale));
+}
+.button-046__circle-wrap {
+  transform-origin: 0 0;
+  will-change: transform;
+  position: absolute;
+  inset: 0%;
+  transform: scale(0);
+}
+.button-046__circle {
+  aspect-ratio: 1;
+  background-color: var(--button-046-hover-color-background);
+  border-radius: 50%;
+  width: 200%;
+  display: block;
+  position: absolute;
+  inset: 0% auto auto 0%;
+  transform: translate(-50%, -50%);
+}
+.button-046__inner {
+  grid-column-gap: .125em;
+  grid-row-gap: .125em;
   width: 100%;
   height: 100%;
-  padding: 0;
-}
-
-.button-097__bg.is--hover {
-  background-color: var(--button-097-hover-color-background);
-}
-
-.button-097__inner {
-  width: 100%;
-  height: 100%;
-  padding: var(--button-097-padding);
+  padding: var(--button-046-padding);
+  z-index: 2;
   grid-area: 1 / 1;
   justify-content: center;
   align-items: center;
   display: flex;
 }
 
-.button-097__text {
-  will-change: transform;
-  transition: translate 0.55s var(--button-097-ease-hover);
-}
-
-.button-097__default {
-  width: 100%;
-  height: 100%;
-  color: var(--button-097-color);
-  grid-area: 1 / 1;
-  display: grid;
-}
-
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .button-097:is(:hover, :focus-visible) .button-097__hover,
-  [data-hover]:is(:hover, :focus-visible) .button-097 .button-097__hover {
-    clip-path: inset(0% 0% 0% 0% round var(--button-097-border-radius));
-    transition-delay: 0.05s;
-  }
-  .button-097:is(:hover, :focus-visible) .button-097__text,
-  [data-hover]:is(:hover, :focus-visible) .button-097 .button-097__text {
-    translate: var(--button-097-offset) 0 0;
-    transition-delay: 0.05s;
-  }
-}
-
-/* --- Osmo Glass Effect (verbatim) --- */
+/* --- Glass Effect (backdrop-filter updated per request) --- */
 .glass-effect {
-  -webkit-backdrop-filter: saturate(120%) blur(.75em);
-  backdrop-filter: saturate(120%) blur(.75em);
+  -webkit-backdrop-filter: saturate(110%) blur(20px);
+  backdrop-filter: saturate(110%) blur(20px);
   pointer-events: none;
   isolation: isolate;
   color: #201d1d;
@@ -783,35 +766,13 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 .glass-effect__edge-dark { mix-blend-mode: overlay; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset -.1875em -.28125em .09375em -.1875em #b3b3b34d; }
 .glass-effect__inner-glow { mix-blend-mode: darken; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset 0 0 1.75em #f2f2f24d; }
 
-/* --- Fusion overrides (minimal) --- */
-/* Glass replaces the white pill → give it the pill radius + sit it under the label */
-.button-097 .glass-effect {
-  border-radius: var(--button-097-border-radius);
-  z-index: 0;
+/* --- Fusion overrides --- */
+.button-046 .glass-effect {
+  border-radius: var(--button-046-border-radius);
+  z-index: 0; /* below the wipe (z1) and label (z2) */
 }
-/* Resting label paints above the glass inside the __default cell */
-.button-097__default .button-097__inner {
-  position: relative;
-  z-index: 1;
-}
-/* PHASE-1 resting label colour — fixed white. CONFIRM ON STAGING; if it washes
-   out over light slides, flip to #131313. Phase 2 makes this dynamic per slide. */
-.button-097__default {
-  color: #fff;
-}
-/* Orange is an INTERACTION colour, not a resting accent — stops the dot competing
-   with the map's red pulsing dot. Resting dot = white (matches the label); orange
-   #d66740 blooms in only on hover/tap. Overrides the verbatim is--hover rule above. */
-.button-097__bg.is--hover {
-  background-color: #fff;
-  transition: background-color 0.45s var(--button-097-ease-hover);
-}
-.button-097:is(:hover, :focus-visible, :active) .button-097__bg.is--hover {
-  background-color: var(--button-097-hover-color-background);
-}
-/* Touch has no hover, so the full fill never fires (correct). Give tap a quick
-   tactile press instead — fires on :active on touch + desktop mousedown. */
-.button-097:active {
-  scale: 0.97;
-  transition: scale 0.12s var(--button-097-ease-hover);
+/* press the glass with the rest of the button */
+.button-046:active .glass-effect {
+  transform: scale(var(--button-046-click-scale));
+  transition: transform 0.15s var(--button-046-ease-click);
 }
