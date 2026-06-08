@@ -119,3 +119,32 @@ The content fade-through felt smooth on cached pages but "lost the timing" on un
 ### Overlay cover was prototyped, then removed — don't resurrect it
 
 A full-screen `[data-page-cover]` wipe was built on top of the load-gate to also mask the inter-page gap, but it was removed once the gate alone delivered the wanted feel. It added a *bigger* fail-blank surface (a full-screen opaque-by-CSS div → total blank if `oa-global.js` fails, vs content-only before) for a marginal gain. `initPageTransition()` no longer references `data-page-cover`, and there is no cover CSS guard. If you reach for a cover again, weigh that fail-blank cost first — the gate is what actually fixed the complaint.
+
+---
+
+## 2026-06-08 — Glass CTA button (Osmo 097→046 + Glass Effect), v1.0.101–105
+
+Hero CTA in `.hero_feed_cta-wrap`: a frosted-glass pill that began as Osmo "Button 097" (CSS clip-path dot→fill hover) and was re-fused with Osmo "Button 046" (GSAP magnetic radial wipe). All styling is in the `GLASS-046 CTA` block of `oa-styles.css`; the wipe JS (`initButton046`) is in `oa-global.js`.
+
+### Osmo "Copy to Webflow" splits a component's CSS — the pasted snippet alone won't style it
+
+The CSS Osmo gives you to paste into custom code is **only the half Webflow can't represent** (custom properties, `::after`, `clip-path`, `mix-blend-mode`, `@media (hover)`). The structural/background half (display, backgrounds, padding, layout) rides on the **classes** that "Copy to Webflow" recreates. Symptom when this bites: paste the snippet, the button renders **completely unstyled** — looks like a class mismatch but isn't. Fix: use Copy-to-Webflow for the structure (carries the styled classes), or paste the component's *full* CSS. We put the entire CSS in `oa-styles.css` so the button is self-contained and version-controlled.
+
+### backdrop-filter flattens if ANY ancestor has transform / filter / opacity<1 / will-change
+
+`.glass-effect` (`backdrop-filter: blur`) samples its backdrop from the nearest ancestor that forms a new backdrop root. A `transform`, `filter`, `opacity:<1`, `will-change`, or `contain:paint` on **any** ancestor between the glass and the slider makes it blur *that ancestor* (transparent) instead of the photos — the frost goes flat. Two design consequences:
+
+- `.hero_feed_cta-wrap` / `hero_feed_grid` must stay transparent with no transform/filter (verified in Webflow).
+- The press-shrink scales the **glass + label** (`.button-046:active .glass-effect, .button-046__inner`), **never `.button-046` itself** — a transform on the glass's ancestor would flatten the blur on every click.
+
+### Press-shrink must not scale the orange wipe — it exposes the glass on springback
+
+First attempt scaled `__bg-circle` (the orange clip layer) on `:active`; on springback the orange pulled in from the edges and flashed the glass (z0) underneath. Fix: leave the orange full-size (it always covers the glass on hover) and put the press on the glass + label only. Uniform `0.98`, not the stock `0.955/0.925` squash.
+
+### 046 wipe is GSAP-driven, fine-pointer only, and keyed off a data attribute
+
+`initButton046()` (`oa-global.js`) registers `CustomEase "button-046-ease"` and tracks the cursor via `gsap.quickSetter` on `[data-button-046-circle]`, gated behind `gsap.matchMedia('(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference)')`. Touch / reduced-motion get the static glass button (no wipe) plus the CSS press feedback — deliberate progressive enhancement. **If the wipe silently doesn't fire, the `data-button-046-circle` attribute was dropped in the Webflow paste** — that's the element GSAP scales.
+
+### No-hover-grow is a single variable
+
+`--button-046-hover-scale: 1 1` neutralises both the `__bg-circle` hover scale **and** the focus-ring `::after` scale (both read that var) — no rule edits needed. The button text also needs a Lumos type utility (`u-text-style-main`) once rebuilt natively: the Osmo text inherited its typography, but a raw Webflow text element has no `line-height` and mis-centres in the flex `__inner`. It's typographic only (no `color`), so it doesn't pre-empt the deferred per-slide light/dark label switching.

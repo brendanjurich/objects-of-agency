@@ -660,7 +660,7 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 .button-046 {
   --button-046-color: #fff;                 /* label white at rest */
   --button-046-hover-color: #fff;           /* label stays white on wipe */
-  --button-046-hover-color-background: rgba(214, 103, 64, 0.92); /* orange wipe #d66740 @ 92% — lets a hint of photo through */
+  --button-046-hover-color-background: #d66740; /* orange wipe (solid) */
   --button-046-color-focus: #fff;
   --button-046-padding: 0.75em 1em;
   --button-046-border-radius: 2.5em;        /* full pill; confirm vs prior look on staging */
