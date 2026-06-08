@@ -650,3 +650,152 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 [data-bunny-background-init][data-player-status="loading"] .bunny-bg__pause-svg {
   display: block;
 }
+
+/* ============================================================
+   GLASS-097 CTA — Osmo "Button 097" (clip-path dot→fill hover)
+   fused with Osmo "Glass Effect (Background)" 7-layer frosted stack.
+   Used in .hero_feed_cta-wrap over the full-screen slider.
+   097 vars scoped to .button-097 (not :root). Dot + hover fill = #d66740.
+   ============================================================ */
+.button-097 {
+  --button-097-color: #131313;
+  --button-097-color-background: #fff;
+  --button-097-hover-color: #fff;
+  --button-097-hover-color-background: #d66740; /* orange dot + fill */
+  --button-097-color-focus: #131313;
+  --button-097-border-radius: 1.5em;
+  --button-097-dot-border-radius: 0.25em;
+  --button-097-padding-right: 0.75em;
+  --button-097-padding-left: 1em;
+  --button-097-gap: 0.375em;
+  --button-097-dot-size: 0.5em;
+  --button-097-focus-inset: -0.125em;
+  --button-097-ease-hover: cubic-bezier(0.32, 0.72, 0, 1);
+  --button-097-ease-focus: cubic-bezier(0.32, 0.72, 0, 1);
+
+  -webkit-user-select: none;
+  user-select: none;
+  background-color: #0000;
+  outline-style: none;
+  padding: 0;
+  line-height: 1;
+  text-decoration: none;
+  display: inline-grid;
+  position: relative;
+  --button-097-padding: 0.75em calc(var(--button-097-padding-right) + var(--button-097-gap) + var(--button-097-dot-size)) 0.75em var(--button-097-padding-left);
+  --button-097-offset: calc((var(--button-097-padding-right) + var(--button-097-gap) + var(--button-097-dot-size) - var(--button-097-padding-left)) / 2);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button-097::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: var(--button-097-focus-inset);
+  border-radius: var(--button-097-border-radius);
+  transition: box-shadow 0.3s var(--button-097-ease-focus);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.button-097:is(:focus-visible)::after {
+  box-shadow: 0 0 0 0.125em var(--button-097-color-focus);
+}
+
+.button-097__hover {
+  color: var(--button-097-hover-color);
+  z-index: 1;
+  will-change: clip-path;
+  grid-area: 1 / 1;
+  place-self: center;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  display: grid;
+  clip-path: inset(calc(50% - var(--button-097-dot-size) * 0.5) var(--button-097-padding-right) calc(50% - var(--button-097-dot-size) * 0.5) calc(100% - (var(--button-097-dot-size) + var(--button-097-padding-right))) round var(--button-097-dot-border-radius));
+  transition: clip-path 0.55s var(--button-097-ease-hover);
+}
+
+.button-097__bg {
+  border-radius: var(--button-097-border-radius);
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.button-097__bg.is--hover {
+  background-color: var(--button-097-hover-color-background);
+}
+
+.button-097__inner {
+  width: 100%;
+  height: 100%;
+  padding: var(--button-097-padding);
+  grid-area: 1 / 1;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.button-097__text {
+  will-change: transform;
+  transition: translate 0.55s var(--button-097-ease-hover);
+}
+
+.button-097__default {
+  width: 100%;
+  height: 100%;
+  color: var(--button-097-color);
+  grid-area: 1 / 1;
+  display: grid;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .button-097:is(:hover, :focus-visible) .button-097__hover,
+  [data-hover]:is(:hover, :focus-visible) .button-097 .button-097__hover {
+    clip-path: inset(0% 0% 0% 0% round var(--button-097-border-radius));
+    transition-delay: 0.05s;
+  }
+  .button-097:is(:hover, :focus-visible) .button-097__text,
+  [data-hover]:is(:hover, :focus-visible) .button-097 .button-097__text {
+    translate: var(--button-097-offset) 0 0;
+    transition-delay: 0.05s;
+  }
+}
+
+/* --- Osmo Glass Effect (verbatim) --- */
+.glass-effect {
+  -webkit-backdrop-filter: saturate(120%) blur(.75em);
+  backdrop-filter: saturate(120%) blur(.75em);
+  pointer-events: none;
+  isolation: isolate;
+  color: #201d1d;
+  border-radius: inherit;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.glass-effect__fill { opacity: 1; border-radius: inherit; background-color: #d4d4d426; position: absolute; inset: 0; }
+.glass-effect__fill-burn { opacity: .05; mix-blend-mode: color-burn; border-radius: inherit; background-color: currentColor; position: absolute; inset: 0; }
+.glass-effect__highlight-soft { mix-blend-mode: overlay; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset -.28125em -.28125em .09375em -.328125em #ffffff80; }
+.glass-effect__highlight-strong { border-radius: inherit; position: absolute; inset: 0; box-shadow: inset .28125em .28125em .09375em -.328125em #fffc; }
+.glass-effect__edge-light { border-radius: inherit; mix-blend-mode: plus-lighter; position: absolute; inset: 0; box-shadow: inset .1875em .28125em .09375em -.1875em #b3b3b380; }
+.glass-effect__edge-dark { mix-blend-mode: overlay; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset -.1875em -.28125em .09375em -.1875em #b3b3b34d; }
+.glass-effect__inner-glow { mix-blend-mode: darken; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset 0 0 1.75em #f2f2f24d; }
+
+/* --- Fusion overrides (minimal) --- */
+/* Glass replaces the white pill → give it the pill radius + sit it under the label */
+.button-097 .glass-effect {
+  border-radius: var(--button-097-border-radius);
+  z-index: 0;
+}
+/* Resting label paints above the glass inside the __default cell */
+.button-097__default .button-097__inner {
+  position: relative;
+  z-index: 1;
+}
+/* PHASE-1 resting label colour — fixed white. CONFIRM ON STAGING; if it washes
+   out over light slides, flip to #131313. Phase 2 makes this dynamic per slide. */
+.button-097__default {
+  color: #fff;
+}
