@@ -799,3 +799,19 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 .button-097__default {
   color: #fff;
 }
+/* Orange is an INTERACTION colour, not a resting accent — stops the dot competing
+   with the map's red pulsing dot. Resting dot = white (matches the label); orange
+   #d66740 blooms in only on hover/tap. Overrides the verbatim is--hover rule above. */
+.button-097__bg.is--hover {
+  background-color: #fff;
+  transition: background-color 0.45s var(--button-097-ease-hover);
+}
+.button-097:is(:hover, :focus-visible, :active) .button-097__bg.is--hover {
+  background-color: var(--button-097-hover-color-background);
+}
+/* Touch has no hover, so the full fill never fires (correct). Give tap a quick
+   tactile press instead — fires on :active on touch + desktop mousedown. */
+.button-097:active {
+  scale: 0.97;
+  transition: scale 0.12s var(--button-097-ease-hover);
+}
