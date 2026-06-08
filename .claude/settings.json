@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check src/js/oa-global.js)",
+      "Bash(curl -sI https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.103/src/css/oa-styles.css)",
+      "Bash(curl -sI https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.104/src/css/oa-styles.css)",
+      "Bash(curl -sI https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.105/src/css/oa-styles.css)",
+      "mcp__chrome-devtools__resize_page",
+      "mcp__chrome-devtools__take_screenshot"
+    ]
+  }
+}
