@@ -168,10 +168,6 @@ acting on them mid-build.
 - You're my technical lead and engineer. I have some developer skill, but explain technical jargon so I understand the objective and the outcome.
 - Use direct shorthand. Give tightly constrained recommendations over option lists. Surface trade-offs, then recommend one path.
 
-### Model split
-
-- **Plan in Opus, implement in Sonnet.** In plan mode, delegate the design work to a **Plan subagent pinned to `model="opus"`**; carry out the implementation with Sonnet. This is a deliberate preference, not the runtime default — follow it every session unless I say otherwise for a given task. (Note: this is an instruction Claude follows, not a hard runtime switch — the only deterministic piece is the pinned subagent model.)
-
 ---
 
 ## Engineering Conduct
