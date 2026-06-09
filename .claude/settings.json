@@ -10,7 +10,19 @@
       "Bash(graphify --version)",
       "Bash(graphify --help)",
       "Bash(graphify .)",
-      "Bash(graphify cluster-only *)"
+      "Bash(graphify cluster-only *)",
+      "Bash(find ~/.claude/plugins -ipath '*planning-with-files*' -name '*.md' | head -20)",
+      "Read(//Users/brendanjurich/.claude/plugins/**)",
+      "Bash(mkdir -p ~/.claude/skills/map)",
+      "Read(//Users/brendanjurich/.claude/skills/**)",
+      "Edit(~/.claude/skills/map/**)",
+      "Bash(git -C ~/.claude rev-parse --is-inside-work-tree)",
+      "Read(//Users/brendanjurich/.claude/**)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('hooks','NO hooks key'\\), indent=2\\)\\)\")",
+      "Bash(mkdir -p ~/.claude/skills/map/templates ~/.claude/skills/map/hooks && ls ~/.claude/skills/map/SKILL.md 2>/dev/null && echo EXISTS || echo \"SKILL.md MISSING \\(expected\\)\")"
+    ],
+    "additionalDirectories": [
+      "/Users/brendanjurich/.claude/skills/map"
     ]
   }
 }
