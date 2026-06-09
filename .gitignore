@@ -12,3 +12,6 @@ node_modules/
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# graphify knowledge-graph output
+graphify-out/

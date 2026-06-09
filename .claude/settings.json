@@ -6,7 +6,11 @@
       "Bash(curl -sI https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.104/src/css/oa-styles.css)",
       "Bash(curl -sI https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.105/src/css/oa-styles.css)",
       "mcp__chrome-devtools__resize_page",
-      "mcp__chrome-devtools__take_screenshot"
+      "mcp__chrome-devtools__take_screenshot",
+      "Bash(graphify --version)",
+      "Bash(graphify --help)",
+      "Bash(graphify .)",
+      "Bash(graphify cluster-only *)"
     ]
   }
 }
