@@ -148,3 +148,27 @@ First attempt scaled `__bg-circle` (the orange clip layer) on `:active`; on spri
 ### No-hover-grow is a single variable
 
 `--button-046-hover-scale: 1 1` neutralises both the `__bg-circle` hover scale **and** the focus-ring `::after` scale (both read that var) — no rule edits needed. The button text also needs a Lumos type utility (`u-text-style-main`) once rebuilt natively: the Osmo text inherited its typography, but a raw Webflow text element has no `line-height` and mis-centres in the flex `__inner`. It's typographic only (no `color`), so it doesn't pre-empt the deferred per-slide light/dark label switching.
+
+---
+
+## 2026-06-09 — Hero slider nav centring + slider-image load decision (Webflow Designer, no repo tag)
+
+### Viewport-centring with the columns fixed is a geometry problem, not a CSS trick
+
+`.crisp-header__slider-nav` sat off-centre because it was an in-flow flex middle-child of a `space-between` row between two **unequal** columns (`hero_main_bottom` ~422px, `hero_feed_grid` ~480px) — so it centred on the *gap*, not the viewport (−44px@1200, −70px@992). The binding constraint: `hero_feed_grid` is bottom-aligned and its left edge reaches the viewport centreline at ≤~1290px (at 992 grid-left=493 vs centre=496). So **any** viewport-centred element overlaps the grid's map card below ~1290 — regardless of the nav's width or how its thumbnails wrap. Centred + columns-unmoved + no-overlap is geometrically impossible in 992–1290px; you must drop one.
+
+### Fix: overlay-centre out of flow, show ≥1280 — do NOT revive the vertical-stack rebuild
+
+`.crisp-header__slider-nav` → position **Absolute** in `.hero_main_layout` (relative, full-bleed): **Left 50%**, **Right/Top Auto**, **Transform Move X −50%**, Bottom 0, **z-index 2** (above the map card's `backdrop-filter`), wrapper padding **0**. Shown **≥1280 only** — base `display:none`, then the **1280 "Large" breakpoint added** → `display:flex`. Pulling the nav out of flow leaves `space-between` pinning the two columns to the same edges, so **nothing else moves**. The old REMAINING.md plan (rebuild `.hero_main_layout` vertical + new `hero_main_row` wrapper, nav as static last child) was **rejected — it lifts the headline+grid ~80px**. Gate is 1280 (not 992) because that's where a centred nav clears the grid; below it the nav is hidden, not overlapping. **Geometry, not z-index — raising z-index only draws the nav over the map.**
+
+### Webflow: set ONE horizontal inset on an absolute element, or it stretches
+
+Hit live — the wrapper wouldn't hug its buttons despite `Width: Auto`. Cause: **both** Left (50%) and Right (0%) insets were set, so the element anchors to both edges and stretches between them, ignoring `Width:Auto`. Set **only Left** (Right Auto) + `translateX(-50%)` to keep a content-width box centred. `left:0; right:0` only centres a *stretched* box's content via internal `justify-content` — here that'd be a full-width transparent strip at z-index 2 eating hero clicks.
+
+### The hero "slider" is `data-slideshow` in oa-global.js, has no autoplay, and slide 0 is the bunny video
+
+`.hero_slider_wrap` (`data-slideshow="wrap"`) → four `[data-slideshow="slide"]`; logic is `initSlideShow()` in `oa-global.js`, which **only navigates on thumb click** (no autoplay/interval). **Slide 0 = the bunny background video** (the visible hero on every viewport); slides 1–3 = large product jpgs (`viewfinder-xen`, `interior-credenza`, `viewfinder-side-oval`), reachable **only via the nav**. So below 1280 (nav hidden, no autoplay) slides 1–3 are unreachable. The nav-thumb hover in `oa-styles.css` only ever scales imgs **≤1** (0.825 down / 1 up), never above — so the wrapper needs no padding to avoid clipping (osmo's 0.6rem was redundant).
+
+### Decided NOT to gate slider-image loading — AVIF instead
+
+Slides 1–3 download even when unreachable, but they already carry Webflow `srcset` (500–3200w, `sizes:100vw`) so phones right-size them; the real residual waste is high-DPR tablets/laptops in 992–1279 pulling large variants. A `data-src` gate would **discard that srcset on three hero images** for a small, device-narrow win. Chosen instead: swap the 3 jpgs → **AVIF** (~½ size everywhere, incl. ≥1280 where they're actually shown, keeps srcset) + set **slide 2 `loading` eager→lazy** (it isn't the LCP — slide 0/video is — so it shouldn't sit in the critical initial load). Tracked in `REMAINING.md`.
