@@ -1,6 +1,6 @@
-# Session Findings
+# Decisions & Findings
 
-Append-only. One entry per session that touched production code or surfaced a non-obvious behaviour, corrected assumption, or deliberate decision worth preserving. Not every session — only when a gotcha would bite again.
+Append-only. One entry per session that touched production code or surfaced a non-obvious behaviour, corrected assumption, or deliberate decision worth preserving. Not every session — only when a gotcha would bite again. Durable rules distilled from older per-feature notes now live in [REFERENCE.md](REFERENCE.md).
 
 ---
 

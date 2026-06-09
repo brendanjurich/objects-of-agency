@@ -8,6 +8,13 @@ Ordered by dependency. Work top-to-bottom where possible: foundation before SEO,
 
 - [ ] Semantic HTML & structure audit
 - [ ] Aria labels — all interactive elements labelled
+- [ ] Product slider keyboard focus (deferred) — CSS-only `:focus-visible` worked in
+      Chrome but broke in Safari (Swiper's a11y module controls `tabindex` on slides
+      and redirects Tab through its dots/arrows, firing the ring out of order).
+      Fix: disable/reconfigure Swiper's keyboard module so native Tab order wins, set
+      correct `tabIndex` on `.clickable_link` in slides, then re-add the focus-ring
+      rule (scale + shadow + outline on `.card_product_visual`, removed at v1.0.36).
+      Test Chrome + Safari. Edit `src/js/oa-global.js`.
 
 ---
 
