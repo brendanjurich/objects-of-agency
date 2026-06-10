@@ -86,11 +86,21 @@ Ordered by dependency. Work top-to-bottom where possible: foundation before SEO,
       for the centre slot of a `space-between` row (`hero_main_bottom` · wrapper ·
       `hero_feed_grid`) — the nav is `position:absolute` to `.hero_main_layout`, so
       the wrapper has **no in-flow content** and clearing its width collapses it to
-      0. Use **`flex:1`** (Webflow flex-child → **Grow**, width Auto), not a width %,
-      so it fills the slot between the two columns (≡ the old 464px@1440, adapts at
-      every width). **`height:2.75rem`** is the load-bearing value — it equals the
-      max nav-button height (`calc(2.75rem × --hero-k-nav)`), so scaled buttons
-      never clip. See the hero scale-lever
+      0. Give it a **width %** (currently ~32%, computes to 464px@1440), **not
+      `flex:1`**. `flex:1` (grow:1, basis:0) makes the wrapper an active claimant of
+      the row's free space, competing with `hero_feed_grid` (`width:100%;
+      max-width:30rem; flex-shrink:1`) and shifting the grid's rendered width across
+      the range — which detunes the divider clamp and `--hero-k`, both calibrated
+      against that grid geometry (breaks off 1440, the reason `flex:1` failed in
+      practice). A width % is a flex-*basis* with no grow: it reserves a
+      viewport-proportional slot without stealing free space, so the grid keeps the
+      exact shrink behaviour the scale flow was tuned against. The wrapper is a pure
+      strut (absolute nav = zero in-flow content), so its width is functionally inert
+      — it can't clip or move the nav, only hold the slot open. Verified on staging
+      992→1920: divider→grid gap holds **16.3–17.1px**, nav clears the grid at every
+      width (min 11.5px@992). **`height:2.75rem`** is the load-bearing value — it
+      equals the max nav-button height (`calc(2.75rem × --hero-k-nav)`), so scaled
+      buttons never clip. See the hero scale-lever
       spec: `docs/superpowers/specs/2026-06-10-homepage-hero-scale-lever-design.md`.
 - [ ] Hero slider images → **AVIF** + fix loading. (Replaces the old "asset
       gating" plan — decided against; rationale below.) Swap the 3 slide jpgs
