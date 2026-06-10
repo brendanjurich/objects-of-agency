@@ -70,11 +70,28 @@ Ordered by dependency. Work top-to-bottom where possible: foundation before SEO,
       hugs the buttons), **Transform Move X −50%** (centres the content-width box),
       **Bottom 0** (page clamp-margin carries floor spacing), **z-index 2** (sits
       above the map card's backdrop-filter), wrapper padding **0** (osmo's 0.6rem
-      was redundant — the thumb hover only ever scales ≤1, never clips). Shown
-      **≥1280** only (base `display:none`, Large 1280 `display:flex`); columns
+      was redundant — the thumb hover only ever scales ≤1, never clips). Columns
       unmoved (removing the nav from flow leaves space-between pinning them to the
-      same edges). Gated to ≥1280 because below ~1290 a viewport-centred nav
-      overlaps the grid map card — geometry, not z-index.
+      same edges).
+      **Update 2026-06-10 — nav now stays, no extra breakpoint:** the old ≥1280
+      gate (base `display:none` + a custom **Large 1280** `display:flex`) is
+      **removed.** That 1280 breakpoint was the thing being avoided (it compresses
+      the desktop Designer canvas). The nav now stays centred and scaling from
+      large screens down to **992**; the only visibility gate is
+      `.nav_viewport_wrapper { display:none }` on the **standard ≤991 tablet
+      breakpoint** — no custom breakpoint added. The old "overlaps the grid map
+      card below ~1290" concern is resolved by the hero scale flow shrinking the
+      nav buttons (`--hero-k-nav`): the centred nav clears the grid by **11.5–14.5px
+      across 992→1024** (verified on staging). `.nav_viewport_wrapper` is a flex placeholder
+      for the centre slot of a `space-between` row (`hero_main_bottom` · wrapper ·
+      `hero_feed_grid`) — the nav is `position:absolute` to `.hero_main_layout`, so
+      the wrapper has **no in-flow content** and clearing its width collapses it to
+      0. Use **`flex:1`** (Webflow flex-child → **Grow**, width Auto), not a width %,
+      so it fills the slot between the two columns (≡ the old 464px@1440, adapts at
+      every width). **`height:2.75rem`** is the load-bearing value — it equals the
+      max nav-button height (`calc(2.75rem × --hero-k-nav)`), so scaled buttons
+      never clip. See the hero scale-lever
+      spec: `docs/superpowers/specs/2026-06-10-homepage-hero-scale-lever-design.md`.
 - [ ] Hero slider images → **AVIF** + fix loading. (Replaces the old "asset
       gating" plan — decided against; rationale below.) Swap the 3 slide jpgs
       (slides 1–3: `viewfinder-xen`, `interior-credenza`, `viewfinder-side-oval`)
