@@ -9,8 +9,8 @@
 ## Context
 
 The homepage hero was rebuilt as absolutely-positioned children inside a
-full-bleed wrapper so the composition scales down as the viewport narrows
-(benchmark: akercompanies.com). Most of it doesn't scale: the nav-button
+full-bleed wrapper so the composition scales down as the viewport narrows.
+Most of it doesn't scale: the nav-button
 thumbnails, the mid text block, and the divider line are all sized/positioned in
 **raw `rem`**, and Lumos keeps the root font-size **flat at 16px** by design
 (it scales *type* via per-variable `clamp()`s and *layout* via container queries
@@ -19,9 +19,9 @@ while the cards scale steeply with viewport width. Different rates → the hero
 reads as incoherent on resize: cards shrink, chrome stays put, the divider
 decouples from the cards (its gap blows out 16px→131px over 1440→1024).
 
-Aker looks cohesive because it runs a **fluid root**, so every rem in its hero
-rides one gentle rate. We can't copy that: Lumos builds its type clamps on rem
-assuming a flat root, so a fluid root would distort type sitewide.
+The obvious alternative — a **fluid root**, so every rem in the hero rides one
+gentle rate — isn't available to us: Lumos builds its type clamps on rem assuming
+a flat root, so a fluid root would distort type sitewide.
 
 **Goal:** a smooth, coherent scale flow for the homepage hero — the chrome
 breathes gently as the window narrows, the divider stays locked to the cards —

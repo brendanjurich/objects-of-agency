@@ -104,9 +104,9 @@ The fade-through fades any element carrying `data-page-transition` (in Webflow, 
 
 The leave handler calls `window.lenis.stop()` before navigating. Back/forward from **bfcache reuses the same JS heap**, so Lenis returns *stopped* and the restored page won't scroll. Fix: the `pageshow` handler restarts Lenis (and restores `autoAlpha:1`) when `e.persisted`. Any future leave logic that touches Lenis/scroll-lock must mirror a restore in `pageshow.persisted`.
 
-### Reference: aker.companies is a heavy branded-loader cover, not a fade-through
+### Transition: lightweight fade-through, branded loader first-visit/home only
 
-Audited live (akercompanies.com). aker is **not** Barba and **not** a fade-through: a custom script intercepts every `<a>` click → fires a Webflow IX2 animation playing a full-screen `.page-loader` (z999) with a logo Lottie (`akersymbol3_white.json`) → hard `setTimeout(1200ms)` before navigating. So every internal click costs ~1.2s + a Lottie render — the "heavy logo on every click" feel. Their Lenis (`lerp:0.2`) and ScrollTrigger+SplitText reveals match our stack. Our fade-through is deliberately lighter and keeps the branded loader to first-visit/home only.
+We deliberately rejected the "heavy logo on every click" pattern (a full-screen branded loader cover with a hard ~1.2s delay gating every internal navigation). Our fade-through is lighter; the branded loader is reserved for first-visit/home only.
 
 ---
 

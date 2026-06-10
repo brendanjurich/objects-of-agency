@@ -49,7 +49,7 @@ Ordered by dependency. Work top-to-bottom where possible: foundation before SEO,
 
 - [ ] Landing page options — decision needed, then build
 - [ ] Scroll reveal animations — build on the Lenis engine (shipped v1.0.89).
-      Aker-style approach: ScrollTrigger `fromTo` reveals with
+      Approach: ScrollTrigger `fromTo` reveals with
       `toggleActions: 'play reset play reset'` (fire-on-enter, replay on re-enter)
       + SplitText for text reveals. No scrub/pin. Mobile differences are
       per-animation params via an `isMobile = innerWidth <= 768` flag (axis swap,
