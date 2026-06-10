@@ -269,6 +269,20 @@ document.addEventListener('DOMContentLoaded', function() {
   if (topSwiper)   topSwiper.autoplay.stop();
   if (rightSwiper) rightSwiper.autoplay.stop();
 
+  // Resize shudder fix. With effect:'creative' Swiper uses virtualTranslate, so
+  // each slide is positioned by an individual transform of magnitude
+  // activeIndex × slideSize. Swiper's ResizeObserver rewrites those transforms
+  // one frame AFTER the browser reflows on resize, so for that frame the active
+  // slide is displaced by activeIndex × ΔslideSize — amplified by loop's deep
+  // activeIndex (pronounced on hero_feed_right). A synchronous update() in the
+  // resize event runs before paint, recomputing the transforms in the same frame
+  // as the reflow so the jump never renders. Must stay synchronous — rAF/debounce
+  // would defer past paint and reintroduce the shudder.
+  window.addEventListener('resize', function () {
+    if (topSwiper)   topSwiper.update();
+    if (rightSwiper) rightSwiper.update();
+  });
+
   var portraitMQ = window.matchMedia('(orientation: portrait)');
   function onOrientationFlip() {
     requestAnimationFrame(function () {
