@@ -15,3 +15,5 @@ node_modules/
 
 # graphify knowledge-graph output
 graphify-out/
+# Symlink to global skills quick-ref (~/.claude/SKILLS.md) — local convenience only
+SKILLS-REF.md
