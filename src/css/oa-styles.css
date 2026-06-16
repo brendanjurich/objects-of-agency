@@ -766,6 +766,13 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 .glass-effect__edge-dark { mix-blend-mode: overlay; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset -.1875em -.28125em .09375em -.1875em #b3b3b34d; }
 .glass-effect__inner-glow { mix-blend-mode: darken; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset 0 0 1.75em #f2f2f24d; }
 
+/* oa_statement_blur: fade the top edge so the filter's soft-blur zone doesn't
+   appear as a visible line as the overlay sweeps across the statement text. */
+.oa_statement_blur {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
+}
+
 /* --- Fusion overrides --- */
 .button-046 .glass-effect {
   border-radius: var(--button-046-border-radius);
