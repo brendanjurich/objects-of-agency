@@ -338,6 +338,26 @@ function initButton046() {
   });
 }
 
+// ============================================================
+// 9. STRIP ORPHANED WEBFLOW SCROLL HANDLER
+// ============================================================
+// The "OA Statement [Scroll]" interaction (continuous "While scrolling in view"
+// on .oa_statement_layout) is applied site-wide, so Webflow registers its scroll
+// event in EVERY page's IX2 data — including pages that don't contain the block
+// (/all-products, /product/*, /materials-finishes/*). On those pages IX2's
+// throttled scroll.webflow handler still runs jQuery .offset() every frame against
+// a missing target → forced reflow. It's cheap on short pages but on the long,
+// image-heavy /all-products it costs ~376ms of reflow per scroll and drops to
+// ~57fps (visible jitter). The interaction can't be unscoped per-page in the
+// Webflow UI, so strip the dead handler wherever the block is absent. Pages WITH
+// the block (homepage) keep the real, wanted animation. No other Webflow scroll
+// interaction exists on the site, so unbinding scroll.webflow here is safe.
+function stripOrphanScrollHandler() {
+  if (document.querySelector('.oa_statement_layout')) return; // block present → keep the real interaction
+  const $ = window.jQuery;
+  if ($) $(window).off('scroll.webflow');
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   initSmoothScroll();
   initPageTransition();
@@ -345,6 +365,14 @@ document.addEventListener('DOMContentLoaded', function () {
   initNavSafariFix();
   initButton046();
 });
+
+// Run after Webflow's modules (incl. IX2) have initialised and bound their
+// scroll handler, so the .off() actually has something to remove.
+if (window.Webflow && typeof window.Webflow.push === 'function') {
+  window.Webflow.push(stripOrphanScrollHandler);
+} else {
+  window.addEventListener('load', stripOrphanScrollHandler);
+}
 
 // Patch Lumos-initialized Swipers after window.load.
 // Lumos init runs before window.load, so instances are available by then.
