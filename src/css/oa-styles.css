@@ -160,6 +160,16 @@ footer.footer_main_wrap {
   transform: scale(1) rotate(0.001deg);
 }
 
+/* Tablet image swap — opacity (not display:none) preserves layout for GSAP xPercent.
+   Desktop image stays in layout on tablet so GSAP can still animate it; opacity hides it visually.
+   display:block overrides the display:none Webflow sets on .is-tablet at the desktop breakpoint.
+   1024px threshold captures iPad Pro portrait (1024×1366) which sits above Webflow's 991px BP. */
+.crisp-header__slider-slide-inner.is-tablet { opacity: 0; }
+@media (max-width: 1024px) {
+  .crisp-header__slider-slide-inner:not(.is-tablet) { opacity: 0; }
+  .crisp-header__slider-slide-inner.is-tablet { display: block; opacity: 1; }
+}
+
 /* GREETINGS: hardcoded 9-item, 36s cycle */
 /* ============================================================
    HERO FEED — CYCLING GREETINGS
