@@ -172,3 +172,21 @@ Hit live — the wrapper wouldn't hug its buttons despite `Width: Auto`. Cause: 
 ### Decided NOT to gate slider-image loading — AVIF instead
 
 Slides 1–3 download even when unreachable, but they already carry Webflow `srcset` (500–3200w, `sizes:100vw`) so phones right-size them; the real residual waste is high-DPR tablets/laptops in 992–1279 pulling large variants. A `data-src` gate would **discard that srcset on three hero images** for a small, device-narrow win. Chosen instead: swap the 3 jpgs → **AVIF** (~½ size everywhere, incl. ≥1280 where they're actually shown, keeps srcset) + set **slide 2 `loading` eager→lazy** (it isn't the LCP — slide 0/video is — so it shouldn't sit in the critical initial load). Tracked in `REMAINING.md`.
+
+---
+
+## 2026-06-16 — Hero slider breakpoint image swap, v1.0.108
+
+### Duplicating a Webflow element copies its custom attributes — `data-slideshow="parallax"` silently breaks the slide index
+
+`initSlideShow()` builds `ui.inner` as a flat `querySelectorAll('[data-slideshow="parallax"]')` and indexes it 1:1 with slides. When a second image (`.is-tablet`) was added to each slide by duplicating the desktop image in Webflow Designer, the `data-slideshow="parallax"` custom attribute was copied onto the duplicate too. `ui.inner` then contained 7 elements instead of 4, and `ui.inner[current]` resolved to the wrong element from the first image-to-image transition onward. No console errors — the animation just targeted the wrong parallax element silently.
+
+**Rule:** any element added inside a `[data-slideshow="slide"]` that should NOT participate in the parallax animation must NOT carry `data-slideshow="parallax"`. Always check custom attributes when duplicating elements in Webflow Designer. The correct structure is one `[data-slideshow="parallax"]` wrapper per slide; content images live inside it.
+
+### `display:none` collapses layout and breaks GSAP `xPercent` — use `opacity:0` instead
+
+GSAP computes `xPercent` as a percentage of the element's **own rendered width**. `display:none` removes the element from layout entirely (width = 0), so `xPercent: 100` produces 0px movement — the animation silently does nothing. For any element that GSAP must be able to animate, hide it with `opacity:0` (preserves layout dimensions) rather than `display:none`. This applies to the desktop `.crisp-header__slider-slide-inner` on tablet — it stays in layout so GSAP can drive it; only `opacity:0` hides it visually.
+
+### iPad Pro portrait (1024 × 1366) sits above Webflow's 991px tablet breakpoint
+
+Webflow's built-in "Tablet" breakpoint fires at ≤991px. iPad Pro portrait is 1024px wide (CSS pixels) — above that threshold — so it inherits desktop styles. For the hero image swap we set our media query at `max-width: 1024px` to capture it. iPad landscape (≥1180px) stays on desktop images intentionally. Any future breakpoint-sensitive CSS that should cover iPad Pro portrait must use `1024px`, not `991px`.
