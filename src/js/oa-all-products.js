@@ -101,8 +101,32 @@ function initBasicFilterSetupMultiMatch() {
 
 
 /* ============================================================
+   SUPPRESS CARD HOVER WHILE SCROLLING
+   ============================================================
+   Scrolling with the cursor over the grid sweeps :hover across card after
+   card; each fires the scale+shadow hover transition on .card_product_group
+   and Safari floods style-recalc for the churning hover states (Chrome
+   absorbs it; Safari drops frames — "sea of purple" in the Timeline). Toggle
+   html.oa-scrolling during scroll so the CSS can drop card pointer-events
+   (no new hovers fire) and neutralise any stuck hover. Passive + class-only:
+   no layout reads, so it does NOT reintroduce the forced reflow the orphaned
+   IX2 scroll-handler strip (oa-global.js §9) removed. */
+function initScrollHoverSuppression() {
+  let timer;
+  window.addEventListener('scroll', function () {
+    document.documentElement.classList.add('oa-scrolling');
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      document.documentElement.classList.remove('oa-scrolling');
+    }, 100);
+  }, { passive: true });
+}
+
+
+/* ============================================================
    INIT
    ============================================================ */
 document.addEventListener('DOMContentLoaded', function () {
   initBasicFilterSetupMultiMatch();
+  initScrollHoverSuppression();
 });

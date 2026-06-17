@@ -190,3 +190,19 @@ GSAP computes `xPercent` as a percentage of the element's **own rendered width**
 ### iPad Pro portrait (1024 × 1366) sits above Webflow's 991px tablet breakpoint
 
 Webflow's built-in "Tablet" breakpoint fires at ≤991px. iPad Pro portrait is 1024px wide (CSS pixels) — above that threshold — so it inherits desktop styles. For the hero image swap we set our media query at `max-width: 1024px` to capture it. iPad landscape (≥1180px) stays on desktop images intentionally. Any future breakpoint-sensitive CSS that should cover iPad Pro portrait must use `1024px`, not `991px`.
+
+---
+
+## 2026-06-17 — Safari /all-products scroll jank: card :hover recalc, v1.0.109
+
+### Desktop Safari scroll jank on /all-products was `:hover` recalc, not the orphaned IX2 handler
+
+The IX2 `scroll.webflow` strip (`oa-global.js` §9, v1.0.107) fixed Chrome but not desktop Safari. Diagnosis (Safari Web Inspector → Timelines → Frames): long frames were dominated by **purple "Styles Recalculated"**, `jQuery._data(window,'events')` showed **no `scroll` handler at all** (strip confirmed working / nothing to strip), and the jank vanished when the cursor was parked **off** the grid. Root cause: scrolling with the cursor over the grid sweeps `:hover` across card after card; each toggles the `.card_product_group` hover (scale(1.02) + 15px box-shadow, transition defined in Webflow) → Safari floods per-frame style recalc (Chrome absorbs it). The animated **box-shadow** amplifies it (full blurred-shadow repaint per frame, per card — the most expensive property to transition in Safari).
+
+### Fix: scroll-gated hover suppression (`oa-all-products.js` + `oa-all-products.css`)
+
+`initScrollHoverSuppression()` toggles `html.oa-scrolling` on a **passive, class-only** scroll listener (no layout reads — does NOT reintroduce the reflow the IX2 strip removed), removed 100ms after scroll stops. CSS during scroll: `pointer-events:none` on `.all_tables_item` (stops new hovers firing — kills the recalc churn) **plus** `transform/box-shadow/transition: none` on `.card_product_group` (neutralises any leaked/stuck hover cheaply). Both rules are needed and complementary — pointer-events alone leaves stuck hovers (Safari doesn't clear `:hover` on `pointer-events:none` until the next mousemove); the override alone still allows recalc churn.
+
+**Known residual (expected, not a bug):** hover can still leak visually during slow/stepped scroll or a mid-scroll mouse nudge — sub-100ms gaps where no `scroll` event fires drop the class. Leaked hovers are cheap (transition killed), so perf stays good.
+
+**Cleaner root-cause fix (Webflow, not this repo — optional follow-up):** make the `.card_product_group` hover cheap so scroll-gating is no longer load-bearing — don't transition `box-shadow`; animate only the `transform`, or toggle a pre-rendered pseudo-element shadow's opacity.
