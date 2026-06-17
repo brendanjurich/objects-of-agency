@@ -90,10 +90,11 @@ function initCascadingSlider() {
 
       const activeSlideWidth = viewportWidth * settings.activeWidth;
       const siblingSlideWidth = viewportWidth * settings.siblingWidth;
-      const farSlideWidth = Math.max(
-        0,
-        (viewportWidth - activeSlideWidth - 2 * siblingSlideWidth - 4 * gap) / 2
-      );
+      // Far slides (offsets ±2/±3) are zero-width: they exist only as invisible
+      // staging slots parked at the viewport edge for the enter/exit animation.
+      // Any non-zero width here leaks a hairline sliver at the viewport edge on
+      // narrow widths (≈0.8px @425). See docs/DECISIONS.md.
+      const farSlideWidth = 0;
 
       slideWidth = activeSlideWidth;
 

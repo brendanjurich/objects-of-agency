@@ -341,7 +341,7 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 
 [data-cascading-slide] {
   --clip: 0;
-  --radius: 0.3em;
+  --radius: 0.3rem;
 }
 
 [data-cascading-slide][data-status="active"] {
