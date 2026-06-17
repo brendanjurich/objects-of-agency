@@ -116,13 +116,5 @@ Ordered by dependency. Work top-to-bottom where possible: foundation before SEO,
 
 ## Post-Launch
 
-- [ ] **/all-products card hover — root-cause perf fix (Webflow).** The v1.0.109
-      scroll-gated hover suppression (`oa-all-products.js`/`.css`) is a symptom fix;
-      the real cost is the `.card_product_group` hover transitioning a 15px
-      **box-shadow** (most expensive prop to animate in Safari) across many cards on
-      scroll-sweep. In Webflow Designer, make the hover cheap so scroll-gating is no
-      longer load-bearing: don't transition `box-shadow` (animate only `transform`,
-      or toggle a pre-rendered pseudo-element shadow's opacity). See DECISIONS
-      2026-06-17.
 - [ ] A/B testing setup (Optimise or equivalent)
 - [ ] "Are we in the conversation?" — visibility / PR audit

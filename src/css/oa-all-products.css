@@ -63,16 +63,11 @@ section[id] {
    SCROLL-TIME HOVER SUPPRESSION (Safari scroll jank)
    ============================================================
    html.oa-scrolling is toggled in oa-all-products.js during scroll. Dropping
-   pointer-events on the cards stops :hover firing as the cursor sweeps the
-   grid (the cause of Safari's per-frame style-recalc). Safari doesn't clear
-   :hover on pointer-events:none until the next mousemove, so also neutralise
-   any stuck card's hover paint/animation while scrolling. */
+   pointer-events on the grid items stops card :hover firing as the cursor
+   sweeps the grid — in Safari every hover toggle (plus the overlapping image
+   scale transitions it spins up) forces a per-frame style recalc, flooding the
+   main thread ("sea of purple" in the Timeline). The rule sits on the item, so
+   it covers the hovered image (a descendant) too. */
 html.oa-scrolling .all_tables_item {
   pointer-events: none;
-}
-
-html.oa-scrolling .card_product_group {
-  transform: none !important;
-  box-shadow: none !important;
-  transition: none !important;
 }
