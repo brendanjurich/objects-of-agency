@@ -112,6 +112,11 @@ function initBasicFilterSetupMultiMatch() {
    no layout reads, so it does NOT reintroduce the forced reflow the orphaned
    IX2 scroll-handler strip (oa-global.js §9) removed. */
 function initScrollHoverSuppression() {
+  // Desktop pointers only. Touch has no :hover to suppress, and running there
+  // would let pointer-events:none swallow a tap landing in the 100ms post-
+  // scroll window — a real downside for zero benefit. Gating here leaves
+  // mobile completely untouched.
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   let timer;
   window.addEventListener('scroll', function () {
     document.documentElement.classList.add('oa-scrolling');
