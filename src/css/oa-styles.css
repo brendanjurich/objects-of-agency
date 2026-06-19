@@ -108,15 +108,19 @@ footer.footer_main_wrap {
 /* ============================================================
    HERO & SLIDER ANIMATIONS
    ============================================================ */
-/* Lock hero to viewport.
-   svh (small viewport height) is static — it never changes as browser chrome
-   shows/hides on scroll, so there is no layout shift.
+/* Lock hero to the visible viewport.
+   --hero-h is set by JS (oa-homepage.js → setHeroHeight) to window.innerHeight,
+   which — unlike any CSS viewport unit — accounts for browser UI that WebKit
+   doesn't report as chrome (e.g. Arc iOS's floating pill, which otherwise
+   overlaps the hero). svh is the pre-JS / no-JS fallback; it's static so it
+   never shifts on scroll. JS re-measures only on orientation change, never on
+   toolbar show/hide, so there is no scroll-driven layout shift.
    __content overrides min-height to 100% so it can't overflow the parent
    and trigger the overflow:hidden clip on Chrome iOS. */
 .crisp-header {
   position: sticky;
   top: 0;
-  height: 100svh;
+  height: var(--hero-h, 100svh);
   overflow: hidden;
   z-index: 0;
 }

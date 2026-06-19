@@ -260,6 +260,17 @@ function initBunnyPlayerBackground() {
   }
 }
 
+// Pin the hero to the *actually visible* viewport height. CSS svh can't see
+// browser UI that WebKit doesn't report as chrome (e.g. Arc iOS's floating
+// pill), so the hero renders too tall and sits behind it; window.innerHeight
+// does see it. Measured on load + on orientation/width change only — never on
+// height-only toolbar show/hide, which would be wasted work (the hero height is
+// pinned, it does not track the toolbar). CSS `100svh` is the pre-JS fallback.
+function setHeroHeight() {
+  if (!document.querySelector('.crisp-header')) return;
+  document.documentElement.style.setProperty('--hero-h', window.innerHeight + 'px');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   initBunnyPlayerBackground();
 
@@ -268,6 +279,8 @@ document.addEventListener('DOMContentLoaded', function() {
   var rightSwiper = initHeroFeedRightSwiper();
   if (topSwiper)   topSwiper.autoplay.stop();
   if (rightSwiper) rightSwiper.autoplay.stop();
+
+  setHeroHeight();
 
   // Resize shudder fix. With effect:'creative' Swiper uses virtualTranslate, so
   // each slide is positioned by an individual transform of magnitude
@@ -278,7 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // resize event runs before paint, recomputing the transforms in the same frame
   // as the reflow so the jump never renders. Must stay synchronous — rAF/debounce
   // would defer past paint and reintroduce the shudder.
+  // Gated to width changes: mobile fires resize on every toolbar show/hide while
+  // scrolling (height only), where re-measuring and updating is wasted work — the
+  // hero height is pinned (--hero-h) and only changes on orientation flip.
+  var lastVW = window.innerWidth;
   window.addEventListener('resize', function () {
+    if (window.innerWidth === lastVW) return;
+    lastVW = window.innerWidth;
+    setHeroHeight();
     if (topSwiper)   topSwiper.update();
     if (rightSwiper) rightSwiper.update();
   });
@@ -286,6 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var portraitMQ = window.matchMedia('(orientation: portrait)');
   function onOrientationFlip() {
     requestAnimationFrame(function () {
+      setHeroHeight();
       if (topSwiper) topSwiper.update();
       if (rightSwiper) rightSwiper.update();
     });

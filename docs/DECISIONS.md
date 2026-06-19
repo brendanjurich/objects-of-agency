@@ -224,3 +224,29 @@ Set `farSlideWidth = 0`. Offsets ±2/±3 collapse to zero visible width (`slotWi
 The slide corner radius is **not** a Webflow border-radius; it's the `round` argument of the Webflow clip-path `.config_slider_layout { clip-path: inset(0px calc(var(--clip)*1px) round var(--radius)) }`, and `--radius` is set in **this repo** at `oa-styles.css` (`[data-cascading-slide]`). It was `0.3em` — but the slide's font-size is a **fluid 16.19px**, so the radius drifted with the type scale (computed ~4.86px). The remembered "0.75em" was stale; live was already 0.3em. Changed to **`0.3rem`** (locked to the 16px root = 4.8px) for consistency with the site's cards. `config_variant_slider` itself is a pure Webflow class (container, `overflow:hidden`, `height:13rem`); the size slider is its `.slider-size` modifier + `.config_size_wrap` (inactive slides `opacity:0`), so the `farSlideWidth` change is a no-op there.
 
 > No build step: `oa-configurator.js` and `oa-styles.css` are served raw from the CDN (only `oa-homepage.js` is bundled). Ship = tag + bump both URLs in Webflow.
+
+---
+
+## 2026-06-19 — Hero sits behind Arc iOS's floating pill: svh → JS-measured height, v1.0.112 (pending)
+
+### Why no CSS viewport unit can fix Arc (reverses the deliberate `svh` choice)
+
+The hero (`.crisp-header`) was `height: 100svh`, chosen deliberately because svh is static (no scroll-driven layout shift). That works on Safari/Chrome iOS but **fails on Arc iOS**: the hero renders too tall and sits behind Arc's floating bottom pill. Root cause — Arc's pill is **custom browser UI that iOS WebKit does not report as chrome**, so *every* CSS viewport unit (`svh`/`dvh`/`lvh`) thinks it has the full height and the pill overlaps the bottom. No CSS-only fix exists. Confirmed with an on-device probe (overlay logging `innerHeight`/`visualViewport.height`/`100svh`):
+
+| | Arc iOS | Firefox Android |
+|---|---|---|
+| `innerHeight` | **717** | 651 |
+| `100svh` | **793** | 651 |
+| `resizes` after scroll | 0 | 0 |
+
+On Arc, `window.innerHeight` (717) is **76px smaller** than `100svh` (793) — that 76px is the pill, and innerHeight is the only metric that sees it. `resizes 0` confirms Arc's pill is stable (never fires resize on scroll), so a single measurement on load suffices.
+
+### Fix: `--hero-h` from `window.innerHeight`, svh as fallback
+
+`oa-styles.css`: `.crisp-header { height: var(--hero-h, 100svh) }`. `oa-homepage.js` `setHeroHeight()` sets `--hero-h` to `window.innerHeight` on load + on orientation/width change only — **never on height-only resize** (toolbar show/hide), so it does not re-introduce scroll-driven shift. svh stays as the pre-JS / no-JS fallback. Matches the Aker benchmark: cold cache may briefly paint long, then a reflow corrects it; reload paints correct (the pill is already settled). This was deemed acceptable up front — beating the cold-paint frame would need a render-blocking `<head>` script.
+
+### Firefox jitter: width-gated the resize handler, but it is a defensive cleanup, not a confirmed cure
+
+The `window.resize` → `swiper.update()` handler (the v1.0.106 shudder fix) now **width-gates**: `if (innerWidth === lastVW) return`. Mobile fires `resize` on every toolbar show/hide while scrolling; gating drops that wasted synchronous `update()` churn. **Width** resizes (desktop drag) still fire `update()`, so the v1.0.106 shudder fix is preserved. Caveat: the diagnostic did **not** reproduce a resize storm on Firefox (`resizes 0`, `innerHeight == svh == 651`), so the hero-height change is a no-op there and the gate is not a proven Firefox fix — the residual Firefox jitter is the sticky-hero reflowing as the toolbar collapses (Aker has it too) and was explicitly accepted at Aker-parity rather than reworking the sticky-hero mechanism.
+
+> Build step applies: `oa-homepage.js` is bundled → `npm run build` before tag. Two URLs bump this ship — `dist/oa-homepage.js` and `src/css/oa-styles.css`.
