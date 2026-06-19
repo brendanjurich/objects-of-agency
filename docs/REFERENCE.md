@@ -5,8 +5,10 @@ per-feature working notes. The **code in `src/` is the source of truth**; this
 captures the *why* and the non-obvious rules so they aren't rediscovered.
 
 For session-by-session decisions and corrected assumptions, see
-[DECISIONS.md](DECISIONS.md). For architecture relationships, query the knowledge
-graph in `graphify-out/`.
+[DECISIONS.md](DECISIONS.md). For how styling is layered across Webflow / Lumos /
+the repo override — and where a fix belongs — see
+[CSS-ARCHITECTURE.md](CSS-ARCHITECTURE.md). For architecture relationships, query the
+knowledge graph in `graphify-out/`.
 
 ---
 
