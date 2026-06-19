@@ -119,13 +119,13 @@ GSAP is provided by Webflow's **native GSAP integration** (Site Settings → GSA
 
 ### Lumos
 
-Version: **v2.2.1**. Controlled in Webflow, not this repo.
+Version: **v2.2.1** — a **build-time clone**, baked into the Webflow project at the version downloaded. **There is no Lumos runtime**: nothing loads from a Lumos CDN, and the slider init is an inline `<script>` frozen in the published file. Unlike GSAP above (which Webflow genuinely auto-updates on publish), Lumos does **not** auto-update — Timothy Ricks cannot change anything already in your project. The *only* way Lumos changes the live site is if **you** re-clone / re-import its components in the Designer yourself.
 
-`oa-global.js` patches Lumos-initialized Swipers at `window.load` (search the source for `is-slider-transitioning`). A Lumos update that changes Swiper init timing or class names requires re-testing the speed patch and the `is-slider-transitioning` body-class behaviour.
+`oa-global.js` patches Lumos-initialized Swipers at `window.load` (search the source for `is-slider-transitioning`). Re-test the speed patch + `is-slider-transitioning` behaviour only if **you** re-import the sliders and their init timing or class names change — *not* on every publish.
 
 **Lumos ≠ Osmo — never conflate.**
 
-- **Lumos** (v2.2.1, Timothy Ricks' Webflow framework) owns the build system: the `u-` utility classes, the `--_…---` / `--site--` variables, the type clamps / root font-size, and the **sliders** (`[data-slider='component']`, `.slider_element` / `.slider_list`, Swiper 8 — "Lumos-initialized Swipers"). CSS written inside Lumos embeds is wiped on update.
+- **Lumos** (v2.2.1, Timothy Ricks' Webflow framework) owns the build system: the `u-` utility classes, the `--_…---` / `--site--` variables, the type clamps / root font-size, and the **sliders** (`[data-slider='component']`, `.slider_element` / `.slider_list`, Swiper 8 — "Lumos-initialized Swipers"). CSS written inside Lumos embeds is wiped if you re-clone/re-import the embed.
 - **Osmo** (osmo.supply) is a vault of individual components I paste in and adapt — e.g. the Glass CTA (Button 097/046 + Glass Effect), the all-products multi-match filter, and the `--ease-osmo` easing curve. Osmo does **not** own the sliders; only the slider *easing* is Osmo-derived.
 
 The product/home sliders are **Lumos**. Don't call them Osmo.
