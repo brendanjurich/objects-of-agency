@@ -642,6 +642,20 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   transition-timing-function: var(--ease-osmo) !important;
 }
 
+/* Centre the static-slider image in its frame. Lumos applies its offset margin
+   to BOTH .static_slider_offset (which sizes the slide) AND
+   .slider_list.swiper-wrapper, doubling it to -16px while slides only pad +8px —
+   netting an 8px left shift that clips the image's LHS and misaligns the controls.
+   Remove the redundant margin on .slider_list ONLY where it sits inside
+   .static_slider_offset (the product-template sliders). Scoped this way so the
+   homepage .section_menu_wrap slider — which relies on .slider_list's margin
+   alone — is untouched. 3-class selector outranks Webflow's 2-class rule, no
+   !important needed. Covers all three: static_slider / static_press / static_process. */
+.static_slider_offset .slider_list.swiper-wrapper {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 /* Bunny Background Video Player */
 [data-bunny-background-init] .bunny-bg__placeholder {
   transition: opacity 0.3s linear, visibility 0.3s linear;

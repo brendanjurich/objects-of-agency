@@ -123,6 +123,13 @@ Version: **v2.2.1**. Controlled in Webflow, not this repo.
 
 `oa-global.js` patches Lumos-initialized Swipers at `window.load` (search the source for `is-slider-transitioning`). A Lumos update that changes Swiper init timing or class names requires re-testing the speed patch and the `is-slider-transitioning` body-class behaviour.
 
+**Lumos ≠ Osmo — never conflate.**
+
+- **Lumos** (v2.2.1, Timothy Ricks' Webflow framework) owns the build system: the `u-` utility classes, the `--_…---` / `--site--` variables, the type clamps / root font-size, and the **sliders** (`[data-slider='component']`, `.slider_element` / `.slider_list`, Swiper 8 — "Lumos-initialized Swipers"). CSS written inside Lumos embeds is wiped on update.
+- **Osmo** (osmo.supply) is a vault of individual components I paste in and adapt — e.g. the Glass CTA (Button 097/046 + Glass Effect), the all-products multi-match filter, and the `--ease-osmo` easing curve. Osmo does **not** own the sliders; only the slider *easing* is Osmo-derived.
+
+The product/home sliders are **Lumos**. Don't call them Osmo.
+
 ### Finsweet Attributes (listnest)
 
 ```html
