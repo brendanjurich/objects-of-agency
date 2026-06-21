@@ -250,3 +250,17 @@ On Arc, `window.innerHeight` (717) is **76px smaller** than `100svh` (793) — t
 The `window.resize` → `swiper.update()` handler (the v1.0.106 shudder fix) now **width-gates**: `if (innerWidth === lastVW) return`. Mobile fires `resize` on every toolbar show/hide while scrolling; gating drops that wasted synchronous `update()` churn. **Width** resizes (desktop drag) still fire `update()`, so the v1.0.106 shudder fix is preserved. Caveat: the diagnostic did **not** reproduce a resize storm on Firefox (`resizes 0`, `innerHeight == svh == 651`), so the hero-height change is a no-op there and the gate is not a proven Firefox fix — the residual Firefox jitter is the sticky-hero reflowing as the toolbar collapses (Aker has it too) and was explicitly accepted at Aker-parity rather than reworking the sticky-hero mechanism.
 
 > Build step applies: `oa-homepage.js` is bundled → `npm run build` before tag. Two URLs bump this ship — `dist/oa-homepage.js` and `src/css/oa-styles.css`.
+
+---
+
+## 2026-06-21 — Statement scroll-blur: `.oa_statement_blur` mask is load-bearing, v1.0.114 (removed) → v1.0.115 (restored)
+
+### Corrected assumption: the mask is NOT redundant
+
+The `.oa_statement_blur` mask (`linear-gradient(to bottom, transparent 0%, black 15%)` in `oa-styles.css`) was removed in v1.0.114 on the theory it was redundant — reasoning that since the panel background colour equals the section bg at `opacity: 0.8`, the blurred edge cancels (`0.8·bg + 0.2·bg = bg`). The line came straight back: a visible edge sweeping down over the statement on scroll. Restored in v1.0.115.
+
+**The flaw:** the cancellation logic only holds for the panel edge over the **bare background**. It ignores the wipe edge over the **text**, which is exactly what the mask feathers. The 40px blur alone leaves a defined moving boundary where the dark text fades; the mask widens that feather so it doesn't read as a line. It's **theme-sensitive** — a light theme (dark text on light bg) exposes the moving edge that FlowGuide's white-on-black hides, which is why FlowGuide runs the identical recipe (`filter: blur(40px)`, opacity 0.8, panel == section bg) mask-free and we can't.
+
+**Process miss:** the "no line" call came from two *static* screenshots; the artefact only shows in *motion*. Verify the actual failure mode (scroll through), not a convenient static proxy. The retiming that shipped alongside (IX2 End offset 50→12) sped the sweep up, making the bare edge more conspicuous still.
+
+Full recipe, colour-lock rule, and component/light-dark-variant flags now live in [REFERENCE.md](REFERENCE.md) → *Statement scroll-blur*. CSS-only change, no build step.

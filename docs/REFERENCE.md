@@ -80,6 +80,45 @@ timing-function inline every slide change, so the rule needs `!important`):
 
 ---
 
+## Statement scroll-blur (`.oa_statement_blur`)
+
+Text that fades as a soft-edged panel sweeps down it on scroll (homepage intro;
+modelled on FlowGuide's brand-guide statement). The repo owns **only** the mask in
+`oa-styles.css` — everything else is Webflow-side.
+
+**The recipe — three Webflow-owned styles on `.oa_statement_blur` + one repo rule:**
+- Webflow: `filter: blur(40px)` · `opacity: 0.8` · `background-color` = **the section bg colour**.
+- Repo (`oa-styles.css`): `mask-image: linear-gradient(to bottom, transparent 0%, black 15%)`.
+- Motion: Webflow **IX2** "While scrolling in view" (`OA Statement [Scroll]`) translates
+  the panel down through the text. No GSAP/ScrollTrigger.
+
+**The colour-lock rule — this is the one that bites.** The panel is invisible against
+its backdrop *only* while `panel background == section background` (at 0.8 opacity,
+`0.8·bg + 0.2·bg = bg`). Let them drift and the panel shows as a visible block/band.
+→ Bind the panel's `background-color` to the **same colour variable the section uses**,
+so a light/dark variant (or any re-theme) drags both together and can't desync.
+
+**The mask is load-bearing — do not remove.** It feathers the wipe's leading (top) edge
+as it sweeps through the text. On a **light** theme (dark text fading on light bg) the
+40px blur alone leaves a visible line travelling over the text; the mask softens it out.
+A **dark** variant (light text on dark, like FlowGuide) doesn't strictly need it but it's
+harmless — leave it. (Removed once as "redundant" → the line came straight back →
+restored. The "panel == bg ⇒ edge invisible" logic only holds for the edge over the
+*bare bg*; it ignores the wipe edge over the *text*, which is what the mask fixes.)
+
+**Component / variant flags:**
+- The mask is a **global class rule** → it carries to every instance and variant
+  automatically. Don't scope or duplicate it per-variant.
+- Per dark variant: set the panel bg to *that* variant's section bg (ideally via the
+  shared variable above); keep `opacity: 0.8` and `filter: blur(40px)`.
+- After componentizing, **test the IX2 scroll interaction still fires** on each variant —
+  IX2 + components is a fiddly area.
+- **Timing** ("comes in at X% from bottom") is IX2 **Start / End offsets**, Designer-only
+  (no API). Lower Start = later onset; a smaller End offset speeds the sweep (faster edge
+  = more conspicuous, so don't over-compress it). Smoothing `80`.
+
+---
+
 ## All Products filter (Osmo multi-match)
 
 - **Approach B (chosen):** a CMS **plain-text** field (`Filter Tags`) bound directly
