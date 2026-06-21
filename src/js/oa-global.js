@@ -358,12 +358,24 @@ function stripOrphanScrollHandler() {
   if ($) $(window).off('scroll.webflow');
 }
 
+function initLocalTime() {
+  const el = document.querySelector('[data-perth-time]');
+  if (!el) return; // homepage map card only — no-op elsewhere
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Australia/Perth', hour: '2-digit', minute: '2-digit', hour12: false
+  });
+  const tick = () => { el.textContent = fmt.format(new Date()); };
+  tick();
+  setInterval(tick, 30000); // visible minute never more than ~30s stale
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   initSmoothScroll();
   initPageTransition();
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
   initButton046();
+  initLocalTime();
 });
 
 // Run after Webflow's modules (incl. IX2) have initialised and bound their
