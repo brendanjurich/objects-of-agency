@@ -1,0 +1,86 @@
+/* ============================================================
+   OSMO — Infinite Draggable Grid (embedded variant)
+   ------------------------------------------------------------
+   Behavioural + structural glue ONLY. Per docs/CSS-ARCHITECTURE.md
+   this repo layer loads AFTER Webflow's CSS and wins at equal
+   specificity, so it deliberately OMITS every design knob you set
+   in the Designer — section height (70svh), item width / padding /
+   aspect-ratio, card border-radius (your card-radius var) — so your
+   Webflow class styles own those cleanly. What lives here is what
+   the Designer panel can't express (touch-action, the JS status
+   states, the wf-design-mode preview) plus the positioning the JS
+   depends on. Paired JS: oa-infinite-grid.js. Page-level embed.
+   ============================================================ */
+
+/* --- Section: behaviour Webflow's panel can't express --- */
+.infinite-grid {
+  touch-action: pan-y;            /* vertical swipe = page scroll, horizontal = grid drag */
+  overflow: clip;
+  cursor: grab;
+  transition: opacity 0.5s ease;
+  /* height (70svh): set in the Webflow Designer */
+}
+
+.infinite-grid[data-infinite-grid-status="loading"]  { opacity: 0; }
+.infinite-grid[data-infinite-grid-status="dragging"] { cursor: grabbing; }
+
+/* --- Structure the JS relies on (not design knobs) --- */
+.infinite-grid__collection {
+  will-change: transform;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.infinite-grid__list {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.infinite-grid__item {
+  will-change: transform;
+  backface-visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* width / padding / aspect-ratio: set in the Webflow Designer (rem) */
+}
+
+.infinite-grid__card {
+  will-change: transform;
+  backface-visibility: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* border-radius: set in the Webflow Designer (your card-radius var) */
+}
+
+.infinite-grid__card-img {
+  pointer-events: none;           /* drag passes through the image, no native ghost-drag */
+  object-fit: cover;
+  border-radius: inherit;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Webflow Designer preview (the JS doesn't run in the editor) --- */
+:is(.wf-design-mode, .wf-editor) .infinite-grid[data-infinite-grid-status] { opacity: 1; }
+
+:is(.wf-design-mode, .wf-editor) .infinite-grid .infinite-grid__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+:is(.wf-design-mode, .wf-editor) .infinite-grid .infinite-grid__item {
+  position: relative;
+  top: unset;
+  left: unset;
+}

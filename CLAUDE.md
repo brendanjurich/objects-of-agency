@@ -23,6 +23,8 @@ keys, tokens, or `.env` files.**
 | `src/js/oa-all-products.js` | Osmo multi-match filter for /all-products. Reads `?filter=` URL param via `paint()` on init. | Raw file → CDN |
 | `src/css/oa-styles.css` | Global styles, FOUC prevention, nav, hero carousel. | Raw file → CDN |
 | `src/css/oa-all-products.css` | /all-products page styles. | Raw file → CDN |
+| `src/js/oa-infinite-grid.js` | Osmo infinite draggable grid (embedded variant) for product pages. Drag + idle drift via GSAP Observer; reuses `window.gsap`/`window.Observer` (no CDN GSAP). | Raw file → CDN |
+| `src/css/oa-infinite-grid.css` | Infinite grid behavioural glue (`touch-action`, status states, Designer preview). Sizing/radius/height live in the Designer. | Raw file → CDN |
 
 Only `oa-homepage.js` goes through the build step. The other files are served as-is.
 
@@ -79,6 +81,7 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 **Page-level embeds** (no dependency on the order above):
 - `oa-homepage.js` — homepage
 - `oa-all-products.js` + `oa-all-products.css` — /all-products
+- `oa-infinite-grid.js` + `oa-infinite-grid.css` — product template (the grid section ships per-product via a CMS toggle; the script no-ops when it's absent)
 
 > Note: `oa-configurator.js` currently loads sitewide but is only needed on
 > product pages. Scoping it to product pages would drop one script request on
@@ -115,6 +118,7 @@ GSAP is provided by Webflow's **native GSAP integration** (Site Settings → GSA
   `Flip`, `ScrollTrigger`, `SplitText`, `Inertia`, `Observer`, `ScrollSmoother`,
   `ScrollTo`, `Text`, `CustomEase`, `CustomBounce`, `CustomWiggle`, `EasePack`.
 - `oa-global.js` registers `CustomEase` at top-level execution — **CustomEase must stay enabled.**
+- **Third-party / Osmo GSAP components: reuse `window.gsap` and `window.Observer` — never load their CDN GSAP.** Webflow already provides both (Observer ships via ScrollTrigger). A second CDN `gsap` makes a duplicate `window.gsap` that can clobber the top-level `CustomEase` registration above. See `oa-infinite-grid.js` and docs/DECISIONS.md (2026-06-22).
 - Webflow auto-updates GSAP (and plugins) to the latest version on **every publish**. The version cannot be pinned. If a publish coincides with a GSAP release, re-verify all animations: loader, nav, slideshow, configurator cascading slider.
 
 ### Lumos

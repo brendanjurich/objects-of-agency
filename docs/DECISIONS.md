@@ -264,3 +264,32 @@ The `.oa_statement_blur` mask (`linear-gradient(to bottom, transparent 0%, black
 **Process miss:** the "no line" call came from two *static* screenshots; the artefact only shows in *motion*. Verify the actual failure mode (scroll through), not a convenient static proxy. The retiming that shipped alongside (IX2 End offset 50→12) sped the sweep up, making the bare edge more conspicuous still.
 
 Full recipe, colour-lock rule, and component/light-dark-variant flags now live in [REFERENCE.md](REFERENCE.md) → *Statement scroll-blur*. CSS-only change, no build step.
+
+---
+
+## 2026-06-22 — Osmo Infinite Draggable Grid on the product page (embedded variant), v1.0.117
+
+### Osmo components reuse Webflow-native GSAP — never add their CDN gsap
+
+Osmo's resource ships with `<script src="…gsap@3.15…">` + `Observer.min.js`. **Do not add them.** Every page already has GSAP via Webflow's native integration. Verified live on `/product/interior-credenza`: `window.gsap` = **3.15.0** (the exact version Osmo targets) and `window.Observer` is a registered function with `.create()` — Webflow bundles Observer in via ScrollTrigger (it sits in `gsap.core.globals()`). Adding the CDN gsap creates a second `window.gsap` that can clobber the top-level `CustomEase` registration in `oa-global.js` (loader, nav, slideshow, configurator). The fix is subtractive: delete both CDN tags; the script uses the page's globals unmodified (its `gsap.registerPlugin(Observer)` is then a harmless no-op). Bonus: reading `window.gsap` keeps the grid on whatever GSAP version the rest of the site rides (Webflow auto-bumps on publish) instead of pinning a diverging 3.15.
+
+**General rule:** any Osmo/third-party GSAP component must reuse `window.gsap` / `window.Observer` — never load a CDN GSAP. Now in CLAUDE.md under the GSAP section.
+
+### Reworked from full-viewport takeover to embedded block
+
+Osmo sizes itself `100svh` and captures `wheel,touch,pointer` with `preventDefault: true` — a scroll-jacking takeover. As a child of `.press_process-layout` (mid-page) that traps page scroll on every device. Changes in `oa-infinite-grid.js`:
+
+- Observer `type` `wheel,touch,pointer` → `touch,pointer`: wheel/trackpad now scrolls the **page**, not the grid.
+- `handleMovement` wheel branch removed. The parallax the look depends on (column-speed pattern + `xToYInfluence` + scale-on-drag) is **preserved** — it's a function of `pos.x/pos.y`, which drag already writes; only the wheel *route* into it was removed.
+- New idle auto-drift (20px/s, mostly horizontal + faint vertical) written straight to `pos.target` so it stays full-size; pauses on hover, on drag, and off-screen (an IntersectionObserver flips `inViewport`, and `updateGrid` early-returns when false — frames saved mid-page).
+- Touch axis-lock via CSS `touch-action: pan-y`, not a JS heuristic: vertical swipe scrolls the page, horizontal pans the grid. Accepted trade-off: vertical grid panning is sacrificed to page scroll on touch.
+
+### CSS split: behaviour in the repo, sizing in the Designer
+
+Per CSS-ARCHITECTURE.md the repo layer loads after Webflow and wins at equal specificity, so `oa-infinite-grid.css` deliberately **omits** the Designer knobs — section height (70svh), item width / padding / aspect-ratio, card `border-radius` — leaving them to the Webflow classes (owned and tweaked in rem, e.g. a global card-radius var). The repo file carries only what the panel can't express (`touch-action`, the `[data-infinite-grid-status]` opacity/cursor states, the `wf-design-mode` preview) plus the absolute positioning the JS depends on. The em→rem conversion therefore happens on the Designer classes, not in code — no JS impact (the script measures whatever size results).
+
+### Visibility is build-time CMS conditional
+
+The whole section ships or not per product via a CMS on/off boolean (same pattern as the configurator). Absent ⇒ `querySelectorAll('[data-infinite-grid-init]')` no-ops; present ⇒ builds. Zero JS. Cards are CMS-bound — Webflow SSRs collection items, so they're in the DOM when the script clones `originalItems` at `DOMContentLoaded`; zero/few items don't error.
+
+> Both files raw-served (no Rollup). Page-level embed on the product template after tag.
