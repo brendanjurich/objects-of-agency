@@ -293,3 +293,15 @@ Per CSS-ARCHITECTURE.md the repo layer loads after Webflow and wins at equal spe
 The whole section ships or not per product via a CMS on/off boolean (same pattern as the configurator). Absent ⇒ `querySelectorAll('[data-infinite-grid-init]')` no-ops; present ⇒ builds. Zero JS. Cards are CMS-bound — Webflow SSRs collection items, so they're in the DOM when the script clones `originalItems` at `DOMContentLoaded`; zero/few items don't error.
 
 > Both files raw-served (no Rollup). Page-level embed on the product template after tag.
+
+---
+
+## 2026-06-23 — Infinite grid tuning: image ratio, touch drag, drift, v1.0.118
+
+### Symmetric padding can't preserve an image ratio — use `aspect-ratio` on the card
+
+4:5 source images rendered distorted (and "way off" on mobile) because the card filled `(square item − symmetric padding)`, and equal padding on a square yields a square content box — `object-fit: cover` then crops 4:5 → square. **No padding value fixes this:** symmetric padding can't define a ratio, and on a non-square cell it distorts the inner ratio — worst on mobile, where the padding clamp's floor is a larger fraction of the smaller cell. Fix: set `aspect-ratio: 4/5` on `.infinite-grid__card` in the Designer (item stays `4/5` so portrait cards tile without vertical overlap; padding is now purely the gutter, ratio-irrelevant). The repo CSS had `height: 100%` on the card which — loading after Webflow — overrode the Designer's aspect-ratio; **removed it** so the Designer owns card height/ratio. General rule: don't hardcode a dimension in the repo layer that you want the Designer to control.
+
+### Touch: vertical reserved for page scroll, horizontal pans; faster touch drag
+
+`handleMovement` now zeroes `moveY` on touch (vertical = page scroll via `touch-action: pan-y`; horizontal still pans, plus the `xToYInfluence` bleed for a little vertical life). Earlier the JS read vertical touch deltas too, so a vertical swipe moved the grid *and* scrolled the page — now it only scrolls. Touch drag sped up (`touchDragSpeed 2.0`, clamp 120); mouse drag unchanged. Hover-pause on drift removed — drift now pauses only on active drag + off-screen.

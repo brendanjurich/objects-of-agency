@@ -22,7 +22,8 @@ function initInfiniteCardsGrid() {
 
   const wrappers = document.querySelectorAll('[data-infinite-grid-init]');
 
-  const dragSpeed = 1.2;                  // drag speed
+  const dragSpeed = 1.2;                  // mouse drag speed
+  const touchDragSpeed = 2.0;             // touch drag speed (snappier on mobile)
   const gridOverscan = 1;                 // extra rows/cols generated outside the viewport
   const startOffsetY = 0.33;              // vertical offset between columns
   const positionLerp = 0.05;              // movement smoothing amount
@@ -49,7 +50,6 @@ function initInfiniteCardsGrid() {
     const scale = {current: 1, target: 1};
 
     // idle auto-drift state
-    let isHovered = false;
     let isDragging = false;
     let inViewport = true;
 
@@ -218,7 +218,7 @@ function initInfiniteCardsGrid() {
     function updateGrid(time, deltaTime) {
       if (!inViewport) return; // section off-screen — skip drift + per-card work
 
-      if (!isHovered && !isDragging) {
+      if (!isDragging) {
         const dt = deltaTime ? Math.min(deltaTime / 1000, 0.05) : 0; // clamp tab-away jumps
         pos.targetX += driftX * dt;
         pos.targetY += driftY * dt;
@@ -241,9 +241,14 @@ function initInfiniteCardsGrid() {
     }
 
     function handleMovement(self) {
-      const deltaX = gsap.utils.clamp(-80, 80, self.deltaX * dragSpeed);
-      const deltaY = gsap.utils.clamp(-80, 80, self.deltaY * dragSpeed);
-      const strength = gsap.utils.clamp(0, 1, Math.max(Math.abs(deltaX), Math.abs(deltaY)) / 80);
+      const ev = self.event || {};
+      const isTouch = ev.pointerType === 'touch' || (typeof ev.type === 'string' && ev.type.indexOf('touch') === 0);
+      const speed = isTouch ? touchDragSpeed : dragSpeed;
+      const limit = isTouch ? 120 : 80;
+      const moveX = gsap.utils.clamp(-limit, limit, self.deltaX * speed);
+      // Touch: vertical is reserved for page scroll (touch-action: pan-y), so don't pan the grid on Y.
+      const moveY = isTouch ? 0 : gsap.utils.clamp(-limit, limit, self.deltaY * speed);
+      const strength = gsap.utils.clamp(0, 1, Math.max(Math.abs(moveX), Math.abs(moveY)) / limit);
 
       scale.target = gsap.utils.interpolate(1, minCardScale, strength);
 
@@ -252,8 +257,8 @@ function initInfiniteCardsGrid() {
         scale.target = 1;
       }, 120);
 
-      pos.targetX += deltaX;
-      pos.targetY += deltaY + deltaX * xToYInfluence;
+      pos.targetX += moveX;
+      pos.targetY += moveY + moveX * xToYInfluence;
     }
 
     function handleMouseLeave() {
@@ -271,11 +276,8 @@ function initInfiniteCardsGrid() {
       timers.resize = setTimeout(buildGrid, 200);
     });
 
-    // Drift pauses on hover (desktop; also covers an active mouse-drag)…
-    wrapper.addEventListener('mouseenter', () => { isHovered = true; });
-    wrapper.addEventListener('mouseleave', () => { isHovered = false; });
-
-    // …and pauses when the section is scrolled out of view (saves frames mid-page).
+    // Drift pauses only while actively dragging and when the section is scrolled
+    // out of view (saves frames mid-page). Hover no longer pauses it.
     const viewportObserver = new IntersectionObserver((entries) => {
       inViewport = entries[0].isIntersecting;
     }, {threshold: 0});
