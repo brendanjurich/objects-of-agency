@@ -114,7 +114,6 @@
           slidesPerView,
           followFinger,
           loop,
-          loopAdditionalSlides: 10,
           freeMode,
           slideToClickedSlide,
           parallax,
