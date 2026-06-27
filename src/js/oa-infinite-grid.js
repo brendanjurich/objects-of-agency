@@ -206,7 +206,7 @@ function initInfiniteCardsGrid() {
       observer = Observer.create({
         target: wrapper,
         type: 'touch,pointer',
-        preventDefault: true,
+        preventDefault: false,
         dragMinimum: 3,
         onPress() { isDragging = true; setStatus('dragging'); },
         onRelease() { isDragging = false; setStatus('idle'); },
