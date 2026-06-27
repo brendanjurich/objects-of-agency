@@ -26,6 +26,17 @@
   const SWIPER_JS = `https://cdn.jsdelivr.net/npm/swiper@${SWIPER_VERSION}/swiper-bundle.min.js`;
   const SWIPER_CSS = `https://cdn.jsdelivr.net/npm/swiper@${SWIPER_VERSION}/swiper-bundle.min.css`;
 
+  // Creative-effect config for sliders with data-effect="creative" (product slider).
+  // translate ±100% keeps slides ATTACHED edge-to-edge (the moving slide drags the
+  // adjacent one along at the seam); `scale` is the morph dial (1 = strictly
+  // touching/linear, lower = more morph on the entering/leaving slide). Tune here.
+  const CREATIVE_EFFECT = {
+    limitProgress: 1,
+    perspective: true,
+    prev: { translate: ['-100%', 0, -160], scale: 0.9, opacity: 1 },
+    next: { translate: ['100%', 0, -160], scale: 0.9, opacity: 1 },
+  };
+
   // Inject the Swiper bundle once; resolve when the global is ready.
   function loadSwiper() {
     return new Promise((resolve, reject) => {
@@ -75,8 +86,11 @@
     document
       .querySelectorAll("[data-slider='component']:not([data-slider='component'] [data-slider='component'])")
       .forEach((component) => {
-        if (component.dataset.scriptInitialized) return;
-        component.dataset.scriptInitialized = 'true';
+        // Own guard key (not the Lumos `scriptInitialized`) so a stray leftover
+        // init embed can't claim the flag and block us — the DOM surgery below is
+        // idempotent, so winning the init is always safe.
+        if (component.dataset.oaSliderInit) return;
+        component.dataset.oaSliderInit = 'true';
 
         const swiperElement = component.querySelector('.slider_element');
         const swiperWrapper = component.querySelector('.slider_list');
@@ -93,6 +107,7 @@
         const slideToClickedSlide = swiperElement.getAttribute('data-slide-to-clicked') === 'true';
         const parallax = swiperElement.getAttribute('data-parallax') === 'true';
         const raiseOnTransition = swiperElement.getAttribute('data-raise-on-transition') === 'true';
+        const effect = swiperElement.getAttribute('data-effect'); // e.g. 'creative' (product slider)
 
         const spvAttr = swiperElement.getAttribute('data-slides-per-view');
         const slidesPerView = spvAttr && spvAttr !== 'auto' ? parseInt(spvAttr, 10) || 'auto' : 'auto';
@@ -118,6 +133,13 @@
           centeredSlides: false,
           autoHeight: false,
           speed,
+          // Attached creative morph for the product slider (no-op otherwise).
+          ...(effect === 'creative' ? { effect: 'creative', grabCursor: true, creativeEffect: CREATIVE_EFFECT } : {}),
+          // One slide per swipe — guards against the mobile multi-slide skipping.
+          slidesPerGroup: 1,
+          shortSwipes: true,
+          longSwipesRatio: 0.5,
+          touchReleaseOnEdges: true,
           mousewheel: { enabled: mousewheel, forceToAxis: true },
           keyboard: { enabled: true, onlyInViewport: true },
           navigation: {
