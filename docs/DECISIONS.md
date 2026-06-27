@@ -305,3 +305,19 @@ The whole section ships or not per product via a CMS on/off boolean (same patter
 ### Touch: vertical reserved for page scroll, horizontal pans; faster touch drag
 
 `handleMovement` now zeroes `moveY` on touch (vertical = page scroll via `touch-action: pan-y`; horizontal still pans, plus the `xToYInfluence` bleed for a little vertical life). Earlier the JS read vertical touch deltas too, so a vertical swipe moved the grid *and* scrolled the page — now it only scrolls. Touch drag sped up (`touchDragSpeed 2.0`, clamp 120); mouse drag unchanged. Hover-pause on drift removed — drift now pauses only on active drag + off-screen.
+
+---
+
+## 2026-06-27 — Repo-driven Lumos slider init on Swiper 12 + Material-You parallax
+
+### The paid "Material You" plugin is not needed — it's native Swiper parallax
+
+The UI Initiative "Material You" slider is a **paid** plugin (self-hosted, not on npm/CDN) — a non-starter for a public repo. Inspecting the live demo's DOM at `slidesPerView:1` showed the effect is just **translate + scale parallax inside a rounded `overflow:hidden` frame**: the image sits at `scale(1.125)` and counter-translates as the slide moves. That is exactly Swiper's **built-in free `parallax` module**. Reproduced with `parallax:true` + `data-swiper-parallax` / `data-swiper-parallax-scale` on the product image — no plugin, no custom effect engine. The card is the clip frame (`overflow:hidden`, Designer radius); the image overfills via `scale(>1)` so the translate never reveals an edge. Tuning dials: parallax distance (−15%…−25%) and scale (1.08…1.15).
+
+### Stayed on Swiper 12.2.0, not v14
+
+**Swiper v14.0.0 released 2026-06-26** (one day before this work) — a TypeScript rewrite that raises the browser baseline (Chrome/Safari 16.4+). Deliberately pinned **12.2.0** (latest v12) for wider support and to avoid a day-old major on a live site. v8 → v12 is still a big jump (loop rewritten in v9, `loopedSlides` removed in v11/v12) — but `new Swiper()` + the data-driven config survive.
+
+### Lumos slider init moved from Webflow embeds into the repo (`oa-slider.js`)
+
+Both Lumos sliders (product `.static_slider_contain`, homepage `.slider_wrap` / "Menu Categories") shared the same `[data-slider='component']` contract, with the Swiper load + init **baked into Webflow embeds** + two `oa-global.js` `window.load` patches. Consolidated into one sitewide-footer, guarded **`src/js/oa-slider.js`**: dynamically injects the Swiper 12.2.0 bundle only when a slider exists, runs the faithful Lumos DOM surgery (`flattenDisplayContents`, `removeCMSList`, add `.swiper-slide`), and reads per-slider config from data-attributes. New attrs over the original init: `data-loop`, `data-parallax`, `data-slides-per-view`, `data-speed-touch` (folds in the product 800/700 patch), `data-raise-on-transition` (folds in the homepage `is-slider-transitioning` patch). Both embeds deleted in the Designer; both `oa-global.js` patches removed. Safe because there is **no Lumos runtime** — the init was frozen inline code, now just version-controlled. Product slider opts into `spv:1` + loop + parallax; homepage runs defaults (`spv:auto`, no loop/parallax), behaviour unchanged. FOUC guard added (Swiper is now async-loaded) with a `.wf-design-mode` override so slides stay visible in the Designer canvas where the init JS doesn't run.

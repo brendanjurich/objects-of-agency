@@ -656,6 +656,34 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   margin-right: 0;
 }
 
+/* Lumos sliders (oa-slider.js) — FOUC guard. Swiper is now async-loaded from the
+   repo, so there is a beat before .slider_element gets .swiper-initialized. Hide
+   the slides until then, scoped to the slider contract. Auto-reveals on init —
+   no restore rule needed. The .wf-design-mode/.wf-editor override keeps slides
+   visible in the Designer canvas, where the init JS doesn't run. */
+[data-slider='component'] .slider_element:not(.swiper-initialized) .slider_list > * {
+  opacity: 0;
+  visibility: hidden;
+}
+:is(.wf-design-mode, .wf-editor) [data-slider='component'] .slider_list > * {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Product slider — Material-You parallax frame. The card is the rounded clip
+   window (its border-radius is set in the Designer); the image inside parallaxes
+   and sits at scale(>1) (data-swiper-parallax-scale) so the translate never
+   reveals an edge. overflow:hidden here makes the radius clip the scaled image. */
+.static_design_card {
+  overflow: hidden;
+}
+.static_design_images {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  will-change: transform;
+}
+
 /* Bunny Background Video Player */
 [data-bunny-background-init] .bunny-bg__placeholder {
   transition: opacity 0.3s linear, visibility 0.3s linear;
