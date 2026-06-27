@@ -670,12 +670,13 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   visibility: visible;
 }
 
-/* Product slider — Creative-effect morph (data-effect="creative", oa-slider.js).
-   Clip the container so the attached neighbour slides don't bleed past the frame
-   (this also fixes the mobile right-edge bleed; Swiper's own .swiper{overflow:hidden}
+/* Product slider — single card, no peek (slidesPerView:1, oa-slider.js).
+   Clip the container so the off-screen neighbour never bleeds past the frame
+   (also fixes the mobile right-edge bleed; Swiper's own .swiper{overflow:hidden}
    doesn't apply to the Lumos .slider_element). Scoped to the product slider so the
    homepage "all cards visible" slider is untouched. The card is the rounded clip
-   window (border-radius set in the Designer); overflow:hidden makes it clip the image. */
+   window (border-radius set in the Designer); overflow:hidden makes it clip the
+   image, so the native parallax scale stays inside the rounded corners. */
 .static_slider_contain .slider_element {
   overflow: hidden;
 }
