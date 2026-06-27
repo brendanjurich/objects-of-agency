@@ -24,6 +24,14 @@
 .infinite-grid[data-infinite-grid-status="loading"]  { opacity: 0; }
 .infinite-grid[data-infinite-grid-status="dragging"] { cursor: grabbing; }
 
+/* Mobile: 2D-drag region — the grid owns the gesture (drag any direction).
+   Page scroll resumes above/below the section, so give it a shorter height on
+   mobile in the Designer or the page is hard to scroll past. Paired with the JS
+   `mobileMQ` 767px breakpoint — keep the two in sync. */
+@media (max-width: 767px) {
+  .infinite-grid { touch-action: none; }
+}
+
 /* --- Structure the JS relies on (not design knobs) --- */
 .infinite-grid__collection {
   will-change: transform;

@@ -34,6 +34,10 @@ function initInfiniteCardsGrid() {
   const driftX = -20;                     // idle auto-drift, px/s — mostly horizontal
   const driftY = -3;                      // faint vertical bias keeps column parallax alive
 
+  // Mobile (≤767px) is a 2D-drag region: the grid owns touch (touch-action: none in
+  // the CSS) and pans on both axes. Larger touch screens keep vertical for page scroll.
+  const mobileMQ = window.matchMedia('(max-width: 767px)');
+
   wrappers.forEach((wrapper) => {
     const collection = wrapper.querySelector('[data-infinite-grid-collection]');
     const sourceList = wrapper.querySelector('[data-infinite-grid-list]');
@@ -246,8 +250,10 @@ function initInfiniteCardsGrid() {
       const speed = isTouch ? touchDragSpeed : dragSpeed;
       const limit = isTouch ? 120 : 80;
       const moveX = gsap.utils.clamp(-limit, limit, self.deltaX * speed);
-      // Touch: vertical is reserved for page scroll (touch-action: pan-y), so don't pan the grid on Y.
-      const moveY = isTouch ? 0 : gsap.utils.clamp(-limit, limit, self.deltaY * speed);
+      // Pan on Y for mouse and for mobile touch (2D-drag region, touch-action: none).
+      // Larger touch screens reserve vertical for page scroll (touch-action: pan-y) → no Y pan.
+      const panY = !isTouch || mobileMQ.matches;
+      const moveY = panY ? gsap.utils.clamp(-limit, limit, self.deltaY * speed) : 0;
       const strength = gsap.utils.clamp(0, 1, Math.max(Math.abs(moveX), Math.abs(moveY)) / limit);
 
       scale.target = gsap.utils.interpolate(1, minCardScale, strength);
@@ -271,7 +277,14 @@ function initInfiniteCardsGrid() {
       }
     }
 
+    let lastWidth = window.innerWidth;
     window.addEventListener('resize', () => {
+      // Mobile browsers fire resize on URL-bar show/hide (height-only) while you
+      // scroll — rebuilding then resets the grid to its start position and can kill
+      // a live touch mid-gesture (looked like "jump to first slide / drift locks").
+      // Only rebuild when the WIDTH actually changes.
+      if (window.innerWidth === lastWidth) return;
+      lastWidth = window.innerWidth;
       clearTimeout(timers.resize);
       timers.resize = setTimeout(buildGrid, 200);
     });
