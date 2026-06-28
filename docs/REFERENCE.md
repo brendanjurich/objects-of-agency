@@ -14,10 +14,10 @@ knowledge graph in `graphify-out/`.
 
 ## Hard constraints — never break these
 
-- **Nav reveal is CSS-gated on `.loader-complete`** (on `<html>`), not GSAP. The nav
-  (Osmo Multilevel Nav, class `.nav`) is FOUC-pre-hidden via `opacity:0` until the
-  loader adds `.loader-complete`. (The old `.nav_component` + `mix-blend-mode` +
-  `autoAlpha`-ban setup was retired 2026-06-28 — the new nav is blend-free.)
+- **Never use GSAP `autoAlpha` on `.nav_component`** — it sets `visibility`, which
+  breaks `mix-blend-mode`. Toggle nav visibility via CSS class only
+  (`loader-complete` on `<html>`; `revealAfterLoader()` also adds `w-mod-ix3` as a
+  Webflow IX2 guard).
 - **Never write CSS inside Lumos embeds** — wiped on Lumos updates. All custom CSS
   lives in `oa-styles.css`.
 - **Never use `dvh` for hero height — use `svh`.**
@@ -56,8 +56,8 @@ Two separate issues, both solved in CSS only — **do not** fix with `setTimeout
 
 ## Site easing — `--ease-oa`
 
-> Renamed from `--ease-osmo` (2026-06-28) to signal it's ours, not Osmo's. The
-> nav's `--cubic-default` aliases this var. Same curve, new name.
+> Renamed from `--ease-osmo` (2026-06-28) to signal it's ours, not Osmo's. Same
+> curve, new name.
 
 CSS variable driving all Swiper slide transitions (Swiper writes the
 timing-function inline every slide change, so the rule needs `!important`):

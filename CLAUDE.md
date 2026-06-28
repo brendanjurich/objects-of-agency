@@ -18,7 +18,7 @@ keys, tokens, or `.env` files.**
 | File | Purpose | Delivery |
 |------|---------|----------|
 | `src/js/oa-homepage.js` | Swiper v12 carousels for homepage hero (hero_feed_top, hero_feed_right). ES6 imports — must be bundled. | Rollup → `dist/oa-homepage.js` → CDN |
-| `src/js/oa-global.js` | GSAP loader, slideshow (data-slideshow), navigation (Osmo Multilevel Nav — `.nav`, data-attr driven; inits at execution), custom eases. | Raw file → CDN |
+| `src/js/oa-global.js` | GSAP loader, slideshow (data-slideshow), nav animations, custom eases. | Raw file → CDN |
 | `src/js/oa-configurator.js` | Cascading slider (product carousels with GSAP, touch/click). | Raw file → CDN |
 | `src/js/oa-all-products.js` | Osmo multi-match filter for /all-products. Reads `?filter=` URL param via `paint()` on init. | Raw file → CDN |
 | `src/css/oa-styles.css` | Global styles, FOUC prevention, nav, hero carousel. | Raw file → CDN |
@@ -130,7 +130,7 @@ Version: **v2.2.1** — a **build-time clone**, baked into the Webflow project a
 **Lumos ≠ Osmo — never conflate.**
 
 - **Lumos** (v2.2.1, Timothy Ricks' Webflow framework) owns the build system: the `u-` utility classes, the `--_…---` / `--site--` variables, the type clamps / root font-size, and the **sliders** (`[data-slider='component']`, `.slider_element` / `.slider_list`, Swiper 8 — "Lumos-initialized Swipers"). CSS written inside Lumos embeds is wiped if you re-clone/re-import the embed.
-- **Osmo** (osmo.supply) is a vault of individual components I paste in and adapt — e.g. the Glass CTA (Button 097/046 + Glass Effect), the all-products multi-match filter, the **Multilevel Nav** (`.nav`), and the easing curve now named **`--ease-oa`** (Osmo-derived, renamed to signal it's ours). Osmo does **not** own the sliders; only the slider *easing* is Osmo-derived.
+- **Osmo** (osmo.supply) is a vault of individual components I paste in and adapt — e.g. the Glass CTA (Button 097/046 + Glass Effect), the all-products multi-match filter, and the easing curve now named **`--ease-oa`** (Osmo-derived, renamed to signal it's ours). Osmo does **not** own the sliders; only the slider *easing* is Osmo-derived.
 
 The product/home sliders are **Lumos**. Don't call them Osmo.
 
