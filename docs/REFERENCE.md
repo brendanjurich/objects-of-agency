@@ -14,10 +14,10 @@ knowledge graph in `graphify-out/`.
 
 ## Hard constraints — never break these
 
-- **Never use GSAP `autoAlpha` on `.nav_component`** — it sets `visibility`, which
-  breaks `mix-blend-mode`. Toggle nav visibility via CSS class only
-  (`loader-complete` on `<html>`; `revealAfterLoader()` also adds `w-mod-ix3` as a
-  Webflow IX2 guard).
+- **Nav reveal is CSS-gated on `.loader-complete`** (on `<html>`), not GSAP. The nav
+  (Osmo Multilevel Nav, class `.nav`) is FOUC-pre-hidden via `opacity:0` until the
+  loader adds `.loader-complete`. (The old `.nav_component` + `mix-blend-mode` +
+  `autoAlpha`-ban setup was retired 2026-06-28 — the new nav is blend-free.)
 - **Never write CSS inside Lumos embeds** — wiped on Lumos updates. All custom CSS
   lives in `oa-styles.css`.
 - **Never use `dvh` for hero height — use `svh`.**
@@ -54,14 +54,17 @@ Two separate issues, both solved in CSS only — **do not** fix with `setTimeout
 
 ---
 
-## Slider easing — `--ease-osmo`
+## Site easing — `--ease-oa`
+
+> Renamed from `--ease-osmo` (2026-06-28) to signal it's ours, not Osmo's. The
+> nav's `--cubic-default` aliases this var. Same curve, new name.
 
 CSS variable driving all Swiper slide transitions (Swiper writes the
 timing-function inline every slide change, so the rule needs `!important`):
 
 ```css
-:root { --ease-osmo: cubic-bezier(0.22, 0.36, 0.1, 1); }
-.slider_element .swiper-wrapper { transition-timing-function: var(--ease-osmo) !important; }
+:root { --ease-oa: cubic-bezier(0.22, 0.36, 0.1, 1); }
+.slider_element .swiper-wrapper { transition-timing-function: var(--ease-oa) !important; }
 ```
 
 - `(0.22, 0.36, 0.1, 1)` is the tuned "goldilocks" curve: early responsive
@@ -76,7 +79,7 @@ timing-function inline every slide change, so the rule needs `!important`):
   toggles `body.is-slider-transitioning` on Swiper `transitionStart/End` +
   `touchStart/End`, and the raise is gated `body:not(.is-slider-transitioning)
   .card_product_wrap.is-active .card_product_visual`. Raise easing matches
-  `--ease-osmo` with a 50ms delay so it reads as a settle.
+  `--ease-oa` with a 50ms delay so it reads as a settle.
 
 ---
 
