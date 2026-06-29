@@ -262,6 +262,45 @@ function initNavSafariFix() {
   observer.observe(navButton, { attributes: true, attributeFilter: ['class'] });
 }
 
+function initNavDropdownHover() {
+  const items = document.querySelectorAll('.nav_dropdown_link');
+  if (!items.length) return;
+
+  const exitMap = {
+    top: 'translateY(-100%)',
+    bottom: 'translateY(100%)',
+    left: 'translateX(-100%)',
+    right: 'translateX(100%)'
+  };
+
+  function getDirection(e, el) {
+    const { left, top, width, height } = el.getBoundingClientRect();
+    const x = e.clientX - left;
+    const y = e.clientY - top;
+    const distances = { top: y, right: width - x, bottom: height - y, left: x };
+    return Object.entries(distances).reduce((a, b) => (a[1] < b[1] ? a : b))[0];
+  }
+
+  items.forEach(item => {
+    const tile = item.querySelector('.nav_dropdown_hover_tile');
+    if (!tile) return;
+
+    item.addEventListener('mouseenter', e => {
+      const dir = getDirection(e, item);
+      tile.style.transition = 'none';
+      tile.style.transform = exitMap[dir];
+      void tile.offsetHeight;
+      tile.style.transition = '';
+      tile.style.transform = 'translate(0%, 0%)';
+    });
+
+    item.addEventListener('mouseleave', e => {
+      const dir = getDirection(e, item);
+      tile.style.transform = exitMap[dir];
+    });
+  });
+}
+
 // ============================================================
 // 8. INIT ON DOM READY
 // ============================================================
@@ -374,6 +413,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initPageTransition();
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
+  initNavDropdownHover();
   initButton046();
   initLocalTime();
 });
