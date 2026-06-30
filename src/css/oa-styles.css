@@ -313,10 +313,29 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
     transition: fill 0.3s ease;
   }
 
-  .nav_button_line {
-    background-color: #ffffff !important;
-    transition: background-color 0.3s ease;
+  /* Hamburger bars — closed */
+  .bold-nav-full__hamburger {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 3rem;
+    height: 3rem;
+    overflow: hidden;          /* clips the middle bar as it slides out */
+    background: transparent;
+    cursor: pointer;
   }
+
+  .bold-nav-full__hamburger-bar {
+    position: absolute;
+    width: 2rem;
+    height: .125rem;
+    background-color: #ffffff;  /* mix-blend-mode:difference on .nav_component inverts this */
+    transform: translate(0, 0) rotate(0.001deg);
+    transition: transform 0.5s cubic-bezier(.7, 0, .3, 1), background-color 0.3s ease;
+  }
+  .bold-nav-full__hamburger-bar:nth-child(1) { transform: translate(0, -.45rem) rotate(0.001deg); }
+  .bold-nav-full__hamburger-bar:nth-child(3) { transform: translate(0,  .45rem) rotate(0.001deg); }
 
   body.menu-open {
     overflow: hidden;
@@ -331,9 +350,11 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
     fill: #000000 !important;
   }
 
-  .nav_component.is-open .nav_button_line {
-    background-color: #000000 !important;
-  }
+  /* Hamburger bars — open (X) */
+  .nav_component.is-open .bold-nav-full__hamburger-bar { background-color: #000000; }
+  .nav_component.is-open .bold-nav-full__hamburger-bar:nth-child(1) { transform: translate(0, 0) rotate(45deg); }
+  .nav_component.is-open .bold-nav-full__hamburger-bar:nth-child(2) { transform: translate(-150%, 0) rotate(0.001deg); }
+  .nav_component.is-open .bold-nav-full__hamburger-bar:nth-child(3) { transform: translate(0, 0) rotate(-45deg); }
 }
 
 /* ============================================================
