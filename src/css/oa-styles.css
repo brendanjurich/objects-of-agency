@@ -667,6 +667,14 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   pointer-events: auto;
 }
 
+/* Vertical Swiper (swiper-bundle.min.css) sets touch-action:pan-x, which blocks
+   vertical page scroll over this region. allowTouchMove is already false, so the
+   carousel doesn't need touch — restore scrolling. Compound selector beats
+   .swiper-vertical (0,1,0), which loads after oa-styles.css. */
+.hero_feed_right.swiper-vertical {
+  touch-action: auto;
+}
+
 /* ============================================================
    HERO FEED MAP
    ============================================================ */
