@@ -607,6 +607,12 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   pointer-events: auto;
 }
 
+/* Restore vertical page scroll over hero_feed_top (see hero_feed_right note).
+   Clicks are unaffected by touch-action, so the slide link still works. */
+.hero_feed_top.swiper-vertical {
+  touch-action: auto;
+}
+
 /* ============================================================
    HERO FEED RIGHT — SWIPER CREATIVE
    ============================================================ */
