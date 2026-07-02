@@ -358,6 +358,19 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 }
 
 /* ============================================================
+   NAVIGATION — MOBILE MENU LINK TEXT (gap 992–1134px)
+   The hamburger menu shows ≤1134px, but Webflow Designer's tablet
+   breakpoint only reaches ≤991px. This ports the ≤991 mobile-link
+   styling up through the 992–1134 dead band so the menu is consistent.
+   Keep in sync with the Webflow tablet (≤991) style on .nav_links_link.
+   ============================================================ */
+@media screen and (min-width: 992px) and (max-width: 1134px) {
+  .nav_mobile_menu_wrap .nav_links_link {
+    font-size: var(--_typography---font-size--h5);
+  }
+}
+
+/* ============================================================
    NAVIGATION — DROPDOWN DIRECTIONAL HOVER (desktop)
    Behavioral only — visual styling (color, radius) lives in Webflow Designer.
    ============================================================ */
