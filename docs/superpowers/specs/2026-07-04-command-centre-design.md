@@ -53,7 +53,8 @@ Rules:
 - **Shallow by default.** Each domain gets a one-line `README.md` stating what
   belongs there. Subfolders emerge from real content — no empty scaffolding.
 - **Naming:** kebab-case folders; `YYYY-MM-DD-` prefix on dated documents
-  (matches the research vault convention).
+  (sorting mechanism — matches the research vault convention). All
+  human-readable dates (inside docs, headers, MAP.md) are **DD-MM-YYYY**.
 - **Lead generation lives in `sales/`** — the GTM is a single channel (direct
   outreach to design studios), so outreach *is* sales. `growth/` holds
   strategy and SEO/AEO only.
