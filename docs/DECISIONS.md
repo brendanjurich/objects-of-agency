@@ -341,3 +341,40 @@ Built and shipped a full swap of the Webflow-native nav (`.nav_component` + `.w-
 - **Live restore was clean.** Webflow custom code restored from backup to pre-swap tags. Verified the restored URLs are functionally correct: `oa-styles.css@122` ≡ `@124` (diff is a *comment only* — the slider revert at v1.0.123 only reworded a comment, the rule is byte-identical), `oa-global.js@121` is **byte-identical** to `@124` (the slider-patch removal landed at v1.0.121). No CSS/JS mismatch, no nav swap live. Files sit on uneven tags (122/121) but content matches latest; optional tidy-up is to bump both to `@124`/next.
 - **Kept the `--ease-osmo` → `--ease-oa` rename** as a standalone (it was an independent ownership decision, not part of the nav). Pure rename, slider behaves identically. Goes live whenever `oa-styles.css` is next deployed — no urgency.
 - **Lesson for next time:** a content-heavy component swap is only worth it if the new content/IA is actually wanted. The minimal nav was fit-for-purpose; the swap added surface area (more CSS/JS, dropdown content to maintain) for little gain. Evaluate the *content* cost, not just the visual upgrade, before swapping.
+
+---
+
+## 2026-07-07 — Repo audit batch: fail-open GSAP, single Swiper source (build step removed), on-demand hls.js, v1.0.131
+
+Full static + live audit of `src/` and the staging DOM; ~19 findings fixed in one tag. The non-obvious ones:
+
+### Designer class renames silently break JS guards — verify hooks against the live DOM
+
+The statement block was renamed `.oa_statement_layout` → `.oa_statement-home` in the Designer, which flipped `stripOrphanScrollHandler` into stripping the **homepage too**. It happened to be harmless because the current Webflow runtime **no longer binds `scroll.webflow` at all** (verified live: zero jQuery scroll handlers anywhere; no forced reflow in a scroll trace of /all-products; the statement wipe runs through another IX2 driver). The strip is now **dormant insurance** — kept with the corrected selector in case a runtime publish reverts to jQuery binding. Rule: any JS/CSS that keys off a Designer class must be re-checked after Designer refactors; the repo can't see those renames.
+
+### GSAP is now fail-open, never fail-closed
+
+`oa-global.js` used to call `gsap.registerPlugin(CustomEase)` bare at the top — if Webflow's auto-updating GSAP integration ever failed, the throw killed the whole file and the page stayed hidden behind the loader/FOUC guards forever. Now guarded by `oaGsapOk`: without GSAP the loader overlay is hidden immediately, `[data-page-transition]` content is unhidden manually, and the GSAP-free features (nav fix, dropdown hover, Perth time) still run. Verified both paths in a local harness.
+
+### One Swiper source sitewide — Rollup build step deleted
+
+The homepage hero bundled its own Swiper (npm 12.1.4 → Rollup → `dist/oa-homepage.js`) while `oa-slider.js` injected `swiper-bundle@12.2.0` on the same page: two copies, two versions, ~82KB duplicate, plus the standing stale-dist-artifact risk. `oa-slider.js` now exposes its loader as **`window.oaLoadSwiper`** (it loads in the sitewide footer, before page embeds) and `oa-homepage.js` is **raw-served** like every other file — no imports, no `modules:` arrays (the bundle registers all modules). `dist/`, `rollup.config.mjs`, npm deps and `npm run build` are gone. **The hero now runs Swiper 12.2.0 (was 12.1.4) — re-verify hero behaviour on staging after any Swiper version bump.** Webflow homepage embed URL changed path: `dist/oa-homepage.js` → `src/js/oa-homepage.js`.
+
+### hls.js is injected on demand, not shipped sitewide
+
+The parser-blocking 157KB `hls.js@1.6.11` footer `<script>` (which every page paid for, and which held DOMContentLoaded back ~17s on Slow 4G) is replaced by `loadHls()` in `oa-homepage.js`, injected only when a `[data-bunny-background-init]` player exists. The pinned version now lives in the `HLS_VERSION` constant. The whole "oa-global.js must load before hls.js" footer-order constraint dissolves with it. **The hls.js `<script>` tag must be deleted from Webflow site-wide footer code.**
+
+### Loader exit now gates on real video readiness
+
+The old exit raced `window.load` against a 1200ms cap under a 1500ms floor — the race could never exceed the floor, so the loader always exited at exactly 1.5s and the "waits for window.load" comment was false. Deliberate behaviour now: exit waits for **max(1.5s brand minimum, `oa:hero-media-ready`)** — dispatched by `oa-homepage.js` on the hero video's first `canplay` — capped at 4s so a stalled CDN can't trap the page. Aesthetic call: the reveal must never land on frame-mush; the anticipation beat outranks TTI here.
+
+### Smaller fixes worth remembering
+
+- **Slideshow parallax**: layers were collected into a parallel document-order array; live DOM had 4 slides / 2 layers → misaligned targets. Parallax now resolves per-slide (`slide.querySelector`). CMS-count guard added.
+- **Configurator clones** (pad-to-9) now strip `input`/`[for]`/`[id]` — cloned radios would duplicate ids fixRadioIds() just repaired and double-count `data-price` in the pricing engine.
+- **Configurator resize**: ResizeObserver debounced 150ms (the gap probe forces a reflow per call); `syncRadio()` removed from resize paths (radio state can't change on resize).
+- **Arrow keys** respond to focus only (wrapper `tabindex="0"`, clicks focus it explicitly for Safari) — hovering no longer hijacks page scroll keys.
+- **Infinite grid**: null guard ran *after* dereferencing `sourceList` (reordered); settled-state `gsap.set(scale)` per frame on every clone now snaps + skips via a write cache.
+- **all-products hoist**: the attribute-reading collect variant was dead — live markup carries the value as text content (all `data-filter-name-collect` attributes are empty). Deleted.
+- **button-046 / glass-effect** JS + CSS deleted (~170 lines): the Glass CTA was removed in the Designer; a new CTA button will replace it. Restore, if ever needed, is a `git revert` away.
+- **`w-mod-ix3`** in `revealAfterLoader()` is load-bearing (IX2 guard, see REFERENCE.md) — now commented inline so it doesn't read as vestigial.

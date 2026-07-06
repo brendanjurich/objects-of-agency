@@ -41,9 +41,10 @@ function initInfiniteCardsGrid() {
   wrappers.forEach((wrapper) => {
     const collection = wrapper.querySelector('[data-infinite-grid-collection]');
     const sourceList = wrapper.querySelector('[data-infinite-grid-list]');
-    const originalItems = Array.from(sourceList.querySelectorAll('[data-infinite-grid-item]')).map((item) => item.cloneNode(true));
+    if (!collection || !sourceList) return; // must be checked BEFORE touching sourceList
 
-    if (!collection || !sourceList || !originalItems.length) return;
+    const originalItems = Array.from(sourceList.querySelectorAll('[data-infinite-grid-item]')).map((item) => item.cloneNode(true));
+    if (!originalItems.length) return;
 
     let observer;
     let cards = [];
@@ -52,6 +53,7 @@ function initInfiniteCardsGrid() {
     const size = {};
     const pos = {};
     const scale = {current: 1, target: 1};
+    let appliedScale = 1; // last scale written to the cards — skip redundant per-frame writes
 
     // idle auto-drift state
     let isDragging = false;
@@ -199,6 +201,7 @@ function initInfiniteCardsGrid() {
       pos.targetY = pos.y;
       scale.current = 1;
       scale.target = 1;
+      appliedScale = 1; // fresh cards render at scale 1 — reset the write cache
 
       updateGrid();
       gsap.ticker.add(updateGrid);
@@ -230,7 +233,10 @@ function initInfiniteCardsGrid() {
 
       pos.x += (pos.targetX - pos.x) * positionLerp;
       pos.y += (pos.targetY - pos.y) * positionLerp;
-      scale.current += (scale.target - scale.current) * scaleLerp;
+      // Snap once the lerp is within a hair of target so the settled state
+      // stops writing scale to every card every frame (dozens of clones).
+      const scaleDelta = scale.target - scale.current;
+      scale.current = Math.abs(scaleDelta) < 0.001 ? scale.target : scale.current + scaleDelta * scaleLerp;
 
       const offsetX = size.itemW * gridOverscan;
       const offsetY = size.itemH * gridOverscan;
@@ -241,7 +247,10 @@ function initInfiniteCardsGrid() {
         ySetter(wrapValue(baseY + pos.startY + startY + scrollY * ySpeed + offsetY, size.totalH) - offsetY);
       });
 
-      gsap.set(cardElements, {scale: scale.current});
+      if (scale.current !== appliedScale) {
+        appliedScale = scale.current;
+        gsap.set(cardElements, {scale: scale.current});
+      }
     }
 
     function handleMovement(self) {

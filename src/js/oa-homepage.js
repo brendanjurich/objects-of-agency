@@ -1,13 +1,18 @@
-import Swiper from 'swiper';
-import { Autoplay, EffectCreative } from 'swiper/modules';
+/* ============================================================
+   OA — homepage hero feeds + Bunny background video
+   ------------------------------------------------------------
+   Raw-served (no build step). Swiper comes from window.oaLoadSwiper
+   (oa-slider.js, sitewide footer) — one Swiper source for the whole
+   site; the swiper-bundle registers every module, so no `modules`
+   arrays are needed. hls.js is injected on demand below, only when a
+   Bunny background player exists on the page.
+   ============================================================ */
 
 function initHeroFeedTopSwiper() {
   var el = document.querySelector('.hero_feed_top');
   if (!el) return;
 
   return new Swiper(el, {
-    // EffectCreative MUST be in this array — omitting it silently falls back to default slide behaviour
-    modules: [Autoplay, EffectCreative],
     wrapperClass: 'hero_feed_top-wrap',
     slideClass: 'hero_feed_top-slide',
     allowTouchMove: false,
@@ -46,8 +51,6 @@ function initHeroFeedRightSwiper() {
   if (!el) return;
 
   return new Swiper(el, {
-    // EffectCreative MUST be in this array — omitting it silently falls back to default slide behaviour
-    modules: [Autoplay, EffectCreative],
     wrapperClass: 'hero_feed_right-wrap',
     slideClass: 'hero_feed_right-slide',
     allowTouchMove: false,
@@ -80,14 +83,33 @@ function initHeroFeedRightSwiper() {
   });
 }
 
+// hls.js, injected on demand. This used to be a parser-blocking 157KB sitewide
+// footer <script> that every page paid for while only pages with a Bunny player
+// use it. Exact-pinned; bumping the version requires re-testing video.
+var HLS_VERSION = '1.6.11';
+function loadHls() {
+  return new Promise(function(resolve) {
+    if (window.Hls) return resolve();
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@' + HLS_VERSION;
+    script.onload = resolve;
+    script.onerror = resolve; // fail-open — the init below falls back to direct video.src
+    document.head.appendChild(script);
+  });
+}
+
 function initBunnyPlayerBackground() {
+  var players = document.querySelectorAll('[data-bunny-background-init]');
+  if (!players.length) return;
+
   var loaderReady = document.documentElement.classList.contains('loader-complete')
     ? Promise.resolve()
     : new Promise(function(resolve) {
         document.addEventListener('oa:loader-complete', resolve, { once: true });
       });
 
-  document.querySelectorAll('[data-bunny-background-init]').forEach(function(player) {
+  loadHls().then(function() {
+  players.forEach(function(player) {
     var src = player.getAttribute('data-player-src');
     if (!src) return;
 
@@ -215,6 +237,10 @@ function initBunnyPlayerBackground() {
     video.addEventListener('pause', function() { pendingPlay = false; setStatus('paused'); });
     video.addEventListener('waiting', function() { setStatus('loading'); });
     video.addEventListener('canplay', function() { readyIfIdle(player, pendingPlay); });
+    // Loader gate (oa-global.js): first frames buffered — safe to reveal, no frame-mush.
+    video.addEventListener('canplay', function() {
+      document.dispatchEvent(new CustomEvent('oa:hero-media-ready'));
+    }, { once: true });
     video.addEventListener('ended', function() { pendingPlay = false; setStatus('paused'); setActivated(false); });
 
     if (autoplay) {
@@ -245,6 +271,7 @@ function initBunnyPlayerBackground() {
       player._io = io;
     }
   });
+  }); // loadHls().then — per-player setup waits for the on-demand hls.js inject
 
   function readyIfIdle(player, pendingPlay) {
     if (!pendingPlay &&
@@ -274,11 +301,28 @@ function setHeroHeight() {
 document.addEventListener('DOMContentLoaded', function() {
   initBunnyPlayerBackground();
 
-  // Init Swipers immediately so elements are visible; hold autoplay until video plays
-  var topSwiper   = initHeroFeedTopSwiper();
-  var rightSwiper = initHeroFeedRightSwiper();
-  if (topSwiper)   topSwiper.autoplay.stop();
-  if (rightSwiper) rightSwiper.autoplay.stop();
+  var topSwiper   = null;
+  var rightSwiper = null;
+
+  // Swiper arrives via the shared loader in oa-slider.js (single sitewide
+  // source — no bundled copy). Hold autoplay until the video plays, unless
+  // startHeroFeed already fired while the bundle was still loading.
+  var swiperReady = window.oaLoadSwiper ? window.oaLoadSwiper() :
+    Promise.reject(new Error('window.oaLoadSwiper missing — is oa-slider.js in the sitewide footer?'));
+  swiperReady.then(function() {
+    topSwiper   = initHeroFeedTopSwiper();
+    rightSwiper = initHeroFeedRightSwiper();
+    if (!started) {
+      if (topSwiper)   topSwiper.autoplay.stop();
+      if (rightSwiper) rightSwiper.autoplay.stop();
+    }
+  }).catch(function(err) {
+    console.warn('[oa-homepage]', err.message);
+    // Fail-open: the FOUC guard hides slides until .swiper-initialized — reveal them.
+    document.querySelectorAll('.hero_feed_top, .hero_feed_right').forEach(function(el) {
+      el.classList.add('swiper-initialized');
+    });
+  });
 
   setHeroHeight();
 

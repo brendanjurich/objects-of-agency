@@ -9,8 +9,8 @@ configurator, and the All Products filter.
 ## Layout
 
 - `src/js/`, `src/css/` — the source served to Webflow (see `CLAUDE.md` for the
-  per-file purpose and load order). Only `oa-homepage.js` is bundled (Rollup →
-  `dist/`); the rest ship as-is.
+  per-file purpose and load order). Every file ships raw — there is no build
+  step (the Rollup bundle was removed at v1.0.131).
 - `docs/` — project documentation:
   - [`REMAINING.md`](docs/REMAINING.md) — launch checklist
   - [`DECISIONS.md`](docs/DECISIONS.md) — session decisions & gotchas (append-only)

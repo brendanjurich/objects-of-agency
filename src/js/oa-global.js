@@ -1,14 +1,24 @@
 // ============================================================
-// 1. REGISTER GSAP PLUGINS
+// 1. GSAP GUARD + REGISTER PLUGINS
 // ============================================================
-gsap.registerPlugin(CustomEase);
+// Fail-open: GSAP comes from Webflow's auto-updating integration. If it or
+// CustomEase is ever missing (integration toggled, script blocked, publish
+// glitch), a bare registerPlugin() throws and this whole file dies — the
+// loader never dismisses and the nav/content stay hidden (their reveal gates
+// on .loader-complete). Degrade instead: reveal the page, run the GSAP-free
+// features, skip animation.
+var oaGsapOk = !!(window.gsap && window.CustomEase);
+if (oaGsapOk) {
+  gsap.registerPlugin(CustomEase);
 
-// ============================================================
-// 2. CUSTOM EASES
-// ============================================================
-CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
-CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
-CustomEase.create("button-046-ease", "0.32, 0.72, 0, 1");
+  // ============================================================
+  // 2. CUSTOM EASES
+  // ============================================================
+  CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
+  CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
+} else {
+  console.warn('[OA] GSAP unavailable — revealing page without animations.');
+}
 
 
 // ============================================================
@@ -123,9 +133,14 @@ function initSlideShow(el) {
   const ui = {
     el,
     slides: Array.from(el.querySelectorAll('[data-slideshow="slide"]')),
-    inner: Array.from(el.querySelectorAll('[data-slideshow="parallax"]')),
     thumbs: Array.from(thumbsInEl.length ? thumbsInEl : document.querySelectorAll('[data-slideshow="thumb"]')), // Intentional: thumbs are siblings of the slideshow element, not children — document scope is correct
   };
+  // CMS-driven counts can drift; a mismatch would index past the arrays below.
+  if (!ui.slides.length || ui.thumbs.length !== ui.slides.length) return;
+
+  // Parallax layers are optional per slide — resolve from the slide itself, never
+  // from a parallel document-order array (counts drifted once: 4 slides, 2 layers).
+  const innerOf = slide => slide.querySelector('[data-slideshow="parallax"]');
 
   let current = 0;
   const length = ui.slides.length;
@@ -151,11 +166,11 @@ function initSlideShow(el) {
       current > 0 ? current - 1 : length - 1;
 
     const currentSlide = ui.slides[previous];
-    const currentInner = ui.inner[previous];
+    const currentInner = innerOf(currentSlide);
     const upcomingSlide = ui.slides[current];
-    const upcomingInner = ui.inner[current];
+    const upcomingInner = innerOf(upcomingSlide);
 
-    gsap.timeline({
+    const tl = gsap.timeline({
         defaults: { duration: animationDuration, ease: 'slideshow-wipe' },
         onStart() {
           upcomingSlide.classList.add('is--current');
@@ -168,9 +183,9 @@ function initSlideShow(el) {
         },
       })
       .to(currentSlide, { xPercent: -direction * 100 }, 0)
-      .to(currentInner, { xPercent: direction * 75 }, 0)
-      .fromTo(upcomingSlide, { xPercent: direction * 100 }, { xPercent: 0 }, 0)
-      .fromTo(upcomingInner, { xPercent: -direction * 75 }, { xPercent: 0 }, 0);
+      .fromTo(upcomingSlide, { xPercent: direction * 100 }, { xPercent: 0 }, 0);
+    if (currentInner) tl.to(currentInner, { xPercent: direction * 75 }, 0);
+    if (upcomingInner) tl.fromTo(upcomingInner, { xPercent: -direction * 75 }, { xPercent: 0 }, 0);
   }
 
   ui.thumbs.forEach(thumb => {
@@ -187,6 +202,8 @@ function initSlideShow(el) {
 // 6. LOADER
 // ============================================================
 function revealAfterLoader() {
+  // w-mod-ix3 is a deliberate IX2 guard: slow IX2 init on mobile otherwise blocks
+  // the nav reveal. Load-bearing — see docs/REFERENCE.md "Hard constraints".
   document.documentElement.classList.add('w-mod-ix3');
   document.documentElement.classList.add('loader-complete');
   document.dispatchEvent(new CustomEvent('oa:loader-complete'));
@@ -196,6 +213,9 @@ function initLogoRevealLoader() {
   const wrap = document.querySelector('[data-load-wrap]');
   if (!wrap) { revealAfterLoader(); return; }
 
+  // No GSAP — hide the overlay and reveal immediately (see guard §1).
+  if (!oaGsapOk) { wrap.style.display = 'none'; revealAfterLoader(); return; }
+
   // Pages without the full animated loader (no inner elements) — reveal immediately.
   const progressBar = wrap.querySelector('[data-load-progress]');
   if (!progressBar) { revealAfterLoader(); return; }
@@ -203,11 +223,6 @@ function initLogoRevealLoader() {
   const container = wrap.querySelector('[data-load-container]');
   const bg = wrap.querySelector('[data-load-bg]');
   const logo = wrap.querySelector('[data-load-logo]');
-  const resetTargets = Array.from(wrap.querySelectorAll('[data-load-reset]'));
-
-  if (resetTargets.length) {
-    gsap.set(resetTargets, { autoAlpha: 1 });
-  }
 
   // Entrance: branding moment plays immediately (1.5s).
   gsap.set(wrap, { display: 'block' });
@@ -215,15 +230,18 @@ function initLogoRevealLoader() {
     .to(progressBar, { scaleX: 1 })
     .to(logo, { clipPath: 'inset(0% 0% 0% 0%)' }, '<');
 
-  // Exit: waits for whichever is longer — the 1.5s minimum or window.load.
+  // Exit: waits for whichever is longer — the 1.5s brand minimum, or (on pages
+  // with a hero background video) the video buffering its first frames
+  // (oa:hero-media-ready, dispatched by oa-homepage.js on 'canplay') so the
+  // reveal never lands on frame-mush. Capped so a stalled CDN can't trap the
+  // loader. Deliberate trade-off: the anticipation beat outranks raw TTI here.
   const minDelay = new Promise(resolve => setTimeout(resolve, 1500));
-  const pageReady = Promise.race([
-    new Promise(resolve => {
-      if (document.readyState === 'complete') resolve();
-      else window.addEventListener('load', resolve, { once: true });
-    }),
-    new Promise(resolve => setTimeout(resolve, 1200)) // cap the window.load wait; the 1.5s brand minimum below is the real floor
-  ]);
+  const pageReady = document.querySelector('[data-bunny-background-init] video') ?
+    Promise.race([
+      new Promise(resolve => document.addEventListener('oa:hero-media-ready', resolve, { once: true })),
+      new Promise(resolve => setTimeout(resolve, 4000)) // cap — slow video must never hold the page hostage
+    ]) :
+    Promise.resolve();
 
   Promise.all([minDelay, pageReady]).then(function () {
     gsap.timeline({ defaults: { ease: 'loader' } })
@@ -304,10 +322,6 @@ function initNavDropdownHover() {
 // ============================================================
 // 8. INIT ON DOM READY
 // ============================================================
-document.querySelectorAll('.config_svg_embed').forEach(function (el) {
-  el.innerHTML = el.textContent;
-});
-
 // Run the loader immediately, NOT on DOMContentLoaded. This is a footer script so
 // the loader markup (near the top of <body>) is already parsed, and GSAP is injected
 // ahead of footer code — both ready. DOMContentLoaded is itself held back until the
@@ -316,83 +330,23 @@ document.querySelectorAll('.config_svg_embed').forEach(function (el) {
 initLogoRevealLoader();
 
 // ============================================================
-// BUTTON 046 — magnetic radial wipe (glass CTA in .hero_feed_cta-wrap)
-// Orange circle grows from the cursor and follows it. Desktop-pointer only;
-// touch/reduced-motion fall back to the static glass button (no wipe).
-// ============================================================
-function initButton046() {
-  const buttons = document.querySelectorAll('[data-button-046]');
-  if (!buttons.length) return;
-
-  const mm = gsap.matchMedia();
-
-  buttons.forEach((button) => {
-    const circle = button.querySelector('[data-button-046-circle]');
-    if (!circle) return;
-
-    mm.add('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)', () => {
-      const xSet = gsap.quickSetter(circle, 'xPercent');
-      const ySet = gsap.quickSetter(circle, 'yPercent');
-
-      function getXY(e) {
-        const { left, top, width, height } = button.getBoundingClientRect();
-        const xT = gsap.utils.pipe(gsap.utils.mapRange(0, width, 0, 100), gsap.utils.clamp(0, 100));
-        const yT = gsap.utils.pipe(gsap.utils.mapRange(0, height, 0, 100), gsap.utils.clamp(0, 100));
-        return { x: xT(e.clientX - left), y: yT(e.clientY - top) };
-      }
-
-      function onEnter(e) {
-        const { x, y } = getXY(e);
-        xSet(x);
-        ySet(y);
-        gsap.to(circle, { scale: 1, duration: 1.25, ease: 'button-046-ease', overwrite: 'auto' });
-      }
-      function onLeave(e) {
-        const { x, y } = getXY(e);
-        gsap.killTweensOf(circle);
-        gsap.to(circle, {
-          xPercent: x > 90 ? x + 25 : x < 12.5 ? x - 25 : x,
-          yPercent: y > 90 ? y + 25 : y < 12.5 ? y - 25 : y,
-          scale: 0,
-          duration: 0.45,
-          ease: 'button-046-ease',
-          overwrite: 'auto',
-        });
-      }
-      function onMove(e) {
-        const { x, y } = getXY(e);
-        gsap.to(circle, { xPercent: x, yPercent: y, duration: 0.5, ease: 'power1', overwrite: 'auto' });
-      }
-
-      button.addEventListener('pointerenter', onEnter);
-      button.addEventListener('pointerleave', onLeave);
-      button.addEventListener('pointermove', onMove);
-
-      return () => {
-        button.removeEventListener('pointerenter', onEnter);
-        button.removeEventListener('pointerleave', onLeave);
-        button.removeEventListener('pointermove', onMove);
-      };
-    });
-  });
-}
-
-// ============================================================
 // 9. STRIP ORPHANED WEBFLOW SCROLL HANDLER
 // ============================================================
-// The "OA Statement [Scroll]" interaction (continuous "While scrolling in view"
-// on .oa_statement_layout) is applied site-wide, so Webflow registers its scroll
-// event in EVERY page's IX2 data — including pages that don't contain the block
-// (/all-products, /product/*, /materials-finishes/*). On those pages IX2's
-// throttled scroll.webflow handler still runs jQuery .offset() every frame against
-// a missing target → forced reflow. It's cheap on short pages but on the long,
-// image-heavy /all-products it costs ~376ms of reflow per scroll and drops to
-// ~57fps (visible jitter). The interaction can't be unscoped per-page in the
-// Webflow UI, so strip the dead handler wherever the block is absent. Pages WITH
-// the block (homepage) keep the real, wanted animation. No other Webflow scroll
-// interaction exists on the site, so unbinding scroll.webflow here is safe.
+// The "OA Statement [Scroll]" IX2 interaction (continuous "While scrolling in
+// view" on the homepage statement block) is applied site-wide, so Webflow writes
+// it into EVERY page's IX2 data (Webflow support ticket open). When IX2 drives it
+// via a jQuery scroll handler, pages WITHOUT the block run jQuery .offset()
+// against a missing target every frame → forced reflow (~376ms per scroll on the
+// long /all-products, ~57fps). Strip the dead handler wherever the block is
+// absent; the homepage keeps the real animation.
+// NOTE 06-07-2026: the current Webflow runtime no longer binds scroll.webflow at
+// all (verified live: zero jQuery scroll handlers on any page, no forced reflow
+// in traces — the wipe runs through another driver). This is dormant insurance
+// in case a future runtime publish reverts to jQuery binding. The guard selector
+// MUST track the statement block's Designer class if it's ever renamed
+// (originally .oa_statement_layout, renamed → .oa_statement-home).
 function stripOrphanScrollHandler() {
-  if (document.querySelector('.oa_statement_layout')) return; // block present → keep the real interaction
+  if (document.querySelector('.oa_statement-home')) return; // block present → keep the real interaction
   const $ = window.jQuery;
   if ($) $(window).off('scroll.webflow');
 }
@@ -409,12 +363,23 @@ function initLocalTime() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+  if (!oaGsapOk) {
+    // No GSAP: unhide the transition-tagged content the CSS pre-hides, then
+    // run only the GSAP-free features.
+    document.querySelectorAll('[data-page-transition]').forEach(function (el) {
+      el.style.opacity = '1';
+      el.style.visibility = 'visible';
+    });
+    initNavSafariFix();
+    initNavDropdownHover();
+    initLocalTime();
+    return;
+  }
   initSmoothScroll();
   initPageTransition();
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
   initNavDropdownHover();
-  initButton046();
   initLocalTime();
 });
 

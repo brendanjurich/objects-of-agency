@@ -39,6 +39,12 @@ function initCascadingSlider() {
         originalSlides.forEach(function (original) {
           const clone = original.cloneNode(true);
           clone.setAttribute('data-clone', '');
+          // Clones must never duplicate form wiring: duplicate radio ids/names
+          // would re-break the labels fixRadioIds() just repaired and
+          // double-count data-price modifiers in the pricing engine.
+          clone.querySelectorAll('input').forEach(function (el) { el.remove(); });
+          clone.querySelectorAll('[for]').forEach(function (el) { el.removeAttribute('for'); });
+          clone.querySelectorAll('[id]').forEach(function (el) { el.removeAttribute('id'); });
           viewport.appendChild(clone);
           slides.push(clone);
         });
@@ -233,18 +239,22 @@ function initCascadingSlider() {
       });
     }
 
-    if (prevButton) prevButton.addEventListener('click', function () { goTo(activeIndex - 1); });
-    if (nextButton) nextButton.addEventListener('click', function () { goTo(activeIndex + 1); });
+    if (prevButton) prevButton.addEventListener('click', function () { wrapper.focus({ preventScroll: true }); goTo(activeIndex - 1); });
+    if (nextButton) nextButton.addEventListener('click', function () { wrapper.focus({ preventScroll: true }); goTo(activeIndex + 1); });
 
     slides.forEach(function (slide, index) {
       slide.addEventListener('click', function () {
+        wrapper.focus({ preventScroll: true });
         if (index !== activeIndex) goTo(index);
       });
     });
 
+    // Arrow keys respond to real focus only — merely hovering must not hijack
+    // the arrows from page scrolling. The wrapper is focusable so keyboard
+    // users can tab to it; clicks inside move focus to it (Safari doesn't
+    // focus on click by itself, hence the explicit focus() in the handlers).
+    wrapper.setAttribute('tabindex', '0');
     let sliderHasFocus = false;
-    wrapper.addEventListener('mouseenter', function () { sliderHasFocus = true; });
-    wrapper.addEventListener('mouseleave', function () { sliderHasFocus = false; });
     wrapper.addEventListener('focusin', function () { sliderHasFocus = true; });
     wrapper.addEventListener('focusout', function () { sliderHasFocus = false; });
     document.addEventListener('keydown', function (event) {
@@ -253,12 +263,19 @@ function initCascadingSlider() {
       if (event.key === 'ArrowRight') { event.preventDefault(); goTo(activeIndex + 1); }
     });
 
+    // Debounced: the RO fires every frame of a live resize, and measure()'s gap
+    // probe (append + offsetWidth) forces a reflow per call — re-measure once the
+    // resize settles instead. No syncRadio() on resize: radio state can't change
+    // from a resize, and re-dispatching change re-runs pricing/summary for nothing.
+    let resizeTimer = null;
     const ro = new ResizeObserver(function () {
-      requestAnimationFrame(function () {
-        measure();
-        layout(false);
-        syncRadio();
-      });
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        requestAnimationFrame(function () {
+          measure();
+          layout(false);
+        });
+      }, 150);
     });
     ro.observe(viewport);
 
@@ -267,7 +284,6 @@ function initCascadingSlider() {
       requestAnimationFrame(function () {
         measure();
         layout(false);
-        syncRadio();
       });
     }
     if (portraitMQ.addEventListener) portraitMQ.addEventListener('change', onOrientationFlip);

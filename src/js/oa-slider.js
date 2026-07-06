@@ -44,6 +44,12 @@
     });
   }
 
+  // Single Swiper source for the whole site: oa-homepage.js reuses this loader
+  // for the hero carousels instead of bundling its own copy (kills the old
+  // duplicate-Swiper cost + version drift). This file loads in the sitewide
+  // footer, before page-level embeds, so the global is always set in time.
+  window.oaLoadSwiper = loadSwiper;
+
   // Lumos DOM surgery (verbatim from the original Lumos init) ----------------
 
   // Flatten Lumos u-display-contents wrappers.
@@ -107,8 +113,10 @@
         const isTouch = window.matchMedia('(pointer: coarse)').matches;
         const speed = isTouch && touchSpeed ? touchSpeed : baseSpeed;
 
-        // Loop only with enough slides (Swiper 12 needs ≥ slidesPerView + 1).
-        const loop = swiperElement.getAttribute('data-loop') === 'true' && swiperWrapper.children.length >= 2;
+        // Loop only with enough slides — Swiper 12 needs ≥ slidesPerView + 1,
+        // so the guard must scale with spv, not sit at a constant 2.
+        const minLoopSlides = (slidesPerView === 'auto' ? 1 : slidesPerView) + 1;
+        const loop = swiperElement.getAttribute('data-loop') === 'true' && swiperWrapper.children.length >= minLoopSlides;
 
         const swiper = new Swiper(swiperElement, {
           slidesPerView,

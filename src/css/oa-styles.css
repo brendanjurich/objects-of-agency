@@ -11,10 +11,6 @@ html::-webkit-scrollbar {           /* Chrome / Safari — hide native bar */
   height: 0;
 }
 
-[data-load-reset] {
-  opacity: 0;
-}
-
 /* Pre-hide nav from first paint. Revealed by the loader adding
    .loader-complete to <html> via a CSS transition — no GSAP inline
    styles on the nav so mix-blend-mode effects are preserved. */
@@ -177,9 +173,12 @@ footer.footer_main_wrap {
 /* GREETINGS: hardcoded 9-item, 36s cycle */
 /* ============================================================
    HERO FEED — CYCLING GREETINGS
-   9 greetings cycle in 16.2s (1.8s each), synced to the Perth
-   marker pulse in oa-australia-map.svg (same 1.8s cadence,
-   same cubic-bezier(0.16, 1, 0.3, 1) enter easing).
+   9 greetings, 36s cycle (4s each: ~0.35s enter, hold, exit by
+   the 4s mark — the keyframe percentages are fractions of 36s).
+   NOT data-driven: if the CMS greeting count changes, update
+   the nth-child delays AND the keyframe maths by hand. Enter
+   easing cubic-bezier(0.16, 1, 0.3, 1) matches the Perth
+   marker pulse in oa-australia-map.svg.
    ============================================================ */
 .hero_feed_greetings {
   display: grid;
@@ -783,120 +782,6 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   display: block;
 }
 
-/* ============================================================
-   GLASS-046 CTA — Osmo "Button 046" magnetic radial wipe fused
-   with the Osmo "Glass Effect (Background)" frosted stack.
-   In .hero_feed_cta-wrap over the slider. Wipe = #d66740 (GSAP-driven,
-   see initButton046 in oa-global.js). No hover grow; press-shrink kept.
-   ============================================================ */
-.button-046 {
-  --button-046-color: #fff;                 /* label white at rest */
-  --button-046-hover-color: #fff;           /* label stays white on wipe */
-  --button-046-hover-color-background: #d66740; /* orange wipe (solid) */
-  --button-046-color-focus: #fff;
-  --button-046-padding: 0.75em 1em;
-  --button-046-border-radius: 2.5em;        /* full pill; confirm vs prior look on staging */
-  --button-046-focus-inset: -0.125em;
-  --button-046-hover-scale: 1 1;            /* NO hover grow (stock: 1.065 1.095) */
-  --button-046-click-scale: 0.98;           /* subtle uniform press (glass + label) */
-  --button-046-ease-click: cubic-bezier(0.4, 0, 0.2, 1);
-  --button-046-ease-hover: cubic-bezier(0.34, 2.27, 0.64, 1);
-  --button-046-ease-focus: cubic-bezier(0.32, 0.72, 0, 1);
-
-  color: var(--button-046-color);
-  -webkit-user-select: none;
-  user-select: none;
-  background-color: #0000;
-  outline-style: none;
-  padding: 0;
-  line-height: 1;
-  text-decoration: none;
-  display: inline-grid;
-  position: relative;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 0.25s ease-out;
-}
-.button-046::after {
-  content: '';
-  display: block;
-  position: absolute;
-  inset: var(--button-046-focus-inset);
-  border-radius: var(--button-046-border-radius);
-  transition: box-shadow 0.3s var(--button-046-ease-focus), scale 0.4s var(--button-046-ease-hover);
-  pointer-events: none;
-  z-index: 1;
-}
-.button-046:is(:hover, :focus-visible),
-[data-hover]:is(:hover, :focus-visible) .button-046 {
-  color: var(--button-046-hover-color);
-}
-.button-046:is(:focus-visible)::after {
-  box-shadow: 0 0 0 0.125em var(--button-046-color-focus);
-  scale: var(--button-046-hover-scale); /* = 1 1, no grow */
-}
-.button-046__bg-circle {
-  z-index: 1;
-  border-radius: var(--button-046-border-radius);
-  grid-area: 1 / 1;
-  place-self: center;
-  width: calc(100% + 1px);
-  height: calc(100% + 1px);
-  position: relative;
-  overflow: clip;
-  transition: scale 0.4s var(--button-046-ease-hover), transform 0.15s var(--button-046-ease-click);
-}
-/* Note: __bg-circle (the orange wipe) is intentionally NOT press-scaled —
-   shrinking it pulled the orange off the edges and exposed the glass beneath
-   on springback. Press feedback lives on the glass + label instead (below). */
-.button-046__circle-wrap {
-  transform-origin: 0 0;
-  will-change: transform;
-  position: absolute;
-  inset: 0%;
-  transform: scale(0);
-}
-.button-046__circle {
-  aspect-ratio: 1;
-  background-color: var(--button-046-hover-color-background);
-  border-radius: 50%;
-  width: 200%;
-  display: block;
-  position: absolute;
-  inset: 0% auto auto 0%;
-  transform: translate(-50%, -50%);
-}
-.button-046__inner {
-  grid-column-gap: .125em;
-  grid-row-gap: .125em;
-  width: 100%;
-  height: 100%;
-  padding: var(--button-046-padding);
-  z-index: 2;
-  grid-area: 1 / 1;
-  justify-content: center;
-  align-items: center;
-  display: flex;
-}
-
-/* --- Glass Effect (backdrop-filter updated per request) --- */
-.glass-effect {
-  -webkit-backdrop-filter: saturate(120%) blur(14px);
-  backdrop-filter: saturate(120%) blur(14px);
-  pointer-events: none;
-  isolation: isolate;
-  color: #201d1d;
-  border-radius: inherit;
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-.glass-effect__fill { opacity: 1; border-radius: inherit; background-color: #d4d4d426; position: absolute; inset: 0; }
-.glass-effect__fill-burn { opacity: .05; mix-blend-mode: color-burn; border-radius: inherit; background-color: currentColor; position: absolute; inset: 0; }
-.glass-effect__highlight-soft { mix-blend-mode: overlay; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset -.28125em -.28125em .09375em -.328125em #ffffff80; }
-.glass-effect__highlight-strong { border-radius: inherit; position: absolute; inset: 0; box-shadow: inset .28125em .28125em .09375em -.328125em #fffc; }
-.glass-effect__edge-light { border-radius: inherit; mix-blend-mode: plus-lighter; position: absolute; inset: 0; box-shadow: inset .1875em .28125em .09375em -.1875em #b3b3b380; }
-.glass-effect__edge-dark { mix-blend-mode: overlay; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset -.1875em -.28125em .09375em -.1875em #b3b3b34d; }
-.glass-effect__inner-glow { mix-blend-mode: darken; border-radius: inherit; position: absolute; inset: 0; box-shadow: inset 0 0 1.75em #f2f2f24d; }
 
 /* oa_statement_blur: soften the wipe's leading (top) edge as the overlay sweeps
    down through the text. Load-bearing on this light theme — black text fading on
@@ -905,18 +790,4 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 .oa_statement_blur {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
   mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
-}
-
-/* --- Fusion overrides --- */
-.button-046 .glass-effect {
-  border-radius: var(--button-046-border-radius);
-  z-index: 0; /* below the wipe (z1) and label (z2) */
-}
-/* Press feedback: scale the glass + label only, never the orange (see note above).
-   NOT applied to .button-046 itself — a transform on the glass's ancestor would
-   break its backdrop-filter (it'd blur the button, not the slider behind it). */
-.button-046:active .glass-effect,
-.button-046:active .button-046__inner {
-  transform: scale(var(--button-046-click-scale));
-  transition: transform 0.15s var(--button-046-ease-click);
 }

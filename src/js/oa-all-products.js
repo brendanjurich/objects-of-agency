@@ -9,24 +9,16 @@ function initBasicFilterSetupMultiMatch() {
     const buttons = [...group.querySelectorAll('[data-filter-target]')];
     const items = [...group.querySelectorAll('[data-filter-name]')];
 
-    // Hoist: read inner text of collect div → write to parent data-filter-name
+    // Hoist: read inner text of collect div → write to parent data-filter-name.
+    // The live Webflow embed carries the value as TEXT CONTENT of the collect
+    // node (its data-filter-name-collect attribute is empty — verified live
+    // 06-07-2026). An attribute-reading variant used to sit below this; it was
+    // dead against the real markup and has been removed.
     items.forEach(item => {
       const collectDiv = item.querySelector('[data-filter-name-collect]');
       if (!collectDiv) return;
       const val = collectDiv.textContent.trim().toLowerCase();
       if (val) item.setAttribute('data-filter-name', val);
-    });
-
-    // collect names once (init only)
-    items.forEach(item => {
-      const cs = item.querySelectorAll('[data-filter-name-collect]');
-      if (!cs.length) return;
-      const seen = new Set(), out = [];
-      cs.forEach(c => {
-        const v = (c.getAttribute('data-filter-name-collect') || '').trim().toLowerCase();
-        if (v && !seen.has(v)) { seen.add(v); out.push(v); }
-      });
-      if (out.length) item.setAttribute('data-filter-name', out.join(' '));
     });
 
     // cache tokens
