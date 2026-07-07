@@ -378,3 +378,7 @@ The old exit raced `window.load` against a 1200ms cap under a 1500ms floor — t
 - **all-products hoist**: the attribute-reading collect variant was dead — live markup carries the value as text content (all `data-filter-name-collect` attributes are empty). Deleted.
 - **button-046 / glass-effect** JS + CSS deleted (~170 lines): the Glass CTA was removed in the Designer; a new CTA button will replace it. Restore, if ever needed, is a `git revert` away.
 - **`w-mod-ix3`** in `revealAfterLoader()` is load-bearing (IX2 guard, see REFERENCE.md) — now commented inline so it doesn't read as vestigial.
+
+### Post-batch hotfix (v1.0.132): loader inside the transition wrapper + pointer-eating nav spacer
+
+Tagging `data-page-transition` on `.page_wrap` (the only wrapper the Designer offers) put the **loader inside the pre-hidden element** — the CSS guard hid the loader for its entire run (blank page, then pop; reported as "loader not showing"). Fix: the pre-hide is now scoped `[data-page-transition]:not(:has([data-load-wrap]))` — loader pages skip the pre-hide (the loader overlay covers content anyway and owns the reveal). Structural alternative (optional, cleaner): move the Loader element out of `.page_wrap` to be a direct child of Body. Second fix: `.nav_spacer_bg` (product template) is an empty transparent sticky strip at z-index 2 that swallowed pointer events across the top ~160px (arrow cursor, unhoverable radios) — pre-existing, now `pointer-events: none` (the Designer has no pointer-events control).

@@ -27,8 +27,14 @@ html.w-mod-js:not(.wf-design-mode) .nav_component {
 
 /* Pre-hide page content from first paint so the transition can fade it in.
    Revealed by initPageTransition() (oa-global.js). Scoped to JS + published
-   site so the Designer and no-JS fallback always show content. */
-html.w-mod-js:not(.wf-design-mode) [data-page-transition] {
+   site so the Designer and no-JS fallback always show content.
+   :not(:has(…)) — on pages where the LOADER sits inside the transition
+   wrapper (homepage: .page_wrap wraps everything, loader included), this
+   pre-hide would hide the loader itself for its entire run: blank page,
+   then everything pops at loader-complete (bug, 07-07-2026). The loader
+   already covers the content on those pages, so skip the pre-hide there
+   and let the loader own the reveal moment. */
+html.w-mod-js:not(.wf-design-mode) [data-page-transition]:not(:has([data-load-wrap])) {
   opacity: 0;
 }
 
@@ -296,6 +302,18 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   }
 }
 
+
+/* ============================================================
+   NAVIGATION — SPACER STRIP (product template)
+   .nav_spacer_bg is an empty, transparent sticky strip (reserved nav
+   backdrop) at z-index 2, above the page content. It must never
+   intercept the mouse: without this rule, anything scrolled into the
+   top ~160px shows an arrow cursor and can't be hovered or clicked.
+   The Designer has no pointer-events control, so the rule lives here.
+   ============================================================ */
+.nav_spacer_bg {
+  pointer-events: none;
+}
 
 /* ============================================================
    NAVIGATION — TABLET & MOBILE (max 1134px)
