@@ -288,6 +288,17 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
    Easing matches the slider's --ease-oa for visual cohesion.
    ===================================================================== */
 @media (hover: none) {
+  /* iOS "sticky hover": touching the card applies the Designer's
+     .card_product_group:hover state (same scale/shadow as the raise) and it
+     STICKS until the next touch — so a swipe left the outgoing card raised
+     (arrows never touch the card, hence the asymmetry). Touch devices have
+     no real hover, so neutralize it; the is-active raise below is more
+     specific and still wins on the settled card. */
+  .card_product_group:hover {
+    box-shadow: none;
+    transform: none;
+  }
+
   .card_product_wrap.is-active .card_product_group {
     transition:
       transform  0.35s cubic-bezier(0.22, 0.36, 0.1, 1) 0.03s,

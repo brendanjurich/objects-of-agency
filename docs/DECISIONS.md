@@ -386,3 +386,7 @@ Tagging `data-page-transition` on `.page_wrap` (the only wrapper the Designer of
 ### Touch-swipe fix (v1.0.133): backward swipe left the old card raised
 
 Real-iPhone-only symptom: swiping the homepage menu slider backward left the previous card scaled up until the next touch (arrows fine both ways). Cause: `touchEnd` cleared `is-slider-transitioning` only `if (!swiper.animating)` — on a backward followFinger release the transition events can complete before the finger lifts, so the flag stuck with no `transitionEnd` left to clear it. Fix (`oa-slider.js` raise-on-transition block): when `touchEnd` sees `animating`, an unconditional fallback timeout (`speed + 100ms`) clears the flag; `transitionEnd`/new gestures cancel it. Verified in touch emulation: flag ends cleared after every gesture incl. mid-animation flicks.
+
+### The real bug-#5 cause (v1.0.134): iOS sticky hover, not the flag
+
+v1.0.133's flag fallback was a legitimate hardening but not the cause. The Designer's `.card_product_group:hover` (scale 1.02 + shadow, identical to the raise) is ungated in Webflow's stylesheet; on iOS a touch applies `:hover` and it sticks until the next touch. A swipe starts on the card → outgoing card stays raised; arrows touch only the button → clean. Chrome touch emulation doesn't reproduce iOS sticky hover, which is why it never showed. Fix: `oa-styles.css` neutralizes `.card_product_group:hover` inside `@media (hover: none)` (loads after Webflow's CSS; the more-specific `is-active` raise still wins).
