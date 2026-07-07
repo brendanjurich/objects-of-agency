@@ -390,3 +390,7 @@ Real-iPhone-only symptom: swiping the homepage menu slider backward left the pre
 ### The real bug-#5 cause (v1.0.134): iOS sticky hover, not the flag
 
 v1.0.133's flag fallback was a legitimate hardening but not the cause. The Designer's `.card_product_group:hover` (scale 1.02 + shadow, identical to the raise) is ungated in Webflow's stylesheet; on iOS a touch applies `:hover` and it sticks until the next touch. A swipe starts on the card → outgoing card stays raised; arrows touch only the button → clean. Chrome touch emulation doesn't reproduce iOS sticky hover, which is why it never showed. Fix: `oa-styles.css` neutralizes `.card_product_group:hover` inside `@media (hover: none)` (loads after Webflow's CSS; the more-specific `is-active` raise still wins).
+
+### Menu slider: scale removed entirely (v1.0.135)
+
+Final call on the homepage menu slider — the settled-card raise (scale 1.02 + shadow) was too much movement for a nav strip and the root of the v1.0.133/134 asymmetry chase. Removed the feature rather than tuning it: `oa-styles.css` drops the `is-active` raise + transition (kept only the `@media (hover:none)` hover-neutralize so iOS sticky-hover can't scale a touched card); `oa-slider.js` drops the now-orphaned `raiseOnTransition` block + `is-slider-transitioning` toggling (homepage was its only consumer). Speed is the Designer `data-speed` attribute (set 700 to match product); ease was always Swiper's built-in, shared with product. `data-raise-on-transition` on the component is now inert.

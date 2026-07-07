@@ -278,38 +278,16 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 }
 
 /* =====================================================================
-   MOBILE / TOUCH — raise the active product card ONLY when the slider
-   has fully settled. Gated by body.is-slider-transitioning (toggled in
-   oa-global.js) so the raise doesn't compete with in-flight slides.
-
-   Targets .card_product_group (same element as the desktop :hover rule)
-   so the image AND text content scale together, matching desktop.
-   Values mirror the desktop :hover state: scale(1.02), 15px shadow.
-   Easing matches the slider's --ease-oa for visual cohesion.
+   MOBILE / TOUCH — the homepage menu slider is a plain slide, no card
+   scale. Desktop keeps its .card_product_group:hover raise; touch devices
+   have no real hover, and iOS "sticky hover" would otherwise apply that
+   raise to the touched card and leave it stuck until the next touch. So
+   neutralize hover here — clean slide, zero movement on the cards.
    ===================================================================== */
 @media (hover: none) {
-  /* iOS "sticky hover": touching the card applies the Designer's
-     .card_product_group:hover state (same scale/shadow as the raise) and it
-     STICKS until the next touch — so a swipe left the outgoing card raised
-     (arrows never touch the card, hence the asymmetry). Touch devices have
-     no real hover, so neutralize it; the is-active raise below is more
-     specific and still wins on the settled card. */
   .card_product_group:hover {
     box-shadow: none;
     transform: none;
-  }
-
-  .card_product_wrap.is-active .card_product_group {
-    transition:
-      transform  0.35s cubic-bezier(0.22, 0.36, 0.1, 1) 0.03s,
-      box-shadow 0.35s cubic-bezier(0.22, 0.36, 0.1, 1) 0.03s;
-  }
-
-  body:not(.is-slider-transitioning)
-    .card_product_wrap.is-active
-    .card_product_group {
-    box-shadow: 3px 5px 15px 1px var(--swatch--box-shadow-2);
-    transform: scale(1.02);
   }
 }
 

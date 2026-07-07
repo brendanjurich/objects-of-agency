@@ -9,12 +9,10 @@
 
    Per-slider config comes from data-attributes on .slider_element
    (the Lumos-native pattern). New attrs vs the original Lumos init:
-     data-loop, data-parallax, data-slides-per-view, data-speed-touch,
-     data-raise-on-transition.
+     data-loop, data-parallax, data-slides-per-view, data-speed-touch.
 
-   Folds in (and replaces) the two old oa-global.js window.load patches:
-     • product speed 800/700  → data-speed + data-speed-touch
-     • is-slider-transitioning → data-raise-on-transition
+   Folds in (and replaces) the old oa-global.js window.load speed patch:
+     • product speed 800/700 → data-speed + data-speed-touch
 
    Swiper 12.2.0 bundle (JS+CSS) is loaded from jsDelivr only when a
    slider exists on the page. Safe because there is no Lumos runtime —
@@ -101,7 +99,6 @@
         const mousewheel = swiperElement.getAttribute('data-mousewheel') === 'true';
         const slideToClickedSlide = swiperElement.getAttribute('data-slide-to-clicked') === 'true';
         const parallax = swiperElement.getAttribute('data-parallax') === 'true';
-        const raiseOnTransition = swiperElement.getAttribute('data-raise-on-transition') === 'true';
 
         const spvAttr = swiperElement.getAttribute('data-slides-per-view');
         const slidesPerView = spvAttr && spvAttr !== 'auto' ? parseInt(spvAttr, 10) || 'auto' : 'auto';
@@ -118,7 +115,7 @@
         const minLoopSlides = (slidesPerView === 'auto' ? 1 : slidesPerView) + 1;
         const loop = swiperElement.getAttribute('data-loop') === 'true' && swiperWrapper.children.length >= minLoopSlides;
 
-        const swiper = new Swiper(swiperElement, {
+        new Swiper(swiperElement, {
           slidesPerView,
           followFinger,
           loop,
@@ -143,36 +140,6 @@
           },
           slideActiveClass: 'is-active',
         });
-
-        // Folds in the old homepage "is-slider-transitioning" patch: toggle the
-        // body flag while animating/dragging so the CSS only raises the active
-        // card once motion has fully stopped.
-        if (raiseOnTransition) {
-          let clearTimer;
-          const addFlag = () => {
-            clearTimeout(clearTimer);
-            document.body.classList.add('is-slider-transitioning');
-          };
-          const clearFlag = () => {
-            clearTimeout(clearTimer);
-            document.body.classList.remove('is-slider-transitioning');
-          };
-          swiper.on('transitionStart', addFlag);
-          swiper.on('transitionEnd', clearFlag);
-          swiper.on('touchStart', addFlag);
-          swiper.on('touchEnd', () => {
-            if (!swiper.animating) {
-              clearFlag();
-              return;
-            }
-            // Backward followFinger swipes can finish their transition events
-            // before the finger lifts — touchEnd then sees animating=true and,
-            // with no transitionEnd left to fire, the flag would stick (stale
-            // raised card until the next touch). Unconditional fallback: clear
-            // after the transition would have run its course anyway.
-            clearTimer = setTimeout(clearFlag, speed + 100);
-          });
-        }
       });
   }
 
