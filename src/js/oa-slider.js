@@ -148,13 +148,29 @@
         // body flag while animating/dragging so the CSS only raises the active
         // card once motion has fully stopped.
         if (raiseOnTransition) {
-          const addFlag = () => document.body.classList.add('is-slider-transitioning');
-          const clearFlag = () => document.body.classList.remove('is-slider-transitioning');
+          let clearTimer;
+          const addFlag = () => {
+            clearTimeout(clearTimer);
+            document.body.classList.add('is-slider-transitioning');
+          };
+          const clearFlag = () => {
+            clearTimeout(clearTimer);
+            document.body.classList.remove('is-slider-transitioning');
+          };
           swiper.on('transitionStart', addFlag);
           swiper.on('transitionEnd', clearFlag);
           swiper.on('touchStart', addFlag);
           swiper.on('touchEnd', () => {
-            if (!swiper.animating) clearFlag();
+            if (!swiper.animating) {
+              clearFlag();
+              return;
+            }
+            // Backward followFinger swipes can finish their transition events
+            // before the finger lifts — touchEnd then sees animating=true and,
+            // with no transitionEnd left to fire, the flag would stick (stale
+            // raised card until the next touch). Unconditional fallback: clear
+            // after the transition would have run its course anyway.
+            clearTimer = setTimeout(clearFlag, speed + 100);
           });
         }
       });
