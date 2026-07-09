@@ -44,13 +44,13 @@ this build as an auto-generated `MAP.md`, not as a prerequisite.
 ├── 06-pd/                       # personal development
 ├── 07-research/                 # deep-research vault — pre-exists, absorbed as-is
 ├── 08-operations/                # frameworks, policies, legal (open Ts&Cs thread), admin
-├── z—archive/                   # finished projects retire here
+├── 09-archive/                  # finished projects retire here
 └── _system/                     # templates, scripts (MAP.md generator)
 ```
 
-(Top-level folders ended up with two-digit sort prefixes and `archive/` became
-`z—archive/`, decided during implementation — not reflected in the original
-diagram above but updated here to match reality.)
+(Top-level folders ended up with two-digit sort prefixes, including
+`archive/` → `09-archive/`, decided during implementation — not reflected in
+the original diagram above but updated here to match reality.)
 
 Rules:
 
@@ -63,7 +63,7 @@ Rules:
   outreach to design studios), so outreach *is* sales. `05-growth/` holds
   strategy and SEO/AEO only.
 - **Future projects** (e.g. the IGS Revit/BIM pipeline) each get one folder
-  under `01-projects/`; completed ones move to `z—archive/`.
+  under `01-projects/`; completed ones move to `09-archive/`.
 
 ## Git & privacy
 
