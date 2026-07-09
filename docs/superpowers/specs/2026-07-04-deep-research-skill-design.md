@@ -21,7 +21,7 @@ written synthesis on a topic.
 | Deliverables | Three selectable modes: **synthesis**, **extraction**, **dossier** |
 | Engine | **Firecrawl-first**, built-in WebSearch/WebFetch fallback |
 | Skill scope | **Global** — `~/.claude/skills/deep-research/` |
-| Output | **Central vault** (command-center workspace) |
+| Output | **Central vault** (oa-command-centre workspace) |
 | Run flow | **Clarify → plan → confirm gate → execute** |
 | Architecture | Router SKILL.md + per-mode references + templates + **durable per-run folder** |
 
@@ -48,10 +48,10 @@ SKILL.md is a thin router; only the relevant `references/*.md` is read per run
 Skill reads a single configured constant near the top of SKILL.md. Default:
 
 ```
-~/Documents/command-center/research/
+~/Documents/oa-command-centre/07-research/
 ```
 
-The command-center workspace does not exist yet; the constant is centralized so
+The oa-command-centre workspace does not exist yet; the constant is centralized so
 the path changes in one place once it's built.
 
 ## Run flow (every run)
@@ -93,7 +93,7 @@ citation log.
 Scaffolded at step 2, in the vault:
 
 ```
-~/Documents/command-center/research/<YYYY-MM-DD>-<topic-slug>/
+~/Documents/oa-command-centre/07-research/<YYYY-MM-DD>-<topic-slug>/
   plan.md            # mode, sources, tool plan, credit estimate, confirm status
   sources.md         # citation log: url · title · retrieved-date · which claim/row it backs
   raw/               # scraped docs (dossier), raw agent JSON (extraction), saved pages

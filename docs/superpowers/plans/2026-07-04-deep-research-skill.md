@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Skill install path: `~/.claude/skills/deep-research/` (global, discovered automatically).
-- Vault path is a single configured constant near the top of `SKILL.md`, default `~/Documents/command-center/research/`. Referenced everywhere by that constant, never hardcoded elsewhere.
+- Vault path is a single configured constant near the top of `SKILL.md`, default `~/Documents/oa-command-centre/07-research/`. Referenced everywhere by that constant, never hardcoded elsewhere.
 - Run flow is always: **Clarify → Plan (write `plan.md`) → Confirm gate → Execute**. The confirm gate is mandatory before any firecrawl credit is spent.
 - Only the relevant `references/<mode>.md` is loaded per run — `SKILL.md` stays a router, mode detail lives in references.
 - Research policies (no uncited claims, no fabrication, cross-check ≥2 sources in synthesis, primary sources first, respect robots/paywalls, date-stamp retrievals) apply to every mode.
@@ -26,7 +26,7 @@
 - Create: `~/.claude/skills/deep-research/SKILL.md`
 
 **Interfaces:**
-- Produces: the vault constant `RESEARCH_VAULT=~/Documents/command-center/research/`; the run-folder naming convention `<vault>/<YYYY-MM-DD>-<topic-slug>/`; the four-phase flow; the mode→reference routing table (`synthesis`→`references/synthesis.md`, `extraction`→`references/extraction.md`, `dossier`→`references/dossier.md`). All later tasks rely on these names.
+- Produces: the vault constant `RESEARCH_VAULT=~/Documents/oa-command-centre/07-research/`; the run-folder naming convention `<vault>/<YYYY-MM-DD>-<topic-slug>/`; the four-phase flow; the mode→reference routing table (`synthesis`→`references/synthesis.md`, `extraction`→`references/extraction.md`, `dossier`→`references/dossier.md`). All later tasks rely on these names.
 
 - [ ] **Step 1: Create the skill directory**
 
@@ -55,11 +55,11 @@ built-in `WebSearch`/`WebFetch`.
 ## Configuration
 
 ```
-RESEARCH_VAULT = ~/Documents/command-center/research/
+RESEARCH_VAULT = ~/Documents/oa-command-centre/07-research/
 ```
 
 If `RESEARCH_VAULT` does not exist yet, create it on first run. The
-command-center workspace may not be built — this constant is the one place the
+oa-command-centre workspace may not be built — this constant is the one place the
 path changes when it is.
 
 ## Run flow (always, every run)
@@ -463,7 +463,7 @@ Expected exactly:
 In a Claude Code session, invoke `/deep-research` with a throwaway prompt like
 "research the IGS Revit Content Standard requirements". Verify the model:
 - asks only for missing clarify fields (should infer mode=dossier),
-- writes a `plan.md` under `~/Documents/command-center/research/<date>-.../`,
+- writes a `plan.md` under `~/Documents/oa-command-centre/07-research/<date>-.../`,
 - **stops at the confirm gate** without calling any firecrawl tool.
 
 Expected: it halts at the gate. If it runs firecrawl before approval, fix the

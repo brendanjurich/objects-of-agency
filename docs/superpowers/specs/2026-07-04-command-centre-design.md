@@ -6,7 +6,7 @@
 
 ## Purpose
 
-A single canonical workspace — `~/Documents/command-center/` — that acts as
+A single canonical workspace — `~/Documents/oa-command-centre/` — that acts as
 Brendan's second brain and business OS. One folder opened in VS Code where he
 and Claude see every business document in the explorer and co-edit live.
 Houses all projects, strategy, research, and context for Objects of Agency,
@@ -21,32 +21,36 @@ this build as an auto-generated `MAP.md`, not as a prerequisite.
 | Decision | Choice |
 |---|---|
 | Relationship to `~/Documents/ OBJECTS OF AGENCY/` (legacy Finder folder, ~8GB) | **Selective migration.** Command centre is canonical for working/text documents. Heavy binaries stay in the Finder folder, linked from markdown. Migration is a guided pass, not a bulk move. |
-| Website repo location | **Moved inside**, to `command-center/projects/objects-of-agency/`. Keeps its own git history, remote, and name. Claude project memory re-keyed to the new path. |
+| Website repo location | **Moved inside**, to `oa-command-centre/01-projects/objects-of-agency-website/`. Keeps its own git history, remote, and name. Claude project memory re-keyed to the new path. |
 | Scope | **Business + personal development.** No family/house/health admin until the business structure proves itself. |
 | Versioning | **Private GitHub repo, text-only.** Binaries and sensitive material gitignored. |
-| Architecture | **Projects + Domains.** Bounded builds in `projects/` (one collapsible folder each); ongoing functions as flat top-level domains. |
+| Architecture | **Projects + Domains.** Bounded builds in `01-projects/` (one collapsible folder each); ongoing functions as flat top-level domains. |
 
 ## Folder structure
 
 ```
-~/Documents/command-center/
-├── CLAUDE.md                  # the OS: conventions, precedence, how we co-work
-├── FOUNDER.md                 # founder & business context (moved from website repo)
-├── MAP.md                     # auto-generated workspace index — never hand-edited
-├── inbox/                     # capture zone; unfiled material lands here, gets swept
-├── projects/                  # bounded builds (start/finish), one folder each
-│   └── objects-of-agency/     # website repo, moved in, own git + remote
-├── brand/                     # identity, voice, positioning
-├── marketing/                 # content strategy & material, social platforms, campaigns
-├── sales/                     # pricing (Blair Enns), trade program, outreach & lead gen,
-│                              # proposals, presentations
-├── growth/                    # growth strategy, SEO/AEO
-├── operations/                # frameworks, policies, legal (open Ts&Cs thread), admin
-├── research/                  # deep-research vault — pre-exists, absorbed as-is
-├── pd/                        # personal development
-├── archive/                   # finished projects retire here
-└── _system/                   # templates, scripts (MAP.md generator)
+~/Documents/oa-command-centre/
+├── CLAUDE.md                    # the OS: conventions, precedence, how we co-work
+├── FOUNDER.md                   # founder & business context (moved from website repo)
+├── MAP.md                       # auto-generated workspace index — never hand-edited
+├── inbox/                       # capture zone; unfiled material lands here, gets swept
+├── 01-projects/                 # bounded builds (start/finish), one folder each
+│   └── objects-of-agency-website/  # website repo, moved in, own git + remote
+├── 02-brand/                    # identity, voice, positioning
+├── 03-marketing/                # content strategy & material, social platforms, campaigns
+├── 04-sales/                    # pricing (Blair Enns), trade program, outreach & lead gen,
+│                                 # proposals, presentations
+├── 05-growth/                   # growth strategy, SEO/AEO
+├── 06-pd/                       # personal development
+├── 07-research/                 # deep-research vault — pre-exists, absorbed as-is
+├── 08-operations/                # frameworks, policies, legal (open Ts&Cs thread), admin
+├── z—archive/                   # finished projects retire here
+└── _system/                     # templates, scripts (MAP.md generator)
 ```
+
+(Top-level folders ended up with two-digit sort prefixes and `archive/` became
+`z—archive/`, decided during implementation — not reflected in the original
+diagram above but updated here to match reality.)
 
 Rules:
 
@@ -55,19 +59,19 @@ Rules:
 - **Naming:** kebab-case folders; `YYYY-MM-DD-` prefix on dated documents
   (sorting mechanism — matches the research vault convention). All
   human-readable dates (inside docs, headers, MAP.md) are **DD-MM-YYYY**.
-- **Lead generation lives in `sales/`** — the GTM is a single channel (direct
-  outreach to design studios), so outreach *is* sales. `growth/` holds
+- **Lead generation lives in `04-sales/`** — the GTM is a single channel (direct
+  outreach to design studios), so outreach *is* sales. `05-growth/` holds
   strategy and SEO/AEO only.
 - **Future projects** (e.g. the IGS Revit/BIM pipeline) each get one folder
-  under `projects/`; completed ones move to `archive/`.
+  under `01-projects/`; completed ones move to `z—archive/`.
 
 ## Git & privacy
 
 - `git init` at the command-centre root; private GitHub repo under
   `brendanjurich`.
 - `.gitignore` excludes:
-  - `projects/objects-of-agency/` (nested repo with its own remote — ignored
-    by the outer repo for clarity),
+  - `01-projects/objects-of-agency-website/` (nested repo with its own
+    remote — ignored by the outer repo for clarity),
   - heavy binaries (`*.pdf`, images, video, archives, design files),
   - `**/private/` — a convention: any folder named `private/` never leaves
     the machine (finance, legal identifiers, anything sensitive).
@@ -77,7 +81,7 @@ Rules:
 
 ## VS Code + Claude layer
 
-- **One folder to open:** `command-center/` is the daily workspace. The
+- **One folder to open:** `oa-command-centre/` is the daily workspace. The
   website repo appears as one collapsible project. No multi-root workspace.
 - **Extensions:** audit current install; add only the useful non-code layer —
   markdown rendering, PDF/Office viewing in-editor, Excalidraw. Keep the
@@ -86,13 +90,13 @@ Rules:
   context and workspace conventions, importing `FOUNDER.md`. The website
   repo's own `CLAUDE.md` is untouched and takes precedence when working
   inside it. `.claude/FOUNDER-CONTEXT.md` moves out of the website repo to
-  `command-center/FOUNDER.md` (repo keeps no copy; the file is currently
+  `oa-command-centre/FOUNDER.md` (repo keeps no copy; the file is currently
   tracked-and-modified on `dev`, so its removal is committed).
 - **Memory re-key:** `~/.claude/projects/-Users-brendanjurich-Documents-objects-of-agency/`
   is renamed to match the repo's new path so auto-memory and history survive
   the move.
 - **`/deep-research` vault:** `RESEARCH_VAULT` already points at
-  `~/Documents/command-center/research/` — no change; the existing IGS
+  `~/Documents/oa-command-centre/07-research/` — no change; the existing IGS
   dossier is absorbed in place.
 - **MAP.md generator:** small script in `_system/scripts/`, same pattern as
   the SKILLS.md generator — reads the live tree, regenerates the index.
@@ -100,9 +104,9 @@ Rules:
 
 ## Migration plan (one session, reversible at each step)
 
-1. Scaffold the structure (research/ already exists).
+1. Scaffold the structure (07-research/ already exists).
 2. `git init`, `.gitignore`, first commit, create private GitHub repo, push.
-3. Move the website repo into `projects/`; re-key Claude project memory;
+3. Move the website repo into `01-projects/`; re-key Claude project memory;
    verify `git status`, `npm run build`, and remotes still work.
 4. Move `FOUNDER-CONTEXT.md` → `FOUNDER.md`; commit its removal in the
    website repo; write the command-centre `CLAUDE.md`.
@@ -126,8 +130,8 @@ routines wait until there is content and a lead list to feed them.
 
 ## Success criteria
 
-- Opening `~/Documents/command-center/` in VS Code shows the whole business
-  as a navigable tree, website repo collapsible under `projects/`.
+- Opening `~/Documents/oa-command-centre/` in VS Code shows the whole business
+  as a navigable tree, website repo collapsible under `01-projects/`.
 - Website repo functions identically post-move: `git status` clean-or-known,
   remote pushes work, `npm run build` passes, Claude memory intact.
 - `MAP.md` regenerates from the live tree with one command.
