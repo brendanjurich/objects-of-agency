@@ -10,6 +10,10 @@ node_modules/
 *.jpeg
 *.gif
 
+# Site icon assets (favicon/PWA) — served via jsDelivr, must override *.png above
+!src/icons/
+!src/icons/*.png
+
 # Playwright MCP artifacts
 .playwright-mcp/
 

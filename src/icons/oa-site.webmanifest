@@ -1,0 +1,30 @@
+{
+  "name": "Objects of Agency",
+  "short_name": "Objects",
+  "id": "https://oa-v5.webflow.io/",
+  "start_url": "https://oa-v5.webflow.io/",
+  "scope": "https://oa-v5.webflow.io/",
+  "display": "standalone",
+  "background_color": "#fafaf8",
+  "theme_color": "#fafaf8",
+  "icons": [
+    {
+      "src": "https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.136/src/icons/oa-manifest-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.136/src/icons/oa-manifest-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.136/src/icons/oa-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
