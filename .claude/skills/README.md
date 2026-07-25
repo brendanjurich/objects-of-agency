@@ -9,4 +9,8 @@ every project (a general planning skill, GSAP helpers), it belongs in the **glob
 store at `~/.claude/skills/` instead — see `~/.claude/README.md` for the rule.
 
 Each skill is a directory with a `SKILL.md` (name + description frontmatter, then
-instructions). Empty for now.
+instructions).
+
+| Skill | Use when |
+|---|---|
+| `icon-release` | Any favicon/PWA icon master changes — full rebuild, safe-zone audit, jsDelivr tag, Webflow head code, live verification. |
