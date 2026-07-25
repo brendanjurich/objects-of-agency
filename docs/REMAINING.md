@@ -4,6 +4,39 @@ Ordered by dependency. Work top-to-bottom where possible: foundation before SEO,
 
 ---
 
+## ⚠️ Critical — Domain Cutover
+
+- [ ] **Swap the web manifest off the staging domain.** `src/icons/oa-site.webmanifest`
+      hardcodes `id`, `start_url` and `scope` as absolute
+      `https://oa-v5.webflow.io/` URLs. They **must** be absolute — the manifest is
+      served cross-origin from jsDelivr, so relative values would scope the PWA to
+      the CDN and break it. On custom-domain go-live: edit those three fields, re-tag,
+      bump the four `@v1.0.X` URLs in `02-brand/oa-logo/icons/webflow-head-code.html`
+      (command centre), re-paste into Webflow → Project Settings → Custom Code → Head,
+      publish. **If this is missed the PWA installs against the staging domain** —
+      silent failure, nothing visibly breaks on the site itself.
+
+### Context: the icon system is Webflow-bypassed
+
+Webflow's Site Settings **Favicon/Webclip fields cannot be cleared once set.** They
+currently hold duplicate copies of the *current* icon artwork (deliberate — if a tag
+ever leaks past the neutraliser it renders correct art, not stale). Consequence:
+
+- The **served HTML always contains ~6 Webflow icon tags** from
+  `cdn.prod.website-files.com`. This is expected, not a regression.
+- A runtime script in the head code strips them, matching on the
+  `website-files.com` **host** (not filenames), so new uploads there are handled
+  automatically.
+- **Audit the post-JS DOM and the network log, never the served HTML.** Pass = 0
+  Webflow icon tags remaining in the DOM, and only jsDelivr icons fetched.
+- The light/dark favicon swap is **JS-driven on a `matchMedia` listener**, because
+  neither Chromium nor WebKit evaluates `prefers-color-scheme` inside an SVG favicon
+  (Firefox is the only engine that does). The script also removes the `.ico` link at
+  runtime so the SVG wins unambiguously. Don't "simplify" this back to the pure-CSS
+  approach — it was tested and does not work.
+
+---
+
 ## Foundation
 
 - [ ] Semantic HTML & structure audit
