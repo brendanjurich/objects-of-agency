@@ -280,6 +280,83 @@ function initNavSafariFix() {
   observer.observe(navButton, { attributes: true, attributeFilter: ['class'] });
 }
 
+// The nav's section links are absolute (`/all-products#tables`) so they work from
+// any page — the only correct way to author them for a sitewide nav. But THREE
+// separate systems each decide what to do by testing whether the href *starts*
+// with "#", and an absolute path fails all three. On /all-products, where these
+// resolve to a same-document hash change:
+//   1. Webflow's navbar never closes the mobile overlay
+//      (webflow.js: `href.indexOf('#') === 0 && open && close()`) — the menu is
+//      left stranded over the page while it scrolls underneath.
+//   2. Lenis's `anchors` handler never intercepts, so there is no smooth scroll —
+//      verified live: zero calls reach lenis.scrollTo on a real link click.
+//   3. The browser's own fragment jump ignores the section's scroll-margin-top,
+//      landing the heading under the fixed nav — verified with Lenis destroyed.
+// None of that is fixable by changing the hrefs, so own the interaction instead.
+// Reproduces 100% on /all-products and never from another page — which is why it
+// read as intermittent.
+function initNavAnchorLinks() {
+  const nav = document.querySelector('.nav_component');
+  if (!nav) return;
+  const navButton = document.querySelector('.w-nav-button');
+
+  document.addEventListener('click', function (e) {
+    // NOT gated on e.defaultPrevented — a smooth-scroll library may already have
+    // claimed this click, and it is still a legitimate user click.
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest('a[href]');
+    if (!a || !nav.contains(a)) return;
+    if (a.target === '_blank' || a.hasAttribute('download')) return;
+    let url;
+    try { url = new URL(a.href, location.href); } catch (_) { return; }
+    if (url.origin !== location.origin) return;
+    if (url.pathname !== location.pathname || url.search !== location.search) return; // real navigation
+    if (!url.hash) return;
+    let target;
+    try { target = document.querySelector(url.hash); } catch (_) { return; } // ids starting with a digit aren't valid selectors
+    if (!target) return;
+
+    e.preventDefault();
+    // Capture phase + stopPropagation: Webflow's own anchor scroll is a
+    // document-delegated bubble handler that animates to the target's raw
+    // offset, ignoring scroll-margin-top. preventDefault alone does not stop it
+    // — it would run after ours and drag the page the last 130px back down.
+    e.stopPropagation();
+
+    const scrollToTarget = function () {
+      // Clearance under the fixed nav comes from the section's own
+      // scroll-margin-top, so it stays one number, editable in the Designer —
+      // and it tracks the breakpoint, since this is read live.
+      const offset = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      const y = target.getBoundingClientRect().top + window.scrollY - offset;
+      if (window.lenis) window.lenis.scrollTo(y);
+      else window.scrollTo({ top: y, behavior: 'smooth' }); // reduced motion / Lenis CDN down
+      history.pushState(null, '', url.hash);
+    };
+
+    // Webflow already closes the menu for hrefs that start with "#", so closing
+    // it again for those would toggle it straight back open.
+    const mustClose = navButton && navButton.classList.contains('w--open') &&
+                      a.getAttribute('href').charAt(0) !== '#';
+    if (!mustClose) { scrollToTarget(); return; }
+
+    // Scrolling cannot happen until the menu is actually shut: body.menu-open
+    // sets overflow:hidden and initNavSafariFix stops Lenis, so a scroll issued
+    // now is silently dropped (even with Lenis's force option). Webflow's toggle
+    // is debounced, so the class has not flipped by the next frame either —
+    // wait for the flip rather than guessing a delay. initNavSafariFix observes
+    // the same attribute and is registered first, so the lock is already
+    // released by the time this runs.
+    const closed = new MutationObserver(function () {
+      if (navButton.classList.contains('w--open')) return;
+      closed.disconnect();
+      requestAnimationFrame(scrollToTarget);
+    });
+    closed.observe(navButton, { attributes: true, attributeFilter: ['class'] });
+    navButton.click(); // Webflow's own toggle — proper close animation + cleanup
+  }, true); // capture — must run before Webflow's delegated anchor-scroll handler
+}
+
 function initNavDropdownHover() {
   const items = document.querySelectorAll('.nav_dropdown_link');
   if (!items.length) return;
@@ -339,12 +416,23 @@ initLogoRevealLoader();
 // against a missing target every frame → forced reflow (~376ms per scroll on the
 // long /all-products, ~57fps). Strip the dead handler wherever the block is
 // absent; the homepage keeps the real animation.
-// NOTE 06-07-2026: the current Webflow runtime no longer binds scroll.webflow at
-// all (verified live: zero jQuery scroll handlers on any page, no forced reflow
-// in traces — the wipe runs through another driver). This is dormant insurance
-// in case a future runtime publish reverts to jQuery binding. The guard selector
-// MUST track the statement block's Designer class if it's ever renamed
-// (originally .oa_statement_layout, renamed → .oa_statement-home).
+// NOTE 26-07-2026: load-bearing, NOT dormant — supersedes the 06-07-2026 note
+// that claimed the runtime no longer binds scroll.webflow. Verified live: the
+// homepage (statement block present → strip returns early) keeps a
+// scroll.webflow handler, while /all-products has no scroll binding but still
+// has resize/orientationchange/load from that same Webflow call — the
+// fingerprint of this .off(). The orphan is also still real: /all-products'
+// IX2 data carries 2 SCROLLING_IN_VIEW events with no statement block to drive
+// (Webflow ticket still open, nudged 26-07-2026).
+// Cost of removing the strip, measured on /all-products (3 rounds, scripted
+// scroll, desktop CPU): p95 frame 17.4ms → 33.3ms (one dropped frame in ~20),
+// mean +1.2ms, p50 unchanged. The old "~376ms per scroll" figure no longer
+// reproduces — the mechanism holds, the severity does not.
+// Side effect: this also disables Webflow's scroll-spy w--current on in-page
+// anchor links. Deliberate and unused — the mega menu is a dropdown, so an
+// active state would only ever be visible on reopen; not worth a per-scroll cost.
+// The guard selector MUST track the statement block's Designer class if it's
+// ever renamed (originally .oa_statement_layout, renamed → .oa_statement-home).
 function stripOrphanScrollHandler() {
   if (document.querySelector('.oa_statement-home')) return; // block present → keep the real interaction
   const $ = window.jQuery;
@@ -371,6 +459,7 @@ document.addEventListener('DOMContentLoaded', function () {
       el.style.visibility = 'visible';
     });
     initNavSafariFix();
+    initNavAnchorLinks();
     initNavDropdownHover();
     initLocalTime();
     return;
@@ -379,6 +468,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initPageTransition();
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
+  initNavAnchorLinks();
   initNavDropdownHover();
   initLocalTime();
 });

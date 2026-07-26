@@ -394,3 +394,50 @@ v1.0.133's flag fallback was a legitimate hardening but not the cause. The Desig
 ### Menu slider: scale removed entirely (v1.0.135)
 
 Final call on the homepage menu slider — the settled-card raise (scale 1.02 + shadow) was too much movement for a nav strip and the root of the v1.0.133/134 asymmetry chase. Removed the feature rather than tuning it: `oa-styles.css` drops the `is-active` raise + transition (kept only the `@media (hover:none)` hover-neutralize so iOS sticky-hover can't scale a touched card); `oa-slider.js` drops the now-orphaned `raiseOnTransition` block + `is-slider-transitioning` toggling (homepage was its only consumer). Speed is the Designer `data-speed` attribute (set 700 to match product); ease was always Swiper's built-in, shared with product. `data-raise-on-transition` on the component is now inert.
+
+---
+
+## 2026-07-26 — Nav mega-dropdown anchors, logo componentised, v1.0.139 + v1.0.140
+
+### Three systems all branch on "does the href start with #"
+
+The nav's section links are absolute (`/all-products#tables`) so they work from any page — the only correct authoring for a sitewide nav. But an absolute path fails three separate checks, and all three symptoms were reported as one bug:
+
+1. **Webflow's navbar** closes the mobile overlay only when `href.indexOf('#') === 0` (`g.menu.on('click','a',L(g))`). Absolute hrefs leave the overlay stranded over the page while it scrolls underneath.
+2. **Lenis's `anchors` handler** never intercepts them — verified live: zero calls reach `lenis.scrollTo` on a real link click. These links had no smooth scroll at all.
+3. **Webflow's own delegated anchor-scroll** animates to the target's raw offset and ignores `scroll-margin-top`, landing the heading under the fixed nav. This is why the existing `scroll-margin-top: 130px` appeared to do nothing — Webflow, not the browser and not Lenis, was doing the scrolling.
+
+Reproduces 100% on `/all-products` and never from another page (elsewhere it's a real document navigation), which is why it read as intermittent. Not fixable by changing the hrefs — `initNavAnchorLinks` owns the whole interaction instead.
+
+### Ordering traps in that handler (both found by measurement, not reasoning)
+
+- **Do not gate on `e.defaultPrevented`.** A smooth-scroll library may already have claimed the click; the first fix silently no-op'd because of this.
+- **`preventDefault` does not stop Webflow's anchor scroll** — it's a bubble-phase document delegate. The handler runs in the **capture** phase and calls `stopPropagation`.
+- **Webflow's menu toggle is debounced**, so the menu is still open on the next frame. `body.menu-open` sets `overflow:hidden` and `initNavSafariFix` stops Lenis, so a scroll issued then is dropped — Lenis's `force` option does *not* help, because the document itself cannot scroll. Wait for the `w--open` flip via MutationObserver rather than guessing a delay.
+- Offset is read live from the target's own `scroll-margin-top`, so clearance stays one Designer-editable number and tracks the breakpoint.
+
+### `stripOrphanScrollHandler` is load-bearing, not dormant (supersedes the 2026-07-06 note)
+
+That note claimed the runtime no longer binds `scroll.webflow`. Wrong. Verified: the homepage (statement block present → strip returns early) keeps a `scroll.webflow` handler; `/all-products` has no scroll binding but still has `resize`/`orientationchange`/`load` from the same Webflow call — the fingerprint of this `.off()`. The orphan is still real: `/all-products` IX2 data carries 2 `SCROLLING_IN_VIEW` events with no statement block to drive (Webflow ticket still open, nudged 2026-07-26). Measured cost of removing the strip: p95 frame 17.4ms → 33.3ms (one dropped frame in ~20), mean +1.2ms, p50 unchanged — the old "~376ms per scroll" figure no longer reproduces. Mechanism holds, severity does not.
+
+Side effect, accepted deliberately: this also disables Webflow's scroll-spy `w--current` on in-page anchor links. An `initNavActiveSection` was built and then **removed** — the mega menu is a dropdown, so the highlight is only visible on reopen, and nothing styles that state.
+
+### Lumos nav: two Menu variants, not two components
+
+`Nav` places the **same** `Menu` component twice, differing only by a `Variant` prop (`base` = Mobile, `23049969-…` = Desktop). Confirmed identical in the stock Lumos V2.2.1 template — this is Lumos's design, not local damage. Edits land in whichever variant is selected, which is why component edits appeared not to propagate. **Make structural/content edits on Base.**
+
+### Logo is a component again; colour comes from context
+
+Stock Lumos `Nav` holds two `Logo` component instances; this project had replaced them with two raw HTML embeds — one edit became two. Now `Logo Nav OA` (`1162c1d1-…`), placed in both nav slots and both loader layers. Inserted via `data_whtml_builder`, which converts inline SVG to **native Webflow DOM elements** (stylable) rather than a locked embed.
+
+Rule that fell out of the loader work: **the component supplies geometry, the context supplies colour.** `.oa_logo_nav` had pinned its own `color`, so `fill="currentColor"` never inherited — and it was pinned to `variable-b6de3dc8`, the same variable `.loader__bg` uses, so the mark drew in the loader's own background colour. Colour now lives on `.nav_desktop_logo` / `.nav_mobile_logo`; the loader's `is--base` (0.2 opacity) / `is--top` (clip-wiped) layers supply theirs.
+
+### Webflow `instanceCount` is not a usage count
+
+It counts *rendered* instances, so it inherits the parent's placement count: `Logo Nav OA` reads 14 (7 Nav placements × 2 slots), while a component nested inside a definition that has no page placements reads 0 while still being in use. Six zero-instance logo components deleted cleanly; `Logo Monograph` reported 0 and was refused with *"Cannot unregister a component that is in use."* **Never treat a 0 as proof something is unused** — the API's own guard is the reliable check.
+
+### Open
+
+- `Logo Monograph` — in use somewhere not yet located (not in `Logo`, `OA Logo - Tag`, or either Footer). Left registered.
+- Loader logo swap + colour-inheritance fix are **Designer-side, unpublished** as of this entry.
+- Logo sizing in the loader (fills 80% of a 12em wrap) and the duplicated class token (`class="logo_svg logo_svg u-path"`, a WHTML-import artifact) are cosmetic tidy-ups, not verified visually.
