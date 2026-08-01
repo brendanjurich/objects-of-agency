@@ -357,10 +357,13 @@ function initNavAnchorLinks() {
   }, true); // capture — must run before Webflow's delegated anchor-scroll handler
 }
 
-function initNavDropdownHover() {
-  const items = document.querySelectorAll('.nav_dropdown_link');
-  if (!items.length) return;
-
+// One tile-slide behaviour, two consumers: the nav dropdown links (class hooks,
+// all four directions) and the directional list on /about (data hooks, with
+// data-type choosing the axis — "y" for a stacked list, "x", or "all").
+// Pointer events rather than mouse events so each input is handled on its own
+// terms — a mouse hovers, a finger presses — instead of gating the whole feature
+// off below a breakpoint. Cheaper than two copies of the same 25 lines.
+function initDirectionalHover() {
   const exitMap = {
     top: 'translateY(-100%)',
     bottom: 'translateY(100%)',
@@ -368,31 +371,76 @@ function initNavDropdownHover() {
     right: 'translateX(100%)'
   };
 
-  function getDirection(e, el) {
+  function getDirection(e, el, axis) {
     const { left, top, width, height } = el.getBoundingClientRect();
     const x = e.clientX - left;
     const y = e.clientY - top;
+    // A stacked list is only ever entered from above or below in practice, so
+    // "y" keeps the fill reading as one continuous vertical motion down the
+    // column; nearest-edge would flip it sideways on a slow horizontal entry.
+    if (axis === 'y') return y < height / 2 ? 'top' : 'bottom';
+    if (axis === 'x') return x < width / 2 ? 'left' : 'right';
     const distances = { top: y, right: width - x, bottom: height - y, left: x };
     return Object.entries(distances).reduce((a, b) => (a[1] < b[1] ? a : b))[0];
   }
 
-  items.forEach(item => {
-    const tile = item.querySelector('.nav_dropdown_hover_tile');
+  function bind(item, tileSelector, axis) {
+    const tile = item.querySelector(tileSelector);
     if (!tile) return;
 
-    item.addEventListener('mouseenter', e => {
-      const dir = getDirection(e, item);
+    const enter = dir => {
       tile.style.transition = 'none';
       tile.style.transform = exitMap[dir];
-      void tile.offsetHeight;
-      tile.style.transition = '';
+      void tile.offsetHeight;     // forced reflow to flush the jump
+      tile.style.transition = '';  // back to the CSS transition
       tile.style.transform = 'translate(0%, 0%)';
+    };
+    const leave = dir => { tile.style.transform = exitMap[dir]; };
+
+    // Mouse: in from the edge the cursor crossed, out towards the edge it left by.
+    item.addEventListener('pointerenter', e => {
+      if (e.pointerType === 'mouse') enter(getDirection(e, item, axis));
+    });
+    item.addEventListener('pointerleave', e => {
+      if (e.pointerType === 'mouse') leave(getDirection(e, item, axis));
     });
 
-    item.addEventListener('mouseleave', e => {
-      const dir = getDirection(e, item);
-      tile.style.transform = exitMap[dir];
+    // Touch/pen: there is no hover, so the press itself is the gesture — fill on
+    // contact from the half that was touched, clear on release or when the touch
+    // turns out to be a scroll (pointercancel). Same motion, honest input.
+    item.addEventListener('pointerdown', e => {
+      if (e.pointerType !== 'mouse') enter(getDirection(e, item, axis));
     });
+    item.addEventListener('pointerup', e => {
+      if (e.pointerType !== 'mouse') leave(getDirection(e, item, axis));
+    });
+    item.addEventListener('pointercancel', e => {
+      if (e.pointerType !== 'mouse') leave(getDirection(e, item, axis));
+    });
+
+    // Keyboard: no coordinates to read, so always from the top. :focus-visible
+    // keeps it off a mouse click, and the flag stops a stray blur yanking the
+    // tile out from under a cursor that is still hovering.
+    let viaKeyboard = false;
+    item.addEventListener('focus', () => {
+      if (!item.matches(':focus-visible')) return;
+      viaKeyboard = true;
+      enter('top');
+    });
+    item.addEventListener('blur', () => {
+      if (!viaKeyboard) return;
+      viaKeyboard = false;
+      leave('top');
+    });
+  }
+
+  document.querySelectorAll('.nav_dropdown_link')
+    .forEach(item => bind(item, '.nav_dropdown_hover_tile', 'all'));
+
+  document.querySelectorAll('[data-directional-hover]').forEach(container => {
+    const axis = container.getAttribute('data-type') || 'all';
+    container.querySelectorAll('[data-directional-hover-item]')
+      .forEach(item => bind(item, '[data-directional-hover-tile]', axis));
   });
 }
 
@@ -460,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     initNavSafariFix();
     initNavAnchorLinks();
-    initNavDropdownHover();
+    initDirectionalHover();
     initLocalTime();
     return;
   }
@@ -469,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('[data-slideshow="wrap"]').forEach(wrap => initSlideShow(wrap));
   initNavSafariFix();
   initNavAnchorLinks();
-  initNavDropdownHover();
+  initDirectionalHover();
   initLocalTime();
 });
 

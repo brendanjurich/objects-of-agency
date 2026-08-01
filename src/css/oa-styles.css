@@ -377,15 +377,22 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 }
 
 /* ============================================================
-   NAVIGATION — DROPDOWN DIRECTIONAL HOVER (desktop)
-   Behavioral only — visual styling (color, radius) lives in Webflow Designer.
+   DIRECTIONAL HOVER TILE — nav dropdown + awards list
+   One behaviour, two consumers: the nav dropdown links (class hooks) and the
+   directional list on /about (data hooks). Driven by initDirectionalHover()
+   in oa-global.js.
+   Behavioral only — visual styling (color, radius, spacing) lives in Webflow
+   Designer. The Designer already gives .directional-list__item its
+   position/overflow and the tile its box; only the resting transform and the
+   transition belong here, because the Designer can't express either.
    ============================================================ */
 .nav_dropdown_link {
   position: relative;
   overflow: hidden;
 }
 
-.nav_dropdown_hover_tile {
+.nav_dropdown_hover_tile,
+[data-directional-hover-tile] {
   position: absolute;
   top: 0;
   left: 0;
@@ -395,6 +402,14 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
   pointer-events: none;
+}
+
+/* The fill still lands, it just doesn't travel. */
+@media (prefers-reduced-motion: reduce) {
+  .nav_dropdown_hover_tile,
+  [data-directional-hover-tile] {
+    transition-duration: 0.01ms;
+  }
 }
 
 /* ============================================================
