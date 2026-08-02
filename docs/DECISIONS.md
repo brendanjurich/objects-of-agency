@@ -441,3 +441,70 @@ It counts *rendered* instances, so it inherits the parent's placement count: `Lo
 - `Logo Monograph` — in use somewhere not yet located (not in `Logo`, `OA Logo - Tag`, or either Footer). Left registered.
 - Loader logo swap + colour-inheritance fix are **Designer-side, unpublished** as of this entry.
 - Logo sizing in the loader (fills 80% of a 12em wrap) and the duplicated class token (`class="logo_svg logo_svg u-path"`, a WHTML-import artifact) are cosmetic tidy-ups, not verified visually.
+
+---
+
+## 2026-08-02 — Awards directional list, skip-link focus, About semantics, v1.0.141–143
+
+### One directional-hover initialiser, two consumers
+
+The Osmo directional list (`/about` awards) uses the same algorithm the nav dropdown tile had carried since `eb7d119`. Rather than ship a second copy, `initNavDropdownHover` became `initDirectionalHover`: the nav binds by class (`.nav_dropdown_link` / `.nav_dropdown_hover_tile`, all four directions), the list by attribute (`[data-directional-hover]` with `data-type` choosing the axis). CSS is one shared rule carrying only what the Designer can't express — resting transform, transition, `will-change`, `pointer-events`. Osmo's `data-status` writes were dropped: nothing in the project's CSS or IX2 consumes them (verified against every loaded stylesheet).
+
+`data-type="y"` is deliberate over nearest-edge: a stacked list reads as one continuous vertical motion, where nearest-edge flips the fill sideways on a slow horizontal entry.
+
+### Touch: branch on `pointerType`, never on a breakpoint — then remove it entirely
+
+v1.0.141 handled touch as a press state (`pointerdown` fill, `pointerup`/`pointercancel` clear) rather than gating the feature off below a breakpoint. A breakpoint gets both edge cases wrong: an iPad Pro at 1024px reads as "desktop", a touchscreen laptop at 900px reads as "tablet". **Keep the `pointerType` branch as the house pattern** — it also fixed a latent iOS bug where `mouseenter` fires on tap and left the nav tile stuck filled.
+
+v1.0.142 then deleted the touch branch, because the award rows had become plain divs with no destination. Press feedback on a non-interactive row advertises an affordance that doesn't exist — worse than no feedback. The rule is about affordance, not input.
+
+### `href="#"` slips past both page-transition guards
+
+A Webflow Link Block left on the placeholder `#` resolves to `/about#` with an **empty** hash. `initPageTransition`'s leave handler tests `url.pathname === location.pathname && url.hash` (falsy hash → no bail) and `url.href === location.href` (`…/about#` ≠ `…/about` → no bail), so it would `preventDefault`, fade the page out and reload. Currently latent only because `/about` carries no `[data-page-transition]` element, so the listener never attaches. Convert placeholder link blocks to divs rather than leaving `#`.
+
+### `preventDefault` suppresses the focus move — the skip link never worked
+
+`initNavAnchorLinks` owns the anchor scroll, so the native fragment navigation that *moves focus* never happens. Invisible on section links; fatal for "Skip to main content", which scrolled and then left focus on the skip link itself — the next Tab went back into the nav. Fixed v1.0.143: `tabindex="-1"` (keeps the target out of the tab order), then `focus({ preventScroll: true })` so the browser doesn't jump on top of the smooth scroll.
+
+### `wf-force-outline-none` is Webflow's own hook for programmatic focus
+
+Focusing the target tripped the project's `[tabindex]:focus-visible` rule (`outline-style: solid`, 2px) and drew a ring around an entire section. Webflow already ships `.wf-force-outline-none[tabindex="-1"]:focus { outline: none }`, which out-specifies it (0,3,0 vs 0,2,0). Adding that class is the fix — **no CSS of ours required.**
+
+### Percentage `min-width` is a floor, not a width
+
+`.directional-list__col-award` had `min-width: 30%` with default `flex: 0 1 auto`, so its width was content-driven and the floor only engaged when it exceeded the text. At 1440 the floor computes to 248px (binds on every row → aligned); at 390 it computes to 87px (below every label → content wins → columns jitter 97/108/117px, misaligning the neighbouring column per row). Fix is a **basis, not a floor**: `flex: 0 0 30%` + `min-width: 0`, bumped to `flex-basis: 40%` at ≤767 with side padding 2rem→1rem. Desktop geometry unchanged.
+
+### Webflow Rich Text can never be a heading
+
+`set_tag` on a Rich Text is rejected with the valid list: `div, header, footer, nav, main, section, article, aside, address, figure`. A Rich Text renders `div.w-richtext` whose **children** carry the real tags, taken from *content formatting* — the wrapper is always a container. This is why all Lumos typography components are Rich Text: it is the only element holding mixed inline formatting without extra nesting, it binds to CMS Rich Text fields, and Lumos styles all nested children through `u-rich-text`.
+
+The escape hatch (format the content as Heading 2, as the CTA heading already does) is **unavailable when the Rich Text is bound to a component prop as plain `innerText`** — there is no per-instance formatting. A short label that is structurally a heading must therefore be a Heading element, keeping the eyebrow class for styling. Body copy stays Rich Text.
+
+### Duplicate `id="search"` is structural, not an oversight
+
+The search field is **one** `SearchInput` inside the nested `Menu` component, which `oa Nav` instances twice (desktop variant + mobile `base`). There is no separate mobile element to rename. Removing the ID entirely is the fix — Webflow's search runs on `name="query"` → `/search`, nothing links to `#search`, and no `<label for>` exists. Verified after publish: search still returns hits, page duplicate-id count 0. `aria-label="Search"` added on the same element fixes both renders at once (neither had any accessible name).
+
+### The nav's second dropdown is the locale switcher, not a stub
+
+`nav_dropdown_main_wrap` containing "This is some text inside of a div block." reads as debris, but it wraps a **`LocalesWrapper`** — the language switcher. Deleting it would have removed that from all eight nav instances. Its dangling `aria-labelledby="w-dropdown-toggle-2"` / `-6` is a consequence of being single-locale: Webflow emits the dropdown *list* but not its *toggle*, so the generated reference points at an id that never renders (emitted ids are 0,1,3,4,5,7).
+
+**Never reference Webflow's auto-generated ids** (`w-dropdown-toggle-N`, `w-node-…`) in ARIA, CSS or JS — they renumber on publish. Give the element a stable ID first, as with `biography-label` / `awards-label`.
+
+### MCP element filters do not traverse nested component instances
+
+`query_elements` with `element_filter` returns 0 matches for anything inside a nested `ComponentInstance`, from both page scope and the parent component's scope — `oa Nav` → `Menu` → `SearchInput` was invisible to every filter. Only a **full-depth `get_all_elements` on the parent** reveals the nested component, after which the query must be re-scoped to that component's id. A 0-match result is not evidence of absence; it usually means the element is one component deeper. This produced one round of wrong instructions before the full read corrected it.
+
+### Audit the post-JS DOM, not the served HTML (second occurrence)
+
+Webflow adds dropdown ARIA at runtime, so a `fetch()` + `DOMParser` check reported the orphaned references as resolved when the live DOM still had two. Same trap as the favicon audit. For this site, any Webflow-generated attribute must be read from the running page.
+
+### jsDelivr negative cache, again
+
+v1.0.141 returned `404` as `text/plain` on first check for both files (the documented ORB-block failure). `purge.jsdelivr.net` cleared it immediately; the commit-SHA fallback was not needed. v1.0.142 and v1.0.143 were clean on first check.
+
+### Open
+
+- **Locale switcher** — single-locale site; decide whether a language dropdown belongs in the nav at all. Hiding it removes the dangling ARIA references and the leftover placeholder text with it. Not touched.
+- **`<main>` landmark** — `/about` now has `main#main` wrapping its sections. `/` and `/all-products` still have none (`/all-products`'s `<main>` reverted to `section` when its ID was renamed `top` → `main`). Their skip targets are hero sections, not content wrappers, so each needs a wrapper before it can be tagged.
+- **`/contact` returns 404** while nav and footer link to it sitewide.
+- `Logo Monograph` (from 2026-07-26) still unlocated.

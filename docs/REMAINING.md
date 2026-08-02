@@ -40,7 +40,23 @@ ever leaks past the neutraliser it renders correct art, not stale). Consequence:
 ## Foundation
 
 - [ ] Semantic HTML & structure audit
-- [ ] Aria labels — all interactive elements labelled
+- [ ] `<main>` landmark on `/` and `/all-products` — `/about` has `main#main`
+      (done 2026-08-02). Neither other page has one: their `#main` skip targets
+      are hero sections, not content wrappers, so each needs the sections wrapped
+      in a Div tagged **Main** first, with the `main` ID moved onto that wrapper
+      (ids must stay unique — remove it from the hero). `/all-products` also
+      reverted its `<main>` tag to `section` when its ID was renamed `top` → `main`.
+- [ ] Nav locale switcher — decide whether a language dropdown belongs in the nav
+      while the site is single-locale (EN-AU). It is **not** debris: the dropdown
+      wrapping the "This is some text inside of a div block." placeholder contains
+      a `LocalesWrapper`. Its dangling `aria-labelledby="w-dropdown-toggle-2"`/`-6`
+      exists because Webflow emits the dropdown list but not its toggle when there
+      is one locale. Hiding the switcher clears both, plus the placeholder text.
+- [ ] Section heading pass — a label that is structurally a heading must be a
+      **Heading element**, not a Rich Text (Webflow Rich Text can never carry a
+      heading tag; see DECISIONS 2026-08-02). `/about` done; audit the other pages.
+- [ ] Aria labels — all interactive elements labelled. Nav search inputs done
+      2026-08-02 (`aria-label="Search"`, duplicate `id="search"` removed).
 - [ ] Product slider keyboard focus (deferred) — CSS-only `:focus-visible` worked in
       Chrome but broke in Safari (Swiper's a11y module controls `tabindex` on slides
       and redirects Tab through its dots/arrows, firing the ring out of order).
@@ -53,6 +69,8 @@ ever leaks past the neutraliser it renders correct art, not stale). Consequence:
 
 ## Legal & Content
 
+- [ ] **Contact page — `/contact` returns 404** while the nav and footer link to it
+      on every page. Build it, or point those links elsewhere until it exists.
 - [ ] T&C page — write and publish
 - [ ] Q&A page — write and publish
 - [ ] Nyoongar acknowledgement — copy and placement confirmed
