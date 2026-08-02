@@ -9,7 +9,8 @@
        this is a mid-page block, not a full-viewport takeover.
      • Touch axis-locked to horizontal via CSS `touch-action: pan-y`
        (oa-infinite-grid.css); vertical swipes scroll the page.
-     • Slow idle auto-drift that pauses on hover, drag, and off-screen.
+     • Slow idle auto-drift that pauses on drag and off-screen, and is
+       suppressed entirely under prefers-reduced-motion (drag still works).
    Page-level embed (product template). Raw-served (no Rollup).
    ============================================================ */
 function initInfiniteCardsGrid() {
@@ -37,6 +38,7 @@ function initInfiniteCardsGrid() {
   // Mobile (≤767px) is a 2D-drag region: the grid owns touch (touch-action: none in
   // the CSS) and pans on both axes. Larger touch screens keep vertical for page scroll.
   const mobileMQ = window.matchMedia('(max-width: 767px)');
+  const reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   wrappers.forEach((wrapper) => {
     const collection = wrapper.querySelector('[data-infinite-grid-collection]');
@@ -225,7 +227,11 @@ function initInfiniteCardsGrid() {
     function updateGrid(time, deltaTime) {
       if (!inViewport) return; // section off-screen — skip drift + per-card work
 
-      if (!isDragging) {
+      // Reduced motion stops the idle drift only — the grid stays fully draggable.
+      // Columns drift at different speeds (columnSpeedPattern), so the automatic
+      // motion is parallax, the provocative kind. Drag is user-initiated, so it stays.
+      // Read live: an OS toggle takes effect on the next frame, no reload.
+      if (!isDragging && !reduceMQ.matches) {
         const dt = deltaTime ? Math.min(deltaTime / 1000, 0.05) : 0; // clamp tab-away jumps
         pos.targetX += driftX * dt;
         pos.targetY += driftY * dt;
