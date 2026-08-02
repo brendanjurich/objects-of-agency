@@ -332,6 +332,21 @@ function initNavAnchorLinks() {
       if (window.lenis) window.lenis.scrollTo(y);
       else window.scrollTo({ top: y, behavior: 'smooth' }); // reduced motion / Lenis CDN down
       history.pushState(null, '', url.hash);
+
+      // Native fragment navigation is what moves focus to the target; the
+      // preventDefault above kills it. Nobody noticed on section links, but it
+      // silently broke the skip link — it scrolled, then left focus on the skip
+      // link itself, so the next Tab went back into the nav instead of into the
+      // page. Sections aren't focusable, so make the target programmatically
+      // focusable; tabindex="-1" keeps it out of the tab order. preventScroll
+      // stops the browser issuing its own instant jump on top of the smooth one.
+      // wf-force-outline-none is Webflow's own hook for elements it focuses
+      // programmatically — without it the project's [tabindex]:focus-visible
+      // rule draws a 2px ring around the whole section. It out-specifies that
+      // rule, so the fix needs no CSS of ours.
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+      target.classList.add('wf-force-outline-none');
+      target.focus({ preventScroll: true });
     };
 
     // Webflow already closes the menu for hrefs that start with "#", so closing
