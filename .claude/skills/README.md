@@ -14,3 +14,4 @@ instructions).
 | Skill | Use when |
 |---|---|
 | `icon-release` | Any favicon/PWA icon master changes — full rebuild, safe-zone audit, jsDelivr tag, Webflow head code, live verification. |
+| `osmo-in` | An osmo.supply resource is being absorbed — audit against house rules, adapt into `src/`, hand the design knobs back to the Designer. |

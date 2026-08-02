@@ -99,7 +99,7 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 - `paint(target)` in `oa-all-products.js` — the filter activation function; also pre-fires on page load from `URLSearchParams('filter')`
 - Swiper carousels use custom `wrapperClass` and `slideClass` (not default `.swiper-wrapper` / `.swiper-slide`) to avoid conflicts with Webflow's own Swiper instance
 - GSAP `CustomEase` is registered globally in `oa-global.js` before any page scripts run
-- Animation components are frequently sourced from **osmo.supply**: I paste the Webflow HTML, Claude Code adapts the JS with my tweaks
+- Animation components are frequently sourced from **osmo.supply**: I paste the Webflow HTML, Claude Code adapts the JS with my tweaks — procedure in `.claude/skills/osmo-in/`
 
 ---
 
@@ -119,9 +119,9 @@ GSAP is provided by Webflow's **native GSAP integration** (Site Settings → GSA
 
 ### Lumos
 
-Version: **v2.2.1** — a **build-time clone**, baked into the Webflow project at the version downloaded. **There is no Lumos runtime**: nothing loads from a Lumos CDN, and the slider init is an inline `<script>` frozen in the published file. Unlike GSAP above (which Webflow genuinely auto-updates on publish), Lumos does **not** auto-update — Timothy Ricks cannot change anything already in your project. The *only* way Lumos changes the live site is if **you** re-clone / re-import its components in the Designer yourself.
+Version: **v2.2.1** — a **build-time clone**, baked into the Webflow project at the version downloaded. **There is no Lumos runtime**: nothing loads from a Lumos CDN, and its CSS/classes are frozen in the published file. Unlike GSAP above (which Webflow genuinely auto-updates on publish), Lumos does **not** auto-update — Timothy Ricks cannot change anything already in your project. The *only* way Lumos changes the live site is if **you** re-clone / re-import its components in the Designer yourself.
 
-`oa-global.js` patches Lumos-initialized Swipers at `window.load` (search the source for `is-slider-transitioning`). Re-test the speed patch + `is-slider-transitioning` behaviour only if **you** re-import the sliders and their init timing or class names change — *not* on every publish.
+**`oa-slider.js` owns the slider init outright** (since v1.0.135). Lumos's inline init embeds were deleted in the Designer and the two old `oa-global.js` `window.load` patches removed with them — `oa-global.js` no longer touches sliders. Per-slider config is read from Designer data-attributes (`data-speed`, `data-speed-touch`, `data-loop`, `data-parallax`, `data-slides-per-view`); `oa-slider.js` is the source of truth for the defaults. Re-test slider behaviour only if **you** re-import the Lumos sliders and their DOM or class names change — *not* on every publish.
 
 **Lumos ≠ Osmo — never conflate.**
 

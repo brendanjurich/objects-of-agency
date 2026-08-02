@@ -71,15 +71,20 @@ timing-function inline every slide change, so the rule needs `!important`):
   departure (no touch lag) without front-loading motion (stays composed on
   desktop). The product page originally used the pure Osmo curve
   `(0.625, 0.05, 0, 1)` — lazy start, gorgeous on desktop, read as lag on touch.
-- **Static product slider speed** is patched in `oa-global.js` at `window.load`:
-  `800ms` desktop / `700ms` touch (`matchMedia('(pointer: coarse)')`). The Webflow
-  `data-speed` attribute is overwritten by this patch, so it's safe to leave/remove.
-- **Mobile "raise on settle" gate**: with `slidesPerView: 1.1` a peek card was
-  raising mid-swipe, so two cards competed for the raised state. `oa-global.js`
-  toggles `body.is-slider-transitioning` on Swiper `transitionStart/End` +
-  `touchStart/End`, and the raise is gated `body:not(.is-slider-transitioning)
-  .card_product_wrap.is-active .card_product_visual`. Raise easing matches
-  `--ease-oa` with a 50ms delay so it reads as a settle.
+- **Slider speed** is a Designer data-attribute read by `oa-slider.js`:
+  `data-speed` (default 600) with an optional `data-speed-touch` override for
+  `matchMedia('(pointer: coarse)')`. This folded in the old product-slider
+  800/700 `oa-global.js` patch at v1.0.135 — that patch no longer exists, and
+  `data-speed` is now authoritative rather than overwritten.
+- **The "raise on settle" feature was removed at v1.0.135.** The settled-card
+  raise (scale 1.02 + shadow) on the homepage menu slider was too much movement
+  for a nav strip, and was the root of the v1.0.133/134 asymmetry chase. Removed
+  rather than tuned: the `is-active` raise CSS is gone from `oa-styles.css`, and
+  `oa-slider.js` dropped the `raiseOnTransition` block and the
+  `body.is-slider-transitioning` toggling with it. **`data-raise-on-transition`
+  on the component is inert** — nothing reads it. Only the
+  `@media (hover:none)` hover-neutralise survives, so iOS sticky-hover can't
+  scale a touched card.
 
 ---
 
