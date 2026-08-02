@@ -25,10 +25,10 @@ function initBasicFilterSetupMultiMatch() {
     const itemTokens = new Map();
     items.forEach(el => {
       const tokens = ((el.getAttribute('data-filter-name') || '').trim().toLowerCase().split(/\s+/)).filter(Boolean);
-      if (tokens.length === 0) { console.warn('[OA] Filter item has empty data-filter-name:', el); }
+      if (tokens.length === 0) { console.warn('[oa-all-products]Filter item has empty data-filter-name:', el); }
       itemTokens.set(el, new Set(tokens));
     });
-    if (itemTokens.size === 0) { console.warn('[OA] Filter group has no items with data-filter-name. Filter will show all items.'); }
+    if (itemTokens.size === 0) { console.warn('[oa-all-products]Filter group has no items with data-filter-name. Filter will show all items.'); }
 
     const setItemState = (el, on) => {
       const next = on ? 'active' : 'not-active';

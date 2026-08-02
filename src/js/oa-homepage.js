@@ -150,7 +150,7 @@ function initBunnyPlayerBackground() {
     // taking our ABR config + error recovery offline with it.
     var canUseHlsJs    = !!(window.Hls && Hls.isSupported());
     var isSafariNative = !canUseHlsJs && !!video.canPlayType('application/vnd.apple.mpegurl');
-    if (!window.Hls && !isSafariNative) { console.warn('[OA] HLS.js not loaded — falling back to direct video.src. Adaptive streaming unavailable.'); }
+    if (!window.Hls && !isSafariNative) { console.warn('[oa-homepage] HLS.js not loaded — falling back to direct video.src. Adaptive streaming unavailable.'); }
 
     var isAttached = false;
     var userInteracted = false;
