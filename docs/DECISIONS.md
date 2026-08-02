@@ -508,3 +508,33 @@ v1.0.141 returned `404` as `text/plain` on first check for both files (the docum
 - **`<main>` landmark** — `/about` now has `main#main` wrapping its sections. `/` and `/all-products` still have none (`/all-products`'s `<main>` reverted to `section` when its ID was renamed `top` → `main`). Their skip targets are hero sections, not content wrappers, so each needs a wrapper before it can be tagged.
 - **`/contact` returns 404** while nav and footer link to it sitewide.
 - `Logo Monograph` (from 2026-07-26) still unlocated.
+
+---
+
+## 2026-08-02 — osmo-in skill, infinite-grid reduced motion, v1.0.144
+
+### Idle auto-drift is parallax, and needed a reduced-motion opt-out
+
+`oa-infinite-grid.js` drifted continuously from page load, gated only on `isDragging` and `inViewport`. No `prefers-reduced-motion` check existed in the JS or the CSS. That's auto-starting motion lasting well over 5s with no pause mechanism — WCAG 2.2.2.
+
+The aggravating detail is `columnSpeedPattern = [1, 1, 0.9]`: neighbouring columns drift at *different* rates, so cards move relative to each other. Differential motion is a far stronger vestibular trigger than uniform translation — the drift is parallax, not a pan, and parallax is the canonical reduced-motion opt-out.
+
+**Fixed as a branch, not a kill.** Only the automatic drift stops; drag, lerp smoothing and the scale squish are user-initiated and unchanged. Reduced motion means "don't move things at me", not "don't respond to my input". `reduceMQ.matches` is read inside the ticker rather than cached, so an OS toggle applies on the next frame with no reload — and it matches the existing `mobileMQ.matches` read in `handleMovement`.
+
+**Durable rule:** any Osmo component with idle/ambient motion needs this branch before it ships. Now encoded in `.claude/skills/osmo-in/`.
+
+### `osmo-in` skill added
+
+The paste-and-adapt workflow (CLAUDE.md, Key Patterns) had no procedure attached — the rules governing it were spread across CLAUDE.md, CSS-ARCHITECTURE.md, REFERENCE.md and ~10 entries here. `.claude/skills/osmo-in/SKILL.md` collects them: audit-then-gate, no CDN GSAP, rem over em, no `clamp()`, the repo/Designer CSS split, and the accumulated Osmo traps.
+
+Validated by retrodiction against the two already-adapted components. That caught one overstated rule: "always own the init flag" is `oa-slider.js`'s pattern, needed because Lumos ships a competing init — `oa-infinite-grid.js` has a single mount and correctly has none. Stated as conditional.
+
+Also refined: "branch on capability, never on a breakpoint" is about detecting **input type**. A breakpoint is still right for a genuine layout-region decision, like the 767px 2D-drag region in `oa-infinite-grid.css`.
+
+### Warn prefixes normalised
+
+`[OA]` is the sitewide prefix (`oa-global.js`); page-level scripts use `[oa-<file>]`. Three warns in `oa-all-products.js` and `oa-homepage.js` still used `[OA]`. Log strings only.
+
+### Open
+
+- The infinite grid's header banner claimed hover pauses the drift; hover stopped pausing it at v1.0.13x. Corrected in this release — but it's the second stale-comment find in two sessions (see the v1.0.135 `is-slider-transitioning` drift noted in CLAUDE.md and REFERENCE.md, both still stale).
