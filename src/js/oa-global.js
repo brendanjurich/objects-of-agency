@@ -360,9 +360,10 @@ function initNavAnchorLinks() {
 // One tile-slide behaviour, two consumers: the nav dropdown links (class hooks,
 // all four directions) and the directional list on /about (data hooks, with
 // data-type choosing the axis — "y" for a stacked list, "x", or "all").
-// Pointer events rather than mouse events so each input is handled on its own
-// terms — a mouse hovers, a finger presses — instead of gating the whole feature
-// off below a breakpoint. Cheaper than two copies of the same 25 lines.
+// Pointer events rather than mouse events so the effect can be scoped to a real
+// mouse by pointerType — a device capability — instead of to a breakpoint, which
+// gets both an iPad Pro and a touchscreen laptop wrong. Cheaper than two copies
+// of the same 25 lines.
 function initDirectionalHover() {
   const exitMap = {
     top: 'translateY(-100%)',
@@ -405,18 +406,10 @@ function initDirectionalHover() {
       if (e.pointerType === 'mouse') leave(getDirection(e, item, axis));
     });
 
-    // Touch/pen: there is no hover, so the press itself is the gesture — fill on
-    // contact from the half that was touched, clear on release or when the touch
-    // turns out to be a scroll (pointercancel). Same motion, honest input.
-    item.addEventListener('pointerdown', e => {
-      if (e.pointerType !== 'mouse') enter(getDirection(e, item, axis));
-    });
-    item.addEventListener('pointerup', e => {
-      if (e.pointerType !== 'mouse') leave(getDirection(e, item, axis));
-    });
-    item.addEventListener('pointercancel', e => {
-      if (e.pointerType !== 'mouse') leave(getDirection(e, item, axis));
-    });
+    // Touch gets nothing, deliberately. The awards rows are plain divs with no
+    // destination, so a fill-on-tap would advertise an affordance that isn't
+    // there. Gating on pointerType rather than a breakpoint keeps it honest per
+    // device: a touchscreen laptop still hovers, an iPad Pro still doesn't.
 
     // Keyboard: no coordinates to read, so always from the top. :focus-visible
     // keeps it off a mouse click, and the flag stops a stray blur yanking the
