@@ -537,6 +537,7 @@ if (window.Webflow && typeof window.Webflow.push === 'function') {
   window.addEventListener('load', stripOrphanScrollHandler);
 }
 
-// The Lumos slider patches (product speed 800/700, homepage
-// is-slider-transitioning) moved into oa-slider.js, which now owns the slider
-// init. See src/js/oa-slider.js (data-speed-touch, data-raise-on-transition).
+// The old Lumos slider patches are gone from here. Product speed 800/700 moved
+// into oa-slider.js as data-speed / data-speed-touch; the homepage
+// is-slider-transitioning raise was removed outright at v1.0.135. oa-slider.js
+// owns the slider init — this file no longer touches sliders.

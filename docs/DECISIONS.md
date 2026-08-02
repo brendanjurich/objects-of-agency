@@ -535,6 +535,22 @@ Also refined: "branch on capability, never on a breakpoint" is about detecting *
 
 `[OA]` is the sitewide prefix (`oa-global.js`); page-level scripts use `[oa-<file>]`. Three warns in `oa-all-products.js` and `oa-homepage.js` still used `[OA]`. Log strings only.
 
+### Doc-truth sweep — the v1.0.135 slider removal was never propagated
+
+The infinite grid's header banner claimed hover pauses the drift (stopped being true at v1.0.13x). That was the second stale-comment find in two sessions, so the docs got a full sweep: every identifier, data-attribute, CSS class and version constant in `CLAUDE.md`, `REFERENCE.md` and `CSS-ARCHITECTURE.md` checked against `src/`.
+
+Versions, data-attributes and identifiers were all clean. **Three stale claims, all from the same v1.0.135 slider consolidation:**
+
+1. `CLAUDE.md` — "`oa-global.js` patches Lumos-initialized Swipers at `window.load`". It doesn't; `oa-slider.js` has owned the init since v1.0.135.
+2. `CLAUDE.md` — "the slider init is an inline `<script>` frozen in the published file", used as the evidence for "there is no Lumos runtime". The embeds were deleted in the Designer at v1.0.135. The *conclusion* is still right, the example wasn't — replaced with the CSS/classes, which genuinely are frozen.
+3. `REFERENCE.md` — documented the 800/700 `window.load` speed patch and the whole `is-slider-transitioning` "raise on settle" gate as live features. Both were removed at v1.0.135; `oa-styles.css` has no raise CSS and `oa-slider.js` has no transition toggling. Rewritten as past tense, noting **`data-raise-on-transition` is now inert**.
+
+Also corrected the `oa-global.js:540` pointer comment, which still sent readers to `data-raise-on-transition` as if it did something.
+
+**The pattern worth remembering:** a consolidation that *removes* code is the case most likely to leave stale docs. Adding a feature forces you to document it; deleting one leaves the old description sitting there, still readable and now false. When a release removes a feature, grep the docs for its identifiers before tagging.
+
+False positives the sweep correctly cleared, so they don't get "fixed" next time: `.filter-btn` / `.filter-list__item` (deliberate negative references to Osmo's demo classes), `.home-hero_video-gradient` (explicitly Webflow-side), `.all_tables_title-wrap` (a historical note about a selector that never existed).
+
 ### Open
 
-- The infinite grid's header banner claimed hover pauses the drift; hover stopped pausing it at v1.0.13x. Corrected in this release — but it's the second stale-comment find in two sessions (see the v1.0.135 `is-slider-transitioning` drift noted in CLAUDE.md and REFERENCE.md, both still stale).
+- Nothing outstanding from this entry.
