@@ -16,6 +16,8 @@ if (oaGsapOk) {
   // ============================================================
   CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
   CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
+  CustomEase.create("oa-slice-disc", "0.16, 1, 0.3, 1");
+  CustomEase.create("oa-slice-cut", "0.25, 1, 0.5, 1");
 } else {
   console.warn('[OA] GSAP unavailable — revealing page without animations.');
 }
@@ -453,7 +455,66 @@ function initDirectionalHover() {
 }
 
 // ============================================================
-// 8. INIT ON DOM READY
+// 8. CTA LOGO SLICE
+// ============================================================
+// The OA mark is subtractive, not three shapes assembled: it's a solid disc
+// with the diagonal slash and the horizontal notch carved OUT of it. Both
+// counters are black paths inside an SVG <mask>, so animating them travels a
+// cutter across the disc — the mark is made by removal. The disc keeps
+// fill="currentColor", so the mask never interferes with theming.
+//
+// Markup and the full derivation live in the command centre at
+// 02-brand/oa-logo/animation/. Two constraints from it are load-bearing here:
+//   - Travel values are viewBox units, so they scale with the rendered size.
+//   - The notch overshoots ~1.27 units INWARD on the settle. Its mouth fillets
+//     are therefore part of the disc path, not the cutter; don't "simplify" the
+//     notch path to match the slash's, or the overshoot exposes a hard nib on
+//     the silhouette.
+//
+// IntersectionObserver, not ScrollTrigger — this is a fire-once entrance, so
+// scrub/pin/refresh buy nothing and ScrollTrigger stays unused sitewide.
+function initCtaLogo() {
+  document.querySelectorAll('[data-cta-logo]').forEach(function (svg, i) {
+    const group = svg.querySelector('[data-cta-logo-group]');
+    const slash = svg.querySelector('[data-cut="slash"]');
+    const notch = svg.querySelector('[data-cut="notch"]');
+    const mask = svg.querySelector('mask');
+    const disc = svg.querySelector('[mask]');
+    if (!group || !slash || !notch || !mask || !disc) return; // markup changed — leave the mark alone
+
+    // Two embeds on one page would both resolve to the first mask id.
+    const id = 'oa-slice-cut-' + i;
+    mask.id = id;
+    disc.setAttribute('mask', 'url(#' + id + ')');
+
+    // Slash enters along its own 68deg axis, notch straight in from the right.
+    // Both start fully clear of the disc, so the first frame is an uncut disc.
+    gsap.set(group, { scale: 0.92, opacity: 0, svgOrigin: '49.166 48.43' });
+    gsap.set(slash, { x: 26.97, y: -66.76 });
+    gsap.set(notch, { x: 24 });
+
+    const observer = new IntersectionObserver(function (entries) {
+      if (!entries[0].isIntersecting) return;
+      observer.disconnect(); // entrance, not a loop — fire once
+
+      // Read reduced motion here, not at init, so an OS toggle applies.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.set(group, { scale: 1, opacity: 1 });
+        gsap.set([slash, notch], { x: 0, y: 0 });
+        return;
+      }
+      gsap.timeline()
+        .to(group, { scale: 1, opacity: 1, duration: 0.42, ease: 'oa-slice-disc' }, 0)
+        .to(slash, { x: 0, y: 0, duration: 0.48, ease: 'oa-slice-cut' }, 0.08)
+        .to(notch, { x: 0, duration: 0.59, ease: 'back.out(1.2)' }, 0.17);
+    }, { threshold: 0, rootMargin: '0px 0px -20% 0px' });
+
+    observer.observe(svg);
+  });
+}
+
+// ============================================================
+// 9. INIT ON DOM READY
 // ============================================================
 // Run the loader immediately, NOT on DOMContentLoaded. This is a footer script so
 // the loader markup (near the top of <body>) is already parsed, and GSAP is injected
@@ -463,7 +524,7 @@ function initDirectionalHover() {
 initLogoRevealLoader();
 
 // ============================================================
-// 9. STRIP ORPHANED WEBFLOW SCROLL HANDLER
+// 10. STRIP ORPHANED WEBFLOW SCROLL HANDLER
 // ============================================================
 // The "OA Statement [Scroll]" IX2 interaction (continuous "While scrolling in
 // view" on the homepage statement block) is applied site-wide, so Webflow writes
@@ -527,6 +588,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initNavAnchorLinks();
   initDirectionalHover();
   initLocalTime();
+  initCtaLogo();
 });
 
 // Run after Webflow's modules (incl. IX2) have initialised and bound their

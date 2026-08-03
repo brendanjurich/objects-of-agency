@@ -813,3 +813,19 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
   mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
 }
+
+
+/* ============================================================
+   CTA LOGO SLICE
+   ============================================================ */
+/* The mark lives in an Embed, so the Designer can't reach inside it — this hands
+   sizing back to the wrapper. Set the size on .cta_logo_wrap in the Designer, not
+   here. The embed's own width/height attributes are the pre-CSS fallback.
+   Nothing about the animation needs CSS: every transform is applied to the SVG's
+   own nodes in viewBox units. Colour comes from the wrapper via currentColor —
+   never set `color` on .oa_logo_slice or that inheritance breaks. */
+.oa_logo_slice {
+  display: block;
+  width: 100%;
+  height: auto;
+}
