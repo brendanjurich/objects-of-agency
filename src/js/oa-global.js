@@ -514,21 +514,26 @@ function initCtaLogo() {
         return;
       }
       if (tl) { tl.restart(); return; }
-      // 2.0s total, in three beats: the disc reveals (0.85s), holds as a plain uncut
-      // disc, then the two cutters carve it. The hold states the disc as a whole
+      // 2.0s total, in three beats: the disc reveals (1.0s), holds briefly as a plain
+      // uncut disc, then the two cutters carve it. The hold states the disc as a whole
       // object before anything is taken away.
       //
-      // The hold is set by where the disc PERCEPTUALLY settles, not where its tween
-      // ends: the ease puts it at 93% by 600ms, so the felt hold is the gap from
-      // ~700ms to the slash at 1000ms, about 300ms. Timing it off the 850ms tween end
-      // instead is what made an earlier pass read as a stall.
+      // MEASURE THE HOLD PERCEPTUALLY, NOT OFF THE TWEEN END. The disc's tween runs to
+      // 1000ms but the ease has it at 97% by 800ms and 99% by 880ms, so the eye calls
+      // it finished well before GSAP does. The slash at 0.95 leaves a felt gap of
+      // ~100-180ms against a nominal -50ms. Reading the nominal number is what made two
+      // earlier passes ship a pause that measured fine and felt like a stall.
+      //
+      // The pause was shortened by lengthening the DISC, not by moving the cutters
+      // earlier — that keeps the 2.0s total and leaves the carve gestures at the speed
+      // they were tuned to. A slice that takes 800ms stops reading as a cut.
       //
       // Both cutters share one motion law. They differentiate by distance, not curve —
       // the slash covers 72 units to the notch's 24, so it reads as the faster, larger
       // gesture while the notch settles last.
       tl = gsap.timeline()
-        .to(group, { scale: 1, opacity: 1, duration: 0.85, ease: 'oa-slice-disc' }, 0)
-        .to(slash, { x: 0, y: 0, duration: 0.75, ease: 'oa-slice-cut' }, 1.00)
+        .to(group, { scale: 1, opacity: 1, duration: 1.00, ease: 'oa-slice-disc' }, 0)
+        .to(slash, { x: 0, y: 0, duration: 0.75, ease: 'oa-slice-cut' }, 0.95)
         .to(notch, { x: 0, duration: 0.80, ease: 'oa-slice-cut' }, 1.20);
     }
 
