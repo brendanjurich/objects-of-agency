@@ -493,26 +493,44 @@ function initCtaLogo() {
     gsap.set(slash, { x: 26.97, y: -66.76 });
     gsap.set(notch, { x: 24 });
 
-    const observer = new IntersectionObserver(function (entries) {
-      if (!entries[0].isIntersecting) return;
-      observer.disconnect(); // entrance, not a loop — fire once
+    let tl = null;
+    let armed = true; // false while the mark is on screen and has already played
 
+    function play() {
       // Read reduced motion here, not at init, so an OS toggle applies.
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         gsap.set(group, { scale: 1, opacity: 1 });
         gsap.set([slash, notch], { x: 0, y: 0 });
         return;
       }
-      gsap.timeline()
-        .to(group, { scale: 1, opacity: 1, duration: 0.63, ease: 'oa-slice-disc' }, 0)
-        .to(slash, { x: 0, y: 0, duration: 0.72, ease: 'oa-slice-cut' }, 0.12)
-        .to(notch, { x: 0, duration: 0.89, ease: 'back.out(1.2)' }, 0.26);
-      // ~1.15s total. Fires the moment the mark enters the viewport (rootMargin 0)
-      // rather than part-way up it, so by the time it's comfortably in view it has
-      // already resolved and reads as having always been there.
-    }, { threshold: 0, rootMargin: '0px' });
+      if (tl) { tl.restart(); return; }
+      // 2.0s total, in three beats: the disc reveals gradually (0.85s), holds as a
+      // plain uncut disc for 0.25s, then the two cutters carve it. The hold is the
+      // point — it states the disc as a whole object before anything is taken away.
+      tl = gsap.timeline()
+        .to(group, { scale: 1, opacity: 1, duration: 0.85, ease: 'oa-slice-disc' }, 0)
+        .to(slash, { x: 0, y: 0, duration: 0.70, ease: 'oa-slice-cut' }, 1.10)
+        .to(notch, { x: 0, duration: 0.65, ease: 'back.out(1.2)' }, 1.35);
+    }
 
-    observer.observe(svg);
+    // Play when the mark is properly in view — a fifth of the way up, not the
+    // instant it clips the bottom edge, or a 2s animation is over before you
+    // have composed the CTA in frame.
+    new IntersectionObserver(function (entries) {
+      if (!entries[0].isIntersecting || !armed) return;
+      armed = false;
+      play();
+    }, { threshold: 0, rootMargin: '0px 0px -20% 0px' }).observe(svg);
+
+    // Rearm only once the mark has left the viewport ENTIRELY. Rewinding on the
+    // play threshold instead would reset it to invisible while it is still on
+    // screen — a small scroll down past that line would blank the mark in front
+    // of the user. Hence two observers with different bounds.
+    new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting || armed) return;
+      armed = true;
+      if (tl) tl.pause(0); // rewind and hold at the start state, ready to replay
+    }, { threshold: 0 }).observe(svg);
   });
 }
 
