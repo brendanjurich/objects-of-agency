@@ -504,10 +504,13 @@ function initCtaLogo() {
         return;
       }
       gsap.timeline()
-        .to(group, { scale: 1, opacity: 1, duration: 0.42, ease: 'oa-slice-disc' }, 0)
-        .to(slash, { x: 0, y: 0, duration: 0.48, ease: 'oa-slice-cut' }, 0.08)
-        .to(notch, { x: 0, duration: 0.59, ease: 'back.out(1.2)' }, 0.17);
-    }, { threshold: 0, rootMargin: '0px 0px -20% 0px' });
+        .to(group, { scale: 1, opacity: 1, duration: 0.63, ease: 'oa-slice-disc' }, 0)
+        .to(slash, { x: 0, y: 0, duration: 0.72, ease: 'oa-slice-cut' }, 0.12)
+        .to(notch, { x: 0, duration: 0.89, ease: 'back.out(1.2)' }, 0.26);
+      // ~1.15s total. Fires the moment the mark enters the viewport (rootMargin 0)
+      // rather than part-way up it, so by the time it's comfortably in view it has
+      // already resolved and reads as having always been there.
+    }, { threshold: 0, rootMargin: '0px' });
 
     observer.observe(svg);
   });
