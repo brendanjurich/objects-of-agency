@@ -499,7 +499,7 @@ function initCtaLogo() {
 
     // Slash enters along its own 68deg axis, notch straight in from the right.
     // Both start fully clear of the disc, so the first frame is an uncut disc.
-    gsap.set(group, { scale: 0.92, opacity: 0, svgOrigin: '49.166 48.43' });
+    gsap.set(group, { scale: 0.88, opacity: 0, svgOrigin: '49.166 48.43' });
     gsap.set(slash, { x: 26.97, y: -66.76 });
     gsap.set(notch, { x: 24 });
 
@@ -514,15 +514,22 @@ function initCtaLogo() {
         return;
       }
       if (tl) { tl.restart(); return; }
-      // 2.0s total, in three beats: the disc reveals gradually (0.85s), holds as a
-      // plain uncut disc for 0.25s, then the two cutters carve it. The hold is the
-      // point — it states the disc as a whole object before anything is taken away.
-      // Both cutters share one motion law; the notch reads as settling last because
-      // it starts later and runs longer, not because its curve differs.
+      // 2.0s total, in three beats: the disc reveals (0.85s), holds as a plain uncut
+      // disc, then the two cutters carve it. The hold states the disc as a whole
+      // object before anything is taken away.
+      //
+      // The hold is set by where the disc PERCEPTUALLY settles, not where its tween
+      // ends: the ease puts it at 93% by 600ms, so the felt hold is the gap from
+      // ~700ms to the slash at 1000ms, about 300ms. Timing it off the 850ms tween end
+      // instead is what made an earlier pass read as a stall.
+      //
+      // Both cutters share one motion law. They differentiate by distance, not curve —
+      // the slash covers 72 units to the notch's 24, so it reads as the faster, larger
+      // gesture while the notch settles last.
       tl = gsap.timeline()
         .to(group, { scale: 1, opacity: 1, duration: 0.85, ease: 'oa-slice-disc' }, 0)
-        .to(slash, { x: 0, y: 0, duration: 0.70, ease: 'oa-slice-cut' }, 1.10)
-        .to(notch, { x: 0, duration: 0.75, ease: 'oa-slice-cut' }, 1.25);
+        .to(slash, { x: 0, y: 0, duration: 0.75, ease: 'oa-slice-cut' }, 1.00)
+        .to(notch, { x: 0, duration: 0.80, ease: 'oa-slice-cut' }, 1.20);
     }
 
     // Play when the mark is properly in view — a fifth of the way up, not the
