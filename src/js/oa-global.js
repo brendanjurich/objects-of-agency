@@ -16,7 +16,7 @@ if (oaGsapOk) {
   // ============================================================
   CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
   CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
-  CustomEase.create("oa-slice-disc", "0.16, 1, 0.3, 1");
+  CustomEase.create("oa-slice-disc", "0.4, 0, 0.2, 1");
   CustomEase.create("oa-slice-cut", "0.25, 1, 0.5, 1");
 } else {
   console.warn('[OA] GSAP unavailable — revealing page without animations.');
@@ -466,10 +466,12 @@ function initDirectionalHover() {
 // Markup and the full derivation live in the command centre at
 // 02-brand/oa-logo/animation/. Two constraints from it are load-bearing here:
 //   - Travel values are viewBox units, so they scale with the rendered size.
-//   - The notch overshoots ~1.27 units INWARD on the settle. Its mouth fillets
-//     are therefore part of the disc path, not the cutter; don't "simplify" the
-//     notch path to match the slash's, or the overshoot exposes a hard nib on
-//     the silhouette.
+//   - NEITHER EASE MAY OVERSHOOT. Each cutter carries its own mouth fillets, so
+//     any travel INWARD past the rest position drags those fillets inside the
+//     silhouette and exposes a hard-edged nib on the disc's edge. Moving the
+//     fillets onto the disc to allow an overshoot is worse — it ghosts a static
+//     stadium outline onto the mark before the cutter arrives. Both were tried;
+//     the rig's <desc> has the measurements.
 //
 // IntersectionObserver, not ScrollTrigger — this is a fire-once entrance, so
 // scrub/pin/refresh buy nothing and ScrollTrigger stays unused sitewide.
@@ -507,10 +509,12 @@ function initCtaLogo() {
       // 2.0s total, in three beats: the disc reveals gradually (0.85s), holds as a
       // plain uncut disc for 0.25s, then the two cutters carve it. The hold is the
       // point — it states the disc as a whole object before anything is taken away.
+      // Both cutters share one motion law; the notch reads as settling last because
+      // it starts later and runs longer, not because its curve differs.
       tl = gsap.timeline()
         .to(group, { scale: 1, opacity: 1, duration: 0.85, ease: 'oa-slice-disc' }, 0)
         .to(slash, { x: 0, y: 0, duration: 0.70, ease: 'oa-slice-cut' }, 1.10)
-        .to(notch, { x: 0, duration: 0.65, ease: 'back.out(1.2)' }, 1.35);
+        .to(notch, { x: 0, duration: 0.75, ease: 'oa-slice-cut' }, 1.25);
     }
 
     // Play when the mark is properly in view — a fifth of the way up, not the
