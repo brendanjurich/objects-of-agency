@@ -16,7 +16,7 @@ if (oaGsapOk) {
   // ============================================================
   CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
   CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
-  CustomEase.create("oa-slice-disc", "0.4, 0, 0.2, 1");
+  CustomEase.create("oa-slice-disc", "0.6, 0, 0.2, 1");
   CustomEase.create("oa-slice-cut", "0.25, 1, 0.5, 1");
 } else {
   console.warn('[OA] GSAP unavailable — revealing page without animations.');
