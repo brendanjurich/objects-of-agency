@@ -16,7 +16,7 @@ if (oaGsapOk) {
   // ============================================================
   CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
   CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
-  CustomEase.create("oa-slice-disc", "0.6, 0, 0.2, 1");
+  CustomEase.create("oa-slice-disc", "0.25, 0, 0.2, 1");
   CustomEase.create("oa-slice-cut", "0.25, 1, 0.5, 1");
 } else {
   console.warn('[OA] GSAP unavailable — revealing page without animations.');
@@ -464,7 +464,15 @@ function initDirectionalHover() {
 // fill="currentColor", so the mask never interferes with theming.
 //
 // Markup and the full derivation live in the command centre at
-// 02-brand/oa-logo/animation/. Two constraints from it are load-bearing here:
+// 02-brand/oa-logo/animation/.
+//
+// !! THE SVG GEOMETRY DOES NOT SHIP FROM THIS REPO. It sits in a Webflow Embed,
+// pasted by hand. Re-tagging and bumping the jsDelivr URL updates the motion and
+// nothing else — a change to the disc or cutter paths only reaches the site when
+// oa-mark-slice-embed.html is re-pasted into the Designer and the site republished.
+// The disc and the two cutters are a matched set; paste all three or none.
+//
+// Two constraints from the derivation are load-bearing here:
 //   - Travel values are viewBox units, so they scale with the rendered size.
 //   - NEITHER EASE MAY OVERSHOOT. Each cutter carries its own mouth fillets, so
 //     any travel INWARD past the rest position drags those fillets inside the
