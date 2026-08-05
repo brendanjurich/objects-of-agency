@@ -554,3 +554,92 @@ False positives the sweep correctly cleared, so they don't get "fixed" next time
 ### Open
 
 - Nothing outstanding from this entry.
+
+## 2026-08-05 — Loader: clip-path wipe replaced by a drawn OA outline (pending tag)
+
+The loader's 1.5s `clip-path` inset wipe and its parallel `scaleX` progress bar are
+replaced by the mark drawing its own outline, counter-clockwise, over 2.0s. Lottie was
+considered and rejected (mobile bugs) — same conclusion as the CTA slice reached on
+03-08-2026, so this stays on GSAP + inline SVG and adds no dependency.
+
+### The dash period must equal the path length
+
+`DrawSVGPlugin` is **not** in Webflow's GSAP integration, so the draw is hand-rolled on
+`stroke-dasharray` / `stroke-dashoffset` — a first for this codebase. The mark is one
+**closed** path authored **clockwise**, and the draw has to start partway along it, at
+the corner where the ring meets the A downstroke.
+
+The technique: `dasharray = ` `` `${d} ${L-d}` ``, `dashoffset = d - s`, tweening `d: 0 → L`.
+The drawn set is `[s-d, s] mod L`, which grows *backward* from the start node — and
+backward along a clockwise path is the counter-clockwise sweep.
+
+**The period must be exactly `L`.** That is the whole trick: it makes the dash phase
+identical on both sides of the path's own seam (arc-length 0), so the arc wraps past
+that point instead of being clipped there. `` `${d} ${L}` `` looks equivalent, has period
+`d+L`, and silently truncates the wrap — a chunk of the mark simply never draws. Verified
+in a harness: dash period held at 3792.645 across every frame, and the sweep passes the
+seam between 50% and 60% with no dropped segment.
+
+The start node is carried by the **embed** as `data-draw-start="0.54484"` (arc-length
+fraction 2066.38 / 3792.64), not hardcoded in JS — geometry and its start point travel
+together in the same paste. Length is read from `getTotalLength()` at runtime, so only
+the *fraction* is a constant; the browser agreed with the offline flattening to 2dp.
+
+### `[data-load-progress]` was the sentinel, not just a bar
+
+Dropping the progress bar was not cosmetic. `[data-load-progress]` also decided whether
+the animated loader ran at all (`initLogoRevealLoader`) and whether the page transition
+snapped or faded (`initPageTransition`). Deleting the bar in the Designer without moving
+both probes would have given a loader that silently never runs — no error, the page just
+reveals instantly. The sentinel is now `[data-load-mark]`, which sits on the svg **inside
+the embed**, so it cannot drift away from the geometry it guards.
+
+### No `vector-effect: non-scaling-stroke`
+
+Brendan's call was a px-pinned non-scaling stroke. Shipped instead as `stroke-width: 6.5`
+in viewBox units (= 1.25px at the rendered 154px), because that vector-effect's
+interaction with `stroke-dasharray` is not consistent across engines and the dash pattern
+is what drives the entire animation. Chrome renders both identically; no WebKit build was
+available to verify, and iOS Safari is precisely where the Lottie mobile bugs that
+prompted this work were felt. The mark renders at a fixed size (Lumos pins root
+font-size at 16px), so the vector-effect bought nothing, and the actual goal — weight as a
+one-number tweak — comes from the CSS living in this repo, not from the vector-effect.
+
+### Colour and weight ship from the repo; geometry does not
+
+Same trap as the CTA slice: the embed does not deploy. Colour and `stroke-width` are in
+`oa-styles.css` so they reach the site on a CDN bump; only a geometry change needs a
+re-paste. A first-paint guard (`stroke-dasharray: 0 99999`, scoped `html.w-mod-js:not(.wf-design-mode)`
+like the nav/content pre-hides) stops the embed painting a fully-drawn mark in the frames
+before the footer script runs.
+
+**The loader geometry is optically corrected for light-on-dark and is NOT the nav mark.**
+Brendan baked the correction in at export because the mark needs subtly different geometry
+black-on-white vs white-on-black. Do not consolidate the two.
+
+### Timing, and the settle that is already there
+
+2.0s draw on `slideshow-wipe` (`0.625, 0.05, 0, 1`) — already registered in §2, so no
+duplicate ease was created. Exit floor raised 1500 → 2000ms to match; total 3.0s nominal.
+
+The curve reaches 97% at **73.3% of its duration**, so a 2.0s draw finishes *visually* at
+~1.47s and the floor leaves ~530ms of settle on the finished mark. If that ever reads as a
+stall, **lower the floor — do not shorten the draw**, which would change the line's speed
+character rather than trim dead time. (Reading the nominal tween end instead of the
+perceptual one shipped a stall twice on the CTA slice.)
+
+### Reduced motion: the loader had none
+
+Pre-existing a11y gap — reduced-motion users sat through the full wipe and a 1.0s
+full-viewport curtain slide. Now a branch, not a kill: the mark snaps to fully drawn (0
+tweens created, verified) and the curtain fades instead of sliding a viewport height.
+
+### Open
+
+- Designer work is unshipped: paste the embed into `[data-load-logo]`, remove that
+  element's `clip-path` inset, delete the progress-bar element.
+- `--swatch--brand-500` is a Webflow variable and cannot be verified from this repo. CSS
+  falls back to `#d66740` / `#803e26` if the name is wrong — check the mark is brand
+  orange, not the fallback, on staging.
+- Ghost and draw are close in value at 154px. If the sweep reads as too subtle, the lever
+  is the ghost, not the line.

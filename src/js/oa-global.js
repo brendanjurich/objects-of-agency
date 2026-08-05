@@ -62,7 +62,7 @@ function initPageTransition() {
   const content = document.querySelectorAll('[data-page-transition]');
   if (!content.length) return; // not tagged — feature is a no-op
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const loaderWillRun = !!document.querySelector('[data-load-wrap] [data-load-progress]');
+  const loaderWillRun = !!document.querySelector('[data-load-wrap] [data-load-mark]');
 
   // --- ENTER: fade content in once the page is actually painted. ---
   // Content starts hidden via the CSS guard in oa-styles.css. Loader pages let
@@ -211,6 +211,47 @@ function revealAfterLoader() {
   document.dispatchEvent(new CustomEvent('oa:loader-complete'));
 }
 
+// Draws a CLOSED svg path as a growing arc, from an arbitrary start node, in the
+// direction opposite to how the path was authored. No DrawSVGPlugin — Webflow's
+// GSAP integration does not include it, so this is hand-rolled on dash properties.
+//
+// The dash PERIOD MUST EQUAL the path length. That is the whole trick: it makes the
+// dash phase identical on both sides of the path's own seam (arc-length 0), so the
+// arc wraps past that point instead of being clipped there. `${d} ${L}` looks
+// equivalent, has period d+L, and silently truncates the wrap — half the mark just
+// never draws.
+//
+// The drawn set is [s-d, s] mod L. The mark is authored CLOCKWISE, so growing the
+// arc BACKWARD from the start node is what produces the counter-clockwise sweep.
+function drawLoaderMark(path, startFraction, reduce) {
+  const L = path.getTotalLength();
+  const s = L * startFraction;
+
+  // Whole path, no pattern. Also the reduced-motion end state.
+  const settle = function () {
+    path.style.strokeDasharray = 'none';
+    path.style.strokeDashoffset = '0';
+  };
+
+  // Reduced motion is a branch, not a kill — land on the drawn mark, skip the sweep.
+  if (reduce) { settle(); return; }
+
+  const draw = { d: 0 };
+  const apply = function () {
+    path.style.strokeDasharray = draw.d + ' ' + (L - draw.d);
+    path.style.strokeDashoffset = draw.d - s;
+  };
+  apply(); // first frame is an undrawn mark, before anything paints
+
+  gsap.to(draw, {
+    d: L,
+    duration: 2,
+    ease: 'slideshow-wipe', // 0.625, 0.05, 0, 1 — already registered in §2
+    onUpdate: apply,
+    onComplete: settle // a zero-length gap can render oddly; drop the pattern once whole
+  });
+}
+
 function initLogoRevealLoader() {
   const wrap = document.querySelector('[data-load-wrap]');
   if (!wrap) { revealAfterLoader(); return; }
@@ -218,26 +259,37 @@ function initLogoRevealLoader() {
   // No GSAP — hide the overlay and reveal immediately (see guard §1).
   if (!oaGsapOk) { wrap.style.display = 'none'; revealAfterLoader(); return; }
 
-  // Pages without the full animated loader (no inner elements) — reveal immediately.
-  const progressBar = wrap.querySelector('[data-load-progress]');
-  if (!progressBar) { revealAfterLoader(); return; }
+  // Pages without the full animated loader (no mark embed) — reveal immediately.
+  // [data-load-mark] is the sentinel: it lives on the svg inside the Webflow Embed,
+  // so geometry and sentinel travel together and can't drift apart. initPageTransition()
+  // probes the same attribute to decide whether to snap or fade the content in.
+  const mark = wrap.querySelector('[data-load-mark]');
+  if (!mark) { revealAfterLoader(); return; }
 
   const container = wrap.querySelector('[data-load-container]');
   const bg = wrap.querySelector('[data-load-bg]');
-  const logo = wrap.querySelector('[data-load-logo]');
+  const drawPath = mark.querySelector('[data-draw-path]');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Entrance: branding moment plays immediately (1.5s).
+  // Entrance: the mark draws its own outline counter-clockwise (2.0s), starting at
+  // the corner where the ring meets the A downstroke. The start node is carried as an
+  // arc-length fraction by the embed, not hardcoded here — the geometry owns it.
   gsap.set(wrap, { display: 'block' });
-  gsap.timeline({ defaults: { ease: 'loader', duration: 1.5 } })
-    .to(progressBar, { scaleX: 1 })
-    .to(logo, { clipPath: 'inset(0% 0% 0% 0%)' }, '<');
+  if (drawPath) {
+    drawLoaderMark(drawPath, parseFloat(mark.dataset.drawStart) || 0, reduce);
+  }
 
-  // Exit: waits for whichever is longer — the 1.5s brand minimum, or (on pages
-  // with a hero background video) the video buffering its first frames
+  // Exit: waits for whichever is longer — the 2.0s brand minimum (matching the draw),
+  // or (on pages with a hero background video) the video buffering its first frames
   // (oa:hero-media-ready, dispatched by oa-homepage.js on 'canplay') so the
   // reveal never lands on frame-mush. Capped so a stalled CDN can't trap the
   // loader. Deliberate trade-off: the anticipation beat outranks raw TTI here.
-  const minDelay = new Promise(resolve => setTimeout(resolve, 1500));
+  //
+  // The draw's ease reaches 97% at 1.47s, so this floor leaves ~530ms of settle on
+  // the finished mark. If that ever reads as a stall, LOWER THIS FLOOR — do not
+  // shorten the draw, which would change the line's speed character rather than
+  // trim dead time.
+  const minDelay = new Promise(resolve => setTimeout(resolve, 2000));
   const pageReady = document.querySelector('[data-bunny-background-init] video') ?
     Promise.race([
       new Promise(resolve => document.addEventListener('oa:hero-media-ready', resolve, { once: true })),
@@ -246,11 +298,12 @@ function initLogoRevealLoader() {
     Promise.resolve();
 
   Promise.all([minDelay, pageReady]).then(function () {
-    gsap.timeline({ defaults: { ease: 'loader' } })
-      .to(container, { autoAlpha: 0, duration: 0.5 })
-      .to(progressBar, { scaleX: 0, transformOrigin: 'right center', duration: 0.5 }, '<')
-      .to(bg, { yPercent: -101, duration: 1 }, '<')
-      .set(wrap, { display: 'none' })
+    const tl = gsap.timeline({ defaults: { ease: 'loader' } })
+      .to(container, { autoAlpha: 0, duration: 0.5 });
+    // Reduced motion: fade the curtain rather than sliding a full viewport height.
+    if (reduce) tl.to(bg, { autoAlpha: 0, duration: 0.5 }, '<');
+    else tl.to(bg, { yPercent: -101, duration: 1 }, '<');
+    tl.set(wrap, { display: 'none' })
       .call(revealAfterLoader);
   });
 }

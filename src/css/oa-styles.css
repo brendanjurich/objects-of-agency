@@ -44,6 +44,41 @@ html.wf-design-mode .loader,
   display: none !important;
 }
 
+/* Loader mark — the draw-on OA outline.
+   Geometry lives in a Webflow Embed (command centre:
+   02-brand/oa-logo/animation/oa-loader-mark-embed.html) and does NOT ship from
+   this repo. Colour and weight live here so they reach the site on a CDN bump
+   with no re-paste. Dash properties are written inline by drawLoaderMark()
+   (oa-global.js §6) — never set stroke-dasharray/offset on .oa_loader_mark-draw
+   outside the first-paint guard below. */
+.oa_loader_mark {
+  display: block;
+  width: 100%;
+  height: auto; /* wrap owns the size, as the old logo layers did */
+}
+.oa_loader_mark-ghost {
+  fill: #803e26; /* fallback where color-mix is unsupported */
+  fill: color-mix(in srgb, var(--swatch--brand-500, #d66740), black 40%);
+  stroke: none;
+}
+.oa_loader_mark-draw {
+  fill: none;
+  stroke: var(--swatch--brand-500, #d66740);
+  /* viewBox units (802 wide), NOT px, and deliberately no
+     vector-effect:non-scaling-stroke — that vector-effect's interaction with
+     stroke-dasharray is not consistent across engines, and the dash pattern is
+     what drives the draw. 6.5 units = 1.25px at the mark's rendered 154px.
+     If the mark is resized, rescale: newWidthPx / 154 * 6.5. */
+  stroke-width: 6.5;
+}
+/* First paint shows an UNDRAWN mark. Without this the embed paints fully drawn
+   until the footer script runs — a flash of the finished outline. Same
+   JS-and-published-site scoping as the nav/content pre-hides above, so the
+   Designer and the no-JS fallback still show the complete mark. */
+html.w-mod-js:not(.wf-design-mode) .oa_loader_mark-draw {
+  stroke-dasharray: 0 99999;
+}
+
 .section_main_wrap,
 footer.footer_main_wrap {
   position: relative;
