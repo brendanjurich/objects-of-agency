@@ -643,3 +643,23 @@ tweens created, verified) and the curtain fades instead of sliding a viewport he
   orange, not the fallback, on staging.
 - Ghost and draw are close in value at 154px. If the sweep reads as too subtle, the lever
   is the ghost, not the line.
+
+### Amendment, same day — ghost fill moved to the Designer, v1.0.154
+
+Shipped as `color-mix(in srgb, var(--swatch--brand-500), black 40%)` (#803e26), which read
+far too bright against the near-black curtain and made the sweep a rim-light rather than a
+reveal. Retuning it meant a CDN bump every time — wrong knob in the wrong place for a
+value that wants eyeballing.
+
+Ghost fill is now `currentColor`: it inherits the text colour of the Embed's parent, so it
+is picked live from the Designer's brand swatches (brand-100…900) with no tag. Same
+pattern as the CTA slice — the component supplies geometry, the context supplies colour.
+
+**There is deliberately no default `fill` on `.oa_loader_mark-ghost`.** Any rule on that
+element would beat the inherited value and take the knob away from the Designer. The
+consequence is that the colour MUST be set explicitly on the parent, and must not be left
+to inherit from further up: `.oa_logo_nav` once inherited the same variable `.loader__bg`
+uses and the mark drew in its own background colour.
+
+The draw line stays `var(--swatch--brand-500, #d66740)` in CSS — it is the brand colour,
+not a tuning value.

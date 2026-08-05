@@ -57,8 +57,12 @@ html.wf-design-mode .loader,
   height: auto; /* wrap owns the size, as the old logo layers did */
 }
 .oa_loader_mark-ghost {
-  fill: #803e26; /* fallback where color-mix is unsupported */
-  fill: color-mix(in srgb, var(--swatch--brand-500, #d66740), black 40%);
+  /* DESIGNER-CONTROLLED. Set a text colour on the Embed's parent element and the
+     ghost inherits it — pick any brand swatch live, no CDN bump. House pattern:
+     the component supplies geometry, the context supplies colour.
+     Deliberately NO default fill here — a rule on this element would beat the
+     inherited value and take the knob away from the Designer. */
+  fill: currentColor;
   stroke: none;
 }
 .oa_loader_mark-draw {
