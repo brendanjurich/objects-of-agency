@@ -245,7 +245,7 @@ function drawMarkOutline(path, startFraction, reduce, paused, duration) {
   };
   apply(); // first frame is an undrawn mark, before anything paints
 
-  return gsap.to(draw, {
+  const tween = gsap.to(draw, {
     d: L,
     duration: duration || 2,
     ease: 'slideshow-wipe', // 0.625, 0.05, 0, 1 — already registered in §2
@@ -253,6 +253,18 @@ function drawMarkOutline(path, startFraction, reduce, paused, duration) {
     onUpdate: apply,
     onComplete: settle // a zero-length gap can render oddly; drop the pattern once whole
   });
+
+  // Rewinding the tween is NOT enough to undraw the mark, and this is the trap:
+  // onComplete has already replaced the dash pattern with `none` (the whole path),
+  // and seeking a paused tween back to 0 restores the tweened VALUE without firing
+  // onUpdate — so `d` reads 0 while the DOM still shows the finished outline.
+  // Measured in GSAP 3.13; passing suppressEvents=false to .pause() does not help.
+  // Any caller that rewinds must call this to write the undrawn state itself.
+  tween.oaUndraw = function () {
+    draw.d = 0;
+    apply();
+  };
+  return tween;
 }
 
 // The same draw-on, mounted anywhere on the page and triggered by scroll rather
@@ -287,7 +299,9 @@ function initMarkDraw() {
     new IntersectionObserver(function (entries) {
       if (entries[0].isIntersecting || armed) return;
       armed = true;
-      if (tween) tween.pause(0); // rewind to the undrawn state, ready to replay
+      // pause(0) rewinds the tween; oaUndraw() is what actually clears the drawn
+      // outline from the DOM. Both are needed — see drawMarkOutline().
+      if (tween) { tween.pause(0); tween.oaUndraw(); }
     }, { threshold: 0 }).observe(svg);
   });
 }
