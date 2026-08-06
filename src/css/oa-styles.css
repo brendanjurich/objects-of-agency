@@ -53,8 +53,14 @@ html.wf-design-mode .loader,
    outside the first-paint guard below. */
 .oa_loader_mark {
   display: block;
-  width: 100%;
-  height: auto; /* wrap owns the size, as the old logo layers did */
+  /* HEIGHT-DRIVEN: set the height on the Embed's wrap in the Designer and the mark
+     follows it; width comes from the aspect ratio. Do NOT go back to
+     `width:100%; height:auto` — the wrap's width is auto, so the mark took the full
+     container width (~893px) and derived an 881px height, ignoring the wrap's height
+     entirely and overflowing it. */
+  height: 100%;
+  width: auto;
+  max-width: 100%; /* never overflow a wrap narrower than the aspect ratio needs */
 }
 .oa_loader_mark-ghost {
   /* DESIGNER-CONTROLLED. Set a text colour on the Embed's parent element and the
