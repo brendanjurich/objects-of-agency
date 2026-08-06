@@ -663,3 +663,70 @@ uses and the mark drew in its own background colour.
 
 The draw line stays `var(--swatch--brand-500, #d66740)` in CSS — it is the brand colour,
 not a tuning value.
+
+## 2026-08-06 — The draw-on becomes the house gesture; one mark component, two mounts (v1.0.156)
+
+**Decision (Brendan): the draw-on is the house gesture for the mark.** The CTA slice is
+superseded by it and will be retired; `initCtaLogo()` and the slice rig stay in place
+until that swap happens, so nothing is deleted here.
+
+### One colour knob, two roles
+
+The contact-page CTA spec is *white text colour as the stroke, 10–20% fill for the mark* —
+which is the loader's model with a different colour. So both paths now take
+`currentColor`, and the ghost is a dimmed version of the line via `fill-opacity: 0.15`
+rather than a separately-chosen colour:
+
+```css
+.oa_mark-ghost { fill: currentColor; fill-opacity: 0.15; }
+.oa_mark-draw  { fill: none; stroke: currentColor; stroke-width: 6.5; }
+```
+
+The Designer sets **one text colour** per mount — brand-500 in the loader, white on the
+dark CTA card — and gets both roles from it. That is what makes the two instances read as
+the same gesture rather than two animations that happen to share a path. It also finally
+gives the stroke a Designer knob; it was previously pinned to `--swatch--brand-500` in CSS.
+
+**This changed the loader's colour model and required a Designer change in the same
+publish:** the loader wrap's text colour moved from the literal ghost colour
+(`rgb(43,21,13)`) to **brand-500**. Without it the stroke would inherit the old dark brown
+and vanish against the curtain. brand-500 at 15% over the near-black curtain composites to
+`rgb(41,24,18)` — within a couple of values of the `rgb(43,21,13)` that was tuned by eye,
+so the look is preserved.
+
+Note that white at 15% reads stronger than brand-500 at 15% — equal opacity is not equal
+presence. Both are inside the 10–20% spec; if they need to diverge, split the rule.
+
+### `stroke-width` in viewBox units pays off here
+
+Because the weight is in viewBox units rather than px, one value covers every mount size —
+6.5 = 1.25px at 154px, and scales proportionally at the CTA's size with no second rule.
+That was originally chosen to dodge the `non-scaling-stroke` / `stroke-dasharray`
+inconsistency (2026-08-05); the size-independence is a second dividend.
+
+### Scroll-triggered mount
+
+`initMarkDraw()` finds `[data-mark-draw]` and arms the same two-observer pattern
+`initCtaLogo()` uses — play at 20% into the viewport, rewind and rearm only once the mark
+has left the viewport **entirely**, because rewinding on the play threshold blanks the mark
+while it is still on screen. `drawMarkOutline()` (renamed from `drawLoaderMark`, it is no
+longer loader-specific) gained a `paused` flag and now returns the tween so the observer
+can replay it.
+
+The two mounts are driven by **different hooks and cannot double-init**: the loader is
+`[data-load-mark]` (also its sentinel), the CTA is `[data-mark-draw]`. Do not put the
+loader's sentinel on a CTA embed.
+
+### Known wart
+
+`.oa_loader_mark*` survives as a legacy alias alongside the canonical `.oa_mark*`. The
+loader embed was pasted before the rename and re-pasting a working loader purely to change
+class names is not worth the risk. Fold it in next time that embed is re-pasted for a real
+reason.
+
+### Open
+
+- The slice (`initCtaLogo`, `oa-mark-slice-embed.html`, the two `oa-slice-*` eases) is
+  superseded but still live on the /about CTA. Retire it when the draw-on replaces it there.
+- Ghost strength is one shared constant. Split `.oa_mark-ghost` from `.oa_loader_mark-ghost`
+  if white and brand need different percentages.

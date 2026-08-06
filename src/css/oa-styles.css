@@ -44,13 +44,20 @@ html.wf-design-mode .loader,
   display: none !important;
 }
 
-/* Loader mark — the draw-on OA outline.
-   Geometry lives in a Webflow Embed (command centre:
-   02-brand/oa-logo/animation/oa-loader-mark-embed.html) and does NOT ship from
-   this repo. Colour and weight live here so they reach the site on a CDN bump
-   with no re-paste. Dash properties are written inline by drawLoaderMark()
-   (oa-global.js §6) — never set stroke-dasharray/offset on .oa_loader_mark-draw
-   outside the first-paint guard below. */
+/* OA MARK DRAW-ON — the house gesture.
+   One component, two mounts: the loader (initLogoRevealLoader) and any CTA
+   (initMarkDraw). Geometry lives in Webflow Embeds (command centre:
+   02-brand/oa-logo/animation/) and does NOT ship from this repo. Colour, weight
+   and ghost strength live here so they reach the site on a CDN bump with no
+   re-paste. Dash properties are written inline by drawMarkOutline() (oa-global.js
+   §6) — never set stroke-dasharray/offset on the draw path outside the
+   first-paint guard below.
+
+   `.oa_loader_mark*` is a LEGACY ALIAS. The loader embed was pasted before the
+   rename and re-pasting it only to change class names would risk a working
+   loader for nothing. Fold it onto `.oa_mark*` next time that embed is re-pasted
+   for a real reason. New embeds use `.oa_mark*`. */
+.oa_mark,
 .oa_loader_mark {
   display: block;
   /* HEIGHT-DRIVEN: set the height on the Embed's wrap in the Designer and the mark
@@ -62,29 +69,37 @@ html.wf-design-mode .loader,
   width: auto;
   max-width: 100%; /* never overflow a wrap narrower than the aspect ratio needs */
 }
+
+/* ONE COLOUR KNOB, TWO ROLES. Both paths take `currentColor`, so the Designer sets
+   a single text colour on the Embed's parent and the ghost is automatically a
+   dimmed version of the line. That is what keeps the loader and the CTA consistent
+   while letting each sit in its own context — brand orange in the loader, white on
+   the dark CTA card. House pattern: the component supplies geometry, the context
+   supplies colour.
+   Deliberately NO fixed colour on either path — a literal here would beat the
+   inherited value and take the knob away from the Designer. */
+.oa_mark-ghost,
 .oa_loader_mark-ghost {
-  /* DESIGNER-CONTROLLED. Set a text colour on the Embed's parent element and the
-     ghost inherits it — pick any brand swatch live, no CDN bump. House pattern:
-     the component supplies geometry, the context supplies colour.
-     Deliberately NO default fill here — a rule on this element would beat the
-     inherited value and take the knob away from the Designer. */
   fill: currentColor;
+  fill-opacity: 0.15; /* the ghost strength knob — spec is 10–20% */
   stroke: none;
 }
+.oa_mark-draw,
 .oa_loader_mark-draw {
   fill: none;
-  stroke: var(--swatch--brand-500, #d66740);
+  stroke: currentColor;
   /* viewBox units (802 wide), NOT px, and deliberately no
      vector-effect:non-scaling-stroke — that vector-effect's interaction with
      stroke-dasharray is not consistent across engines, and the dash pattern is
-     what drives the draw. 6.5 units = 1.25px at the mark's rendered 154px.
-     If the mark is resized, rescale: newWidthPx / 154 * 6.5. */
+     what drives the draw. Being in viewBox units means the weight scales with the
+     mark, so one value works at any mount size: 6.5 = 1.25px at 154px. */
   stroke-width: 6.5;
 }
 /* First paint shows an UNDRAWN mark. Without this the embed paints fully drawn
    until the footer script runs — a flash of the finished outline. Same
    JS-and-published-site scoping as the nav/content pre-hides above, so the
    Designer and the no-JS fallback still show the complete mark. */
+html.w-mod-js:not(.wf-design-mode) .oa_mark-draw,
 html.w-mod-js:not(.wf-design-mode) .oa_loader_mark-draw {
   stroke-dasharray: 0 99999;
 }

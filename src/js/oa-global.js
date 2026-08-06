@@ -223,7 +223,8 @@ function revealAfterLoader() {
 //
 // The drawn set is [s-d, s] mod L. The mark is authored CLOCKWISE, so growing the
 // arc BACKWARD from the start node is what produces the counter-clockwise sweep.
-function drawLoaderMark(path, startFraction, reduce) {
+// Returns the tween (or null under reduced motion) so a caller can play/replay it.
+function drawMarkOutline(path, startFraction, reduce, paused) {
   const L = path.getTotalLength();
   const s = L * startFraction;
 
@@ -234,7 +235,7 @@ function drawLoaderMark(path, startFraction, reduce) {
   };
 
   // Reduced motion is a branch, not a kill — land on the drawn mark, skip the sweep.
-  if (reduce) { settle(); return; }
+  if (reduce) { settle(); return null; }
 
   const draw = { d: 0 };
   const apply = function () {
@@ -243,12 +244,43 @@ function drawLoaderMark(path, startFraction, reduce) {
   };
   apply(); // first frame is an undrawn mark, before anything paints
 
-  gsap.to(draw, {
+  return gsap.to(draw, {
     d: L,
     duration: 2,
     ease: 'slideshow-wipe', // 0.625, 0.05, 0, 1 — already registered in §2
+    paused: !!paused,
     onUpdate: apply,
     onComplete: settle // a zero-length gap can render oddly; drop the pattern once whole
+  });
+}
+
+// The same draw-on, mounted anywhere on the page and triggered by scroll rather
+// than by page load. Same two-observer arm/rearm as initCtaLogo: rewinding on the
+// play threshold would blank the mark while it is still on screen.
+function initMarkDraw() {
+  document.querySelectorAll('[data-mark-draw]').forEach(function (svg) {
+    const path = svg.querySelector('[data-draw-path]');
+    if (!path) return; // markup changed — leave the mark alone
+    const start = parseFloat(svg.dataset.drawStart) || 0;
+    let tween = null;
+    let armed = true;
+
+    new IntersectionObserver(function (entries) {
+      if (!entries[0].isIntersecting || !armed) return;
+      armed = false;
+      // Read reduced motion here, not at init, so an OS toggle applies.
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (tween) tween.restart();
+      else tween = drawMarkOutline(path, start, reduce, true);
+      if (tween) tween.play();
+    }, { threshold: 0, rootMargin: '0px 0px -20% 0px' }).observe(svg);
+
+    // Rearm only once the mark has left the viewport ENTIRELY.
+    new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting || armed) return;
+      armed = true;
+      if (tween) tween.pause(0); // rewind to the undrawn state, ready to replay
+    }, { threshold: 0 }).observe(svg);
   });
 }
 
@@ -276,7 +308,7 @@ function initLogoRevealLoader() {
   // arc-length fraction by the embed, not hardcoded here — the geometry owns it.
   gsap.set(wrap, { display: 'block' });
   if (drawPath) {
-    drawLoaderMark(drawPath, parseFloat(mark.dataset.drawStart) || 0, reduce);
+    drawMarkOutline(drawPath, parseFloat(mark.dataset.drawStart) || 0, reduce);
   }
 
   // Exit: waits for whichever is longer — the 2.0s brand minimum (matching the draw),
@@ -687,6 +719,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initDirectionalHover();
   initLocalTime();
   initCtaLogo();
+  initMarkDraw();
 });
 
 // Run after Webflow's modules (incl. IX2) have initialised and bound their
