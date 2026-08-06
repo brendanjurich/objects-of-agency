@@ -724,9 +724,44 @@ loader embed was pasted before the rename and re-pasting a working loader purely
 class names is not worth the risk. Fold it in next time that embed is re-pasted for a real
 reason.
 
+### Open — CLOSED 06-08-2026, see the entry below
+
+- ~~The slice is superseded but still live on the /about CTA.~~ Retired at v1.0.157.
+- ~~Ghost strength is one shared constant.~~ Ghost and line are now independent per mount.
+
+## 2026-08-06 — Every mark knob moves to the Designer; slice retired (v1.0.157)
+
+Supersedes the colour/weight model of the two entries above.
+
+The mark's paint lived in `oa-styles.css`, which Webflow serves as custom code and the
+**Designer canvas does not apply** — so the canvas showed a solid black mark (SVG default
+fill) and every tweak cost a tag → CDN → purge → publish cycle. Presentation attributes
+and embed CSS both lose to a CSS rule, so control could only be handed back by deleting
+those rules.
+
+Colour, opacity, stroke weight, sizing and the first-paint dash guard now live in each
+Embed's own `<style>` block, in the labelled CONTROLS idiom of `src/svg/oa-australia-map.svg`.
+Line and ghost are independent knobs. **Do not reintroduce a `.oa_mark*` rule in
+`oa-styles.css`** — it beats the embed and silently takes the knob away again.
+
+Sizing is width-driven (`width:100%; height:auto`); the parent div carries the width and
+`aspect-ratio: 802/793`, and the Webflow `.w-embed` div is left unstyled so the parent's
+box is the mark's box.
+
+Motion gains `data-draw-duration` (seconds, both mounts) and `data-draw-trigger` (viewport
+%, CTA only). The loader's curtain hold is **derived** from the duration, so a longer draw
+can't be cut off mid-sweep. The ease stays in code — shared house curve.
+
+Shipped weight is **4** viewBox units, not 6.5. That also closes the clipping question:
+geometry starts 2.084 units inside the viewBox, so a half-stroke of 2.0 no longer
+overflows. A heavier stroke than ~4.1 would clip and needs a padded re-export.
+
+Slice retired — verified zero `data-cta-logo` sitewide. `initCtaLogo()`, its call site, the
+`oa-slice-disc` / `oa-slice-cut` eases and `.oa_logo_slice` are deleted; the brand rig is
+kept in the command centre. The `.oa_loader_mark*` alias died with the re-paste.
+
 ### Open
 
-- The slice (`initCtaLogo`, `oa-mark-slice-embed.html`, the two `oa-slice-*` eases) is
-  superseded but still live on the /about CTA. Retire it when the draw-on replaces it there.
-- Ghost strength is one shared constant. Split `.oa_mark-ghost` from `.oa_loader_mark-ghost`
-  if white and brand need different percentages.
+- CTA ghost is `var(--swatch--transparent)` → renders fully invisible, so its
+  `fill-opacity: 0.1` does nothing. Intentional or not, unresolved.
+- CTA line is `var(--swatch--brand-500, #fff)` — fallback no longer matches the variable.
