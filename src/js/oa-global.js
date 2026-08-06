@@ -16,6 +16,8 @@ if (oaGsapOk) {
   // ============================================================
   CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
   CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
+  CustomEase.create("oa-slice-disc", "0.25, 0, 0.2, 1");
+  CustomEase.create("oa-slice-cut", "0.25, 1, 0.5, 1");
 } else {
   console.warn('[OA] GSAP unavailable — revealing page without animations.');
 }
@@ -60,7 +62,7 @@ function initPageTransition() {
   const content = document.querySelectorAll('[data-page-transition]');
   if (!content.length) return; // not tagged — feature is a no-op
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const loaderWillRun = !!document.querySelector('[data-load-wrap] [data-load-progress]');
+  const loaderWillRun = !!document.querySelector('[data-load-wrap] [data-load-mark]');
 
   // --- ENTER: fade content in once the page is actually painted. ---
   // Content starts hidden via the CSS guard in oa-styles.css. Loader pages let
@@ -209,6 +211,47 @@ function revealAfterLoader() {
   document.dispatchEvent(new CustomEvent('oa:loader-complete'));
 }
 
+// Draws a CLOSED svg path as a growing arc, from an arbitrary start node, in the
+// direction opposite to how the path was authored. No DrawSVGPlugin — Webflow's
+// GSAP integration does not include it, so this is hand-rolled on dash properties.
+//
+// The dash PERIOD MUST EQUAL the path length. That is the whole trick: it makes the
+// dash phase identical on both sides of the path's own seam (arc-length 0), so the
+// arc wraps past that point instead of being clipped there. `${d} ${L}` looks
+// equivalent, has period d+L, and silently truncates the wrap — half the mark just
+// never draws.
+//
+// The drawn set is [s-d, s] mod L. The mark is authored CLOCKWISE, so growing the
+// arc BACKWARD from the start node is what produces the counter-clockwise sweep.
+function drawLoaderMark(path, startFraction, reduce) {
+  const L = path.getTotalLength();
+  const s = L * startFraction;
+
+  // Whole path, no pattern. Also the reduced-motion end state.
+  const settle = function () {
+    path.style.strokeDasharray = 'none';
+    path.style.strokeDashoffset = '0';
+  };
+
+  // Reduced motion is a branch, not a kill — land on the drawn mark, skip the sweep.
+  if (reduce) { settle(); return; }
+
+  const draw = { d: 0 };
+  const apply = function () {
+    path.style.strokeDasharray = draw.d + ' ' + (L - draw.d);
+    path.style.strokeDashoffset = draw.d - s;
+  };
+  apply(); // first frame is an undrawn mark, before anything paints
+
+  gsap.to(draw, {
+    d: L,
+    duration: 2,
+    ease: 'slideshow-wipe', // 0.625, 0.05, 0, 1 — already registered in §2
+    onUpdate: apply,
+    onComplete: settle // a zero-length gap can render oddly; drop the pattern once whole
+  });
+}
+
 function initLogoRevealLoader() {
   const wrap = document.querySelector('[data-load-wrap]');
   if (!wrap) { revealAfterLoader(); return; }
@@ -216,26 +259,37 @@ function initLogoRevealLoader() {
   // No GSAP — hide the overlay and reveal immediately (see guard §1).
   if (!oaGsapOk) { wrap.style.display = 'none'; revealAfterLoader(); return; }
 
-  // Pages without the full animated loader (no inner elements) — reveal immediately.
-  const progressBar = wrap.querySelector('[data-load-progress]');
-  if (!progressBar) { revealAfterLoader(); return; }
+  // Pages without the full animated loader (no mark embed) — reveal immediately.
+  // [data-load-mark] is the sentinel: it lives on the svg inside the Webflow Embed,
+  // so geometry and sentinel travel together and can't drift apart. initPageTransition()
+  // probes the same attribute to decide whether to snap or fade the content in.
+  const mark = wrap.querySelector('[data-load-mark]');
+  if (!mark) { revealAfterLoader(); return; }
 
   const container = wrap.querySelector('[data-load-container]');
   const bg = wrap.querySelector('[data-load-bg]');
-  const logo = wrap.querySelector('[data-load-logo]');
+  const drawPath = mark.querySelector('[data-draw-path]');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Entrance: branding moment plays immediately (1.5s).
+  // Entrance: the mark draws its own outline counter-clockwise (2.0s), starting at
+  // the corner where the ring meets the A downstroke. The start node is carried as an
+  // arc-length fraction by the embed, not hardcoded here — the geometry owns it.
   gsap.set(wrap, { display: 'block' });
-  gsap.timeline({ defaults: { ease: 'loader', duration: 1.5 } })
-    .to(progressBar, { scaleX: 1 })
-    .to(logo, { clipPath: 'inset(0% 0% 0% 0%)' }, '<');
+  if (drawPath) {
+    drawLoaderMark(drawPath, parseFloat(mark.dataset.drawStart) || 0, reduce);
+  }
 
-  // Exit: waits for whichever is longer — the 1.5s brand minimum, or (on pages
-  // with a hero background video) the video buffering its first frames
+  // Exit: waits for whichever is longer — the 2.0s brand minimum (matching the draw),
+  // or (on pages with a hero background video) the video buffering its first frames
   // (oa:hero-media-ready, dispatched by oa-homepage.js on 'canplay') so the
   // reveal never lands on frame-mush. Capped so a stalled CDN can't trap the
   // loader. Deliberate trade-off: the anticipation beat outranks raw TTI here.
-  const minDelay = new Promise(resolve => setTimeout(resolve, 1500));
+  //
+  // The draw's ease reaches 97% at 1.47s, so this floor leaves ~530ms of settle on
+  // the finished mark. If that ever reads as a stall, LOWER THIS FLOOR — do not
+  // shorten the draw, which would change the line's speed character rather than
+  // trim dead time.
+  const minDelay = new Promise(resolve => setTimeout(resolve, 2000));
   const pageReady = document.querySelector('[data-bunny-background-init] video') ?
     Promise.race([
       new Promise(resolve => document.addEventListener('oa:hero-media-ready', resolve, { once: true })),
@@ -244,11 +298,12 @@ function initLogoRevealLoader() {
     Promise.resolve();
 
   Promise.all([minDelay, pageReady]).then(function () {
-    gsap.timeline({ defaults: { ease: 'loader' } })
-      .to(container, { autoAlpha: 0, duration: 0.5 })
-      .to(progressBar, { scaleX: 0, transformOrigin: 'right center', duration: 0.5 }, '<')
-      .to(bg, { yPercent: -101, duration: 1 }, '<')
-      .set(wrap, { display: 'none' })
+    const tl = gsap.timeline({ defaults: { ease: 'loader' } })
+      .to(container, { autoAlpha: 0, duration: 0.5 });
+    // Reduced motion: fade the curtain rather than sliding a full viewport height.
+    if (reduce) tl.to(bg, { autoAlpha: 0, duration: 0.5 }, '<');
+    else tl.to(bg, { yPercent: -101, duration: 1 }, '<');
+    tl.set(wrap, { display: 'none' })
       .call(revealAfterLoader);
   });
 }
@@ -453,7 +508,111 @@ function initDirectionalHover() {
 }
 
 // ============================================================
-// 8. INIT ON DOM READY
+// 8. CTA LOGO SLICE
+// ============================================================
+// The OA mark is subtractive, not three shapes assembled: it's a solid disc
+// with the diagonal slash and the horizontal notch carved OUT of it. Both
+// counters are black paths inside an SVG <mask>, so animating them travels a
+// cutter across the disc — the mark is made by removal. The disc keeps
+// fill="currentColor", so the mask never interferes with theming.
+//
+// Markup and the full derivation live in the command centre at
+// 02-brand/oa-logo/animation/.
+//
+// !! THE SVG GEOMETRY DOES NOT SHIP FROM THIS REPO. It sits in a Webflow Embed,
+// pasted by hand. Re-tagging and bumping the jsDelivr URL updates the motion and
+// nothing else — a change to the disc or cutter paths only reaches the site when
+// oa-mark-slice-embed.html is re-pasted into the Designer and the site republished.
+// The disc and the two cutters are a matched set; paste all three or none.
+//
+// Two constraints from the derivation are load-bearing here:
+//   - Travel values are viewBox units, so they scale with the rendered size.
+//   - NEITHER EASE MAY OVERSHOOT. Each cutter carries its own mouth fillets, so
+//     any travel INWARD past the rest position drags those fillets inside the
+//     silhouette and exposes a hard-edged nib on the disc's edge. Moving the
+//     fillets onto the disc to allow an overshoot is worse — it ghosts a static
+//     stadium outline onto the mark before the cutter arrives. Both were tried;
+//     the rig's <desc> has the measurements.
+//
+// IntersectionObserver, not ScrollTrigger — this is a fire-once entrance, so
+// scrub/pin/refresh buy nothing and ScrollTrigger stays unused sitewide.
+function initCtaLogo() {
+  document.querySelectorAll('[data-cta-logo]').forEach(function (svg, i) {
+    const group = svg.querySelector('[data-cta-logo-group]');
+    const slash = svg.querySelector('[data-cut="slash"]');
+    const notch = svg.querySelector('[data-cut="notch"]');
+    const mask = svg.querySelector('mask');
+    const disc = svg.querySelector('[mask]');
+    if (!group || !slash || !notch || !mask || !disc) return; // markup changed — leave the mark alone
+
+    // Two embeds on one page would both resolve to the first mask id.
+    const id = 'oa-slice-cut-' + i;
+    mask.id = id;
+    disc.setAttribute('mask', 'url(#' + id + ')');
+
+    // Slash enters along its own 68deg axis, notch straight in from the right.
+    // Both start fully clear of the disc, so the first frame is an uncut disc.
+    gsap.set(group, { scale: 0.88, opacity: 0, svgOrigin: '49.166 48.43' });
+    gsap.set(slash, { x: 26.97, y: -66.76 });
+    gsap.set(notch, { x: 24 });
+
+    let tl = null;
+    let armed = true; // false while the mark is on screen and has already played
+
+    function play() {
+      // Read reduced motion here, not at init, so an OS toggle applies.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.set(group, { scale: 1, opacity: 1 });
+        gsap.set([slash, notch], { x: 0, y: 0 });
+        return;
+      }
+      if (tl) { tl.restart(); return; }
+      // 2.0s total, in three beats: the disc reveals (1.0s), holds briefly as a plain
+      // uncut disc, then the two cutters carve it. The hold states the disc as a whole
+      // object before anything is taken away.
+      //
+      // MEASURE THE HOLD PERCEPTUALLY, NOT OFF THE TWEEN END. The disc's tween runs to
+      // 1000ms but the ease has it at 97% by 800ms and 99% by 880ms, so the eye calls
+      // it finished well before GSAP does. The slash at 0.95 leaves a felt gap of
+      // ~100-180ms against a nominal -50ms. Reading the nominal number is what made two
+      // earlier passes ship a pause that measured fine and felt like a stall.
+      //
+      // The pause was shortened by lengthening the DISC, not by moving the cutters
+      // earlier — that keeps the 2.0s total and leaves the carve gestures at the speed
+      // they were tuned to. A slice that takes 800ms stops reading as a cut.
+      //
+      // Both cutters share one motion law. They differentiate by distance, not curve —
+      // the slash covers 72 units to the notch's 24, so it reads as the faster, larger
+      // gesture while the notch settles last.
+      tl = gsap.timeline()
+        .to(group, { scale: 1, opacity: 1, duration: 1.00, ease: 'oa-slice-disc' }, 0)
+        .to(slash, { x: 0, y: 0, duration: 0.75, ease: 'oa-slice-cut' }, 0.95)
+        .to(notch, { x: 0, duration: 0.80, ease: 'oa-slice-cut' }, 1.20);
+    }
+
+    // Play when the mark is properly in view — a fifth of the way up, not the
+    // instant it clips the bottom edge, or a 2s animation is over before you
+    // have composed the CTA in frame.
+    new IntersectionObserver(function (entries) {
+      if (!entries[0].isIntersecting || !armed) return;
+      armed = false;
+      play();
+    }, { threshold: 0, rootMargin: '0px 0px -20% 0px' }).observe(svg);
+
+    // Rearm only once the mark has left the viewport ENTIRELY. Rewinding on the
+    // play threshold instead would reset it to invisible while it is still on
+    // screen — a small scroll down past that line would blank the mark in front
+    // of the user. Hence two observers with different bounds.
+    new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting || armed) return;
+      armed = true;
+      if (tl) tl.pause(0); // rewind and hold at the start state, ready to replay
+    }, { threshold: 0 }).observe(svg);
+  });
+}
+
+// ============================================================
+// 9. INIT ON DOM READY
 // ============================================================
 // Run the loader immediately, NOT on DOMContentLoaded. This is a footer script so
 // the loader markup (near the top of <body>) is already parsed, and GSAP is injected
@@ -463,7 +622,7 @@ function initDirectionalHover() {
 initLogoRevealLoader();
 
 // ============================================================
-// 9. STRIP ORPHANED WEBFLOW SCROLL HANDLER
+// 10. STRIP ORPHANED WEBFLOW SCROLL HANDLER
 // ============================================================
 // The "OA Statement [Scroll]" IX2 interaction (continuous "While scrolling in
 // view" on the homepage statement block) is applied site-wide, so Webflow writes
@@ -527,6 +686,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initNavAnchorLinks();
   initDirectionalHover();
   initLocalTime();
+  initCtaLogo();
 });
 
 // Run after Webflow's modules (incl. IX2) have initialised and bound their

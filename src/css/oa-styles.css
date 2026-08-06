@@ -44,6 +44,51 @@ html.wf-design-mode .loader,
   display: none !important;
 }
 
+/* Loader mark — the draw-on OA outline.
+   Geometry lives in a Webflow Embed (command centre:
+   02-brand/oa-logo/animation/oa-loader-mark-embed.html) and does NOT ship from
+   this repo. Colour and weight live here so they reach the site on a CDN bump
+   with no re-paste. Dash properties are written inline by drawLoaderMark()
+   (oa-global.js §6) — never set stroke-dasharray/offset on .oa_loader_mark-draw
+   outside the first-paint guard below. */
+.oa_loader_mark {
+  display: block;
+  /* HEIGHT-DRIVEN: set the height on the Embed's wrap in the Designer and the mark
+     follows it; width comes from the aspect ratio. Do NOT go back to
+     `width:100%; height:auto` — the wrap's width is auto, so the mark took the full
+     container width (~893px) and derived an 881px height, ignoring the wrap's height
+     entirely and overflowing it. */
+  height: 100%;
+  width: auto;
+  max-width: 100%; /* never overflow a wrap narrower than the aspect ratio needs */
+}
+.oa_loader_mark-ghost {
+  /* DESIGNER-CONTROLLED. Set a text colour on the Embed's parent element and the
+     ghost inherits it — pick any brand swatch live, no CDN bump. House pattern:
+     the component supplies geometry, the context supplies colour.
+     Deliberately NO default fill here — a rule on this element would beat the
+     inherited value and take the knob away from the Designer. */
+  fill: currentColor;
+  stroke: none;
+}
+.oa_loader_mark-draw {
+  fill: none;
+  stroke: var(--swatch--brand-500, #d66740);
+  /* viewBox units (802 wide), NOT px, and deliberately no
+     vector-effect:non-scaling-stroke — that vector-effect's interaction with
+     stroke-dasharray is not consistent across engines, and the dash pattern is
+     what drives the draw. 6.5 units = 1.25px at the mark's rendered 154px.
+     If the mark is resized, rescale: newWidthPx / 154 * 6.5. */
+  stroke-width: 6.5;
+}
+/* First paint shows an UNDRAWN mark. Without this the embed paints fully drawn
+   until the footer script runs — a flash of the finished outline. Same
+   JS-and-published-site scoping as the nav/content pre-hides above, so the
+   Designer and the no-JS fallback still show the complete mark. */
+html.w-mod-js:not(.wf-design-mode) .oa_loader_mark-draw {
+  stroke-dasharray: 0 99999;
+}
+
 .section_main_wrap,
 footer.footer_main_wrap {
   position: relative;
@@ -812,4 +857,20 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 .oa_statement_blur {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
   mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
+}
+
+
+/* ============================================================
+   CTA LOGO SLICE
+   ============================================================ */
+/* The mark lives in an Embed, so the Designer can't reach inside it — this hands
+   sizing back to the wrapper. Set the size on .cta_logo_wrap in the Designer, not
+   here. The embed's own width/height attributes are the pre-CSS fallback.
+   Nothing about the animation needs CSS: every transform is applied to the SVG's
+   own nodes in viewBox units. Colour comes from the wrapper via currentColor —
+   never set `color` on .oa_logo_slice or that inheritance breaks. */
+.oa_logo_slice {
+  display: block;
+  width: 100%;
+  height: auto;
 }
