@@ -16,8 +16,6 @@ if (oaGsapOk) {
   // ============================================================
   CustomEase.create("slideshow-wipe", "0.625, 0.05, 0, 1");
   CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
-  CustomEase.create("oa-slice-disc", "0.25, 0, 0.2, 1");
-  CustomEase.create("oa-slice-cut", "0.25, 1, 0.5, 1");
 } else {
   console.warn('[OA] GSAP unavailable — revealing page without animations.');
 }
@@ -223,7 +221,11 @@ function revealAfterLoader() {
 //
 // The drawn set is [s-d, s] mod L. The mark is authored CLOCKWISE, so growing the
 // arc BACKWARD from the start node is what produces the counter-clockwise sweep.
-function drawLoaderMark(path, startFraction, reduce) {
+// Returns the tween (or null under reduced motion) so a caller can play/replay it.
+//
+// duration is seconds, supplied by the embed's data-draw-duration so it can be tuned
+// in the Designer. The ease is deliberately NOT a knob — it is a named house curve.
+function drawMarkOutline(path, startFraction, reduce, paused, duration) {
   const L = path.getTotalLength();
   const s = L * startFraction;
 
@@ -234,7 +236,7 @@ function drawLoaderMark(path, startFraction, reduce) {
   };
 
   // Reduced motion is a branch, not a kill — land on the drawn mark, skip the sweep.
-  if (reduce) { settle(); return; }
+  if (reduce) { settle(); return null; }
 
   const draw = { d: 0 };
   const apply = function () {
@@ -243,12 +245,50 @@ function drawLoaderMark(path, startFraction, reduce) {
   };
   apply(); // first frame is an undrawn mark, before anything paints
 
-  gsap.to(draw, {
+  return gsap.to(draw, {
     d: L,
-    duration: 2,
+    duration: duration || 2,
     ease: 'slideshow-wipe', // 0.625, 0.05, 0, 1 — already registered in §2
+    paused: !!paused,
     onUpdate: apply,
     onComplete: settle // a zero-length gap can render oddly; drop the pattern once whole
+  });
+}
+
+// The same draw-on, mounted anywhere on the page and triggered by scroll rather
+// than by page load. Two observers, not one: rewinding on the play threshold would
+// blank the mark while it is still on screen.
+//
+// The embed owns the two taste knobs — data-draw-duration (seconds) and
+// data-draw-trigger (how far into the viewport, in %, before it plays; higher =
+// later). Both fall back to the values they replaced, so an embed carrying neither
+// behaves exactly as before.
+function initMarkDraw() {
+  document.querySelectorAll('[data-mark-draw]').forEach(function (svg) {
+    const path = svg.querySelector('[data-draw-path]');
+    if (!path) return; // markup changed — leave the mark alone
+    const start = parseFloat(svg.dataset.drawStart) || 0;
+    const duration = parseFloat(svg.dataset.drawDuration) || 2;
+    const trigger = parseFloat(svg.dataset.drawTrigger) || 20;
+    let tween = null;
+    let armed = true;
+
+    new IntersectionObserver(function (entries) {
+      if (!entries[0].isIntersecting || !armed) return;
+      armed = false;
+      // Read reduced motion here, not at init, so an OS toggle applies.
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (tween) tween.restart();
+      else tween = drawMarkOutline(path, start, reduce, true, duration);
+      if (tween) tween.play();
+    }, { threshold: 0, rootMargin: '0px 0px -' + trigger + '% 0px' }).observe(svg);
+
+    // Rearm only once the mark has left the viewport ENTIRELY.
+    new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting || armed) return;
+      armed = true;
+      if (tween) tween.pause(0); // rewind to the undrawn state, ready to replay
+    }, { threshold: 0 }).observe(svg);
   });
 }
 
@@ -271,25 +311,29 @@ function initLogoRevealLoader() {
   const drawPath = mark.querySelector('[data-draw-path]');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Entrance: the mark draws its own outline counter-clockwise (2.0s), starting at
-  // the corner where the ring meets the A downstroke. The start node is carried as an
-  // arc-length fraction by the embed, not hardcoded here — the geometry owns it.
+  // Entrance: the mark draws its own outline counter-clockwise, starting at the corner
+  // where the ring meets the A downstroke. Both the start node (an arc-length fraction)
+  // and the duration are carried by the embed, not hardcoded here — the geometry owns
+  // the first, the Designer owns the second.
+  const duration = parseFloat(mark.dataset.drawDuration) || 2;
   gsap.set(wrap, { display: 'block' });
   if (drawPath) {
-    drawLoaderMark(drawPath, parseFloat(mark.dataset.drawStart) || 0, reduce);
+    drawMarkOutline(drawPath, parseFloat(mark.dataset.drawStart) || 0, reduce, false, duration);
   }
 
-  // Exit: waits for whichever is longer — the 2.0s brand minimum (matching the draw),
-  // or (on pages with a hero background video) the video buffering its first frames
-  // (oa:hero-media-ready, dispatched by oa-homepage.js on 'canplay') so the
-  // reveal never lands on frame-mush. Capped so a stalled CDN can't trap the
-  // loader. Deliberate trade-off: the anticipation beat outranks raw TTI here.
+  // Exit: waits for whichever is longer — the brand minimum, or (on pages with a hero
+  // background video) the video buffering its first frames (oa:hero-media-ready,
+  // dispatched by oa-homepage.js on 'canplay') so the reveal never lands on
+  // frame-mush. Capped so a stalled CDN can't trap the loader. Deliberate trade-off:
+  // the anticipation beat outranks raw TTI here.
   //
-  // The draw's ease reaches 97% at 1.47s, so this floor leaves ~530ms of settle on
-  // the finished mark. If that ever reads as a stall, LOWER THIS FLOOR — do not
-  // shorten the draw, which would change the line's speed character rather than
-  // trim dead time.
-  const minDelay = new Promise(resolve => setTimeout(resolve, 2000));
+  // The floor is DERIVED from the draw duration rather than fixed, so raising
+  // data-draw-duration in the embed can never leave the curtain cutting the draw off
+  // mid-sweep. At the default 2s these are the same number as before. The ease reaches
+  // 97% at ~74% of the duration, so the floor leaves ~500ms of settle on the finished
+  // mark at 2s. If that ever reads as a stall, shorten the draw in the embed — that
+  // trims the floor with it.
+  const minDelay = new Promise(resolve => setTimeout(resolve, duration * 1000));
   const pageReady = document.querySelector('[data-bunny-background-init] video') ?
     Promise.race([
       new Promise(resolve => document.addEventListener('oa:hero-media-ready', resolve, { once: true })),
@@ -508,111 +552,7 @@ function initDirectionalHover() {
 }
 
 // ============================================================
-// 8. CTA LOGO SLICE
-// ============================================================
-// The OA mark is subtractive, not three shapes assembled: it's a solid disc
-// with the diagonal slash and the horizontal notch carved OUT of it. Both
-// counters are black paths inside an SVG <mask>, so animating them travels a
-// cutter across the disc — the mark is made by removal. The disc keeps
-// fill="currentColor", so the mask never interferes with theming.
-//
-// Markup and the full derivation live in the command centre at
-// 02-brand/oa-logo/animation/.
-//
-// !! THE SVG GEOMETRY DOES NOT SHIP FROM THIS REPO. It sits in a Webflow Embed,
-// pasted by hand. Re-tagging and bumping the jsDelivr URL updates the motion and
-// nothing else — a change to the disc or cutter paths only reaches the site when
-// oa-mark-slice-embed.html is re-pasted into the Designer and the site republished.
-// The disc and the two cutters are a matched set; paste all three or none.
-//
-// Two constraints from the derivation are load-bearing here:
-//   - Travel values are viewBox units, so they scale with the rendered size.
-//   - NEITHER EASE MAY OVERSHOOT. Each cutter carries its own mouth fillets, so
-//     any travel INWARD past the rest position drags those fillets inside the
-//     silhouette and exposes a hard-edged nib on the disc's edge. Moving the
-//     fillets onto the disc to allow an overshoot is worse — it ghosts a static
-//     stadium outline onto the mark before the cutter arrives. Both were tried;
-//     the rig's <desc> has the measurements.
-//
-// IntersectionObserver, not ScrollTrigger — this is a fire-once entrance, so
-// scrub/pin/refresh buy nothing and ScrollTrigger stays unused sitewide.
-function initCtaLogo() {
-  document.querySelectorAll('[data-cta-logo]').forEach(function (svg, i) {
-    const group = svg.querySelector('[data-cta-logo-group]');
-    const slash = svg.querySelector('[data-cut="slash"]');
-    const notch = svg.querySelector('[data-cut="notch"]');
-    const mask = svg.querySelector('mask');
-    const disc = svg.querySelector('[mask]');
-    if (!group || !slash || !notch || !mask || !disc) return; // markup changed — leave the mark alone
-
-    // Two embeds on one page would both resolve to the first mask id.
-    const id = 'oa-slice-cut-' + i;
-    mask.id = id;
-    disc.setAttribute('mask', 'url(#' + id + ')');
-
-    // Slash enters along its own 68deg axis, notch straight in from the right.
-    // Both start fully clear of the disc, so the first frame is an uncut disc.
-    gsap.set(group, { scale: 0.88, opacity: 0, svgOrigin: '49.166 48.43' });
-    gsap.set(slash, { x: 26.97, y: -66.76 });
-    gsap.set(notch, { x: 24 });
-
-    let tl = null;
-    let armed = true; // false while the mark is on screen and has already played
-
-    function play() {
-      // Read reduced motion here, not at init, so an OS toggle applies.
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        gsap.set(group, { scale: 1, opacity: 1 });
-        gsap.set([slash, notch], { x: 0, y: 0 });
-        return;
-      }
-      if (tl) { tl.restart(); return; }
-      // 2.0s total, in three beats: the disc reveals (1.0s), holds briefly as a plain
-      // uncut disc, then the two cutters carve it. The hold states the disc as a whole
-      // object before anything is taken away.
-      //
-      // MEASURE THE HOLD PERCEPTUALLY, NOT OFF THE TWEEN END. The disc's tween runs to
-      // 1000ms but the ease has it at 97% by 800ms and 99% by 880ms, so the eye calls
-      // it finished well before GSAP does. The slash at 0.95 leaves a felt gap of
-      // ~100-180ms against a nominal -50ms. Reading the nominal number is what made two
-      // earlier passes ship a pause that measured fine and felt like a stall.
-      //
-      // The pause was shortened by lengthening the DISC, not by moving the cutters
-      // earlier — that keeps the 2.0s total and leaves the carve gestures at the speed
-      // they were tuned to. A slice that takes 800ms stops reading as a cut.
-      //
-      // Both cutters share one motion law. They differentiate by distance, not curve —
-      // the slash covers 72 units to the notch's 24, so it reads as the faster, larger
-      // gesture while the notch settles last.
-      tl = gsap.timeline()
-        .to(group, { scale: 1, opacity: 1, duration: 1.00, ease: 'oa-slice-disc' }, 0)
-        .to(slash, { x: 0, y: 0, duration: 0.75, ease: 'oa-slice-cut' }, 0.95)
-        .to(notch, { x: 0, duration: 0.80, ease: 'oa-slice-cut' }, 1.20);
-    }
-
-    // Play when the mark is properly in view — a fifth of the way up, not the
-    // instant it clips the bottom edge, or a 2s animation is over before you
-    // have composed the CTA in frame.
-    new IntersectionObserver(function (entries) {
-      if (!entries[0].isIntersecting || !armed) return;
-      armed = false;
-      play();
-    }, { threshold: 0, rootMargin: '0px 0px -20% 0px' }).observe(svg);
-
-    // Rearm only once the mark has left the viewport ENTIRELY. Rewinding on the
-    // play threshold instead would reset it to invisible while it is still on
-    // screen — a small scroll down past that line would blank the mark in front
-    // of the user. Hence two observers with different bounds.
-    new IntersectionObserver(function (entries) {
-      if (entries[0].isIntersecting || armed) return;
-      armed = true;
-      if (tl) tl.pause(0); // rewind and hold at the start state, ready to replay
-    }, { threshold: 0 }).observe(svg);
-  });
-}
-
-// ============================================================
-// 9. INIT ON DOM READY
+// 8. INIT ON DOM READY
 // ============================================================
 // Run the loader immediately, NOT on DOMContentLoaded. This is a footer script so
 // the loader markup (near the top of <body>) is already parsed, and GSAP is injected
@@ -622,7 +562,7 @@ function initCtaLogo() {
 initLogoRevealLoader();
 
 // ============================================================
-// 10. STRIP ORPHANED WEBFLOW SCROLL HANDLER
+// 9. STRIP ORPHANED WEBFLOW SCROLL HANDLER
 // ============================================================
 // The "OA Statement [Scroll]" IX2 interaction (continuous "While scrolling in
 // view" on the homepage statement block) is applied site-wide, so Webflow writes
@@ -686,7 +626,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initNavAnchorLinks();
   initDirectionalHover();
   initLocalTime();
-  initCtaLogo();
+  initMarkDraw();
 });
 
 // Run after Webflow's modules (incl. IX2) have initialised and bound their
