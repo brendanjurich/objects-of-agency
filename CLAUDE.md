@@ -18,7 +18,7 @@ keys, tokens, or `.env` files.**
 | File | Purpose | Delivery |
 |------|---------|----------|
 | `src/js/oa-homepage.js` | Homepage hero carousels (hero_feed_top, hero_feed_right) + Bunny background video. Swiper via `window.oaLoadSwiper` (oa-slider.js); injects hls.js on demand (`HLS_VERSION` constant, exact-pinned). Dispatches `oa:hero-media-ready` for the loader gate. | Raw file → CDN |
-| `src/js/oa-global.js` | GSAP fail-open guard, loader, page transitions, slideshow (data-slideshow), nav animations, custom eases, Lenis smooth scroll. | Raw file → CDN |
+| `src/js/oa-global.js` | GSAP fail-open guard, loader, page transitions, slideshow (data-slideshow), nav animations, custom eases, Lenis smooth scroll, Email Direct mailto assembly (`data-oa-email`). | Raw file → CDN |
 | `src/js/oa-slider.js` | Lumos slider init (product + homepage menu). Loads the Swiper 12.2.0 bundle from jsDelivr when a slider exists and exposes the loader as `window.oaLoadSwiper` — the **single Swiper source sitewide**. | Raw file → CDN |
 | `src/js/oa-configurator.js` | Cascading slider (product carousels with GSAP, touch/click), pricing engine, summary. | Raw file → CDN |
 | `src/js/oa-all-products.js` | Osmo multi-match filter for /all-products. Reads `?filter=` URL param via `paint()` on init. | Raw file → CDN |

@@ -1,21 +1,62 @@
 # Contact Strategy
 
 <!-- created: 2026-06-04 -->
+<!-- revised: 2026-08-09 — email surface + obfuscation decided; copy-to-clipboard dropped -->
 
 ## Architecture: Two-Tier
 
-### Tier 1 — Homepage section
+### Tier 1 — The `• oa CTA` component
 
-- Display email address with **copy-to-clipboard** on click
-- Text swaps to `"Copied"` for ~1.5s on trigger, then reverts
-- Single CTA linking to `/contact` — label: **“Start a Project Brief”** (not “Contact Us”)
-- No form. No fields. Absolute minimum friction.
+The ambient contact surface. One component, reused wherever contact belongs —
+currently `/about`, and `/contact` alongside the long-form brief. It carries
+**two** controls and no form:
+
+- **“Project Brief”** → links to `/contact`. Label is deliberate — never “Contact Us”.
+- **“Email Direct”** → the e-mail address, assembled by JS at interaction time (see below).
+
+**Copy-to-clipboard is not used.** The earlier plan here specified a copy button
+with a ~1.5s `"Copied"` swap. It was assessed 09-08-2026 against Osmo Supply's
+production component and dropped. Two reasons, in order:
+
+1. It solves nothing on security. A copy button holds the address in plaintext
+   in the served HTML exactly as a `mailto:` does — a harvester reads a `<span>`
+   as easily as an `href`. It is a UX pattern wearing a security costume.
+2. It costs the `mailto:` affordance, and browsers already provide the copy
+   gesture natively (right-click → *Copy Email Address*) once the link is real.
 
 ### Tier 2 — Dedicated `/contact` page
 
 - Framed as a project brief intake, not a contact form
 - Language tuned to the architectural/design trade throughout
 - Submission triggers a response confirming receipt + expected turnaround (e.g. “We’ll respond within 48 hours”)
+- Also carries the Tier 1 CTA component, so Email Direct is available beside the long form
+
+-----
+
+## E-mail Exposure — how the address is published
+
+**The address never appears in the served HTML.** Decided 09-08-2026.
+
+The Designer holds it split on a pipe, as a custom attribute on the Button Main
+instance — `data-oa-email="hello|objects.agency"`. No `@` exists for a
+harvester's regex to match. `initEmailDirect()` in `src/js/oa-global.js` rejoins
+the parts and writes the `mailto:` href, but only on `pointerenter`, `focusin`
+or `touchstart` — so a headless harvester that executes JS but never interacts
+still gets nothing.
+
+Two layers, both of which blocked 100% of 698 harvesters in Spencer Mortensen's
+2026 honeypot study (JS concatenation, and user-interaction trigger); layering
+them is his own recommendation, since a harvester must break both.
+Ref: <https://spencermortensen.com/articles/email-obfuscation/>
+
+**Rules that follow from this:**
+
+- **Never set a Designer link to a `mailto:`.** That reinstates the exposure in
+  one click and leaves no trace in the repo. The Email Direct link prop points
+  at `/contact` — that is its no-JS fallback, not its real destination.
+- Never place the address in visible or hidden text on any element.
+- The site degrades gracefully with JS off (the FOUC pre-hide is gated on
+  `html.w-mod-js`), so the fallback link is genuinely reachable — keep it useful.
 
 -----
 

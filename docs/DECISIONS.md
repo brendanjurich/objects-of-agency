@@ -765,3 +765,25 @@ kept in the command centre. The `.oa_loader_mark*` alias died with the re-paste.
 - CTA ghost is `var(--swatch--transparent)` → renders fully invisible, so its
   `fill-opacity: 0.1` does nothing. Intentional or not, unresolved.
 - CTA line is `var(--swatch--brand-500, #fff)` — fallback no longer matches the variable.
+
+## 2026-08-09 — Email Direct: address out of the served HTML, Osmo copy-button rejected
+
+Audited Osmo Supply's "Copy Email to Clipboard" against the `• oa CTA` Email Direct
+button on `/about`. **Rejected — it is a UX pattern, not an obfuscation one.** Osmo
+keeps the address in plaintext inside a `<span>`, so a harvester reads it exactly as
+it reads an `href`. Folding it in would have changed spam exposure by zero, cost the
+`mailto:` affordance, and shipped four accessibility defects (`aria-label` swap
+instead of a live region; `blur()` on `mouseleave` destroying keyboard focus; no
+clipboard `.catch()`; copied-state that never resets on touch).
+
+Shipped instead: `initEmailDirect()` in `oa-global.js` §8. The Designer holds
+`data-oa-email="hello|objects.agency"` on the Button Main instance — no `@` in the
+served HTML — and the `mailto:` href is written only on `pointerenter`/`focusin`/
+`touchstart`. Rationale and rules in `docs/contact-strategy.md`.
+
+**The trap:** the Email Direct link prop points at `/contact`, and that is its no-JS
+fallback, NOT its destination. Setting that prop back to a `mailto:` in the Designer
+silently reinstates the exposure and leaves no trace in this repo.
+
+Latent, not yet cleared: the `• oa CTA` instance carries a second Text prop still set
+to the plaintext address on a branch that currently renders nowhere.

@@ -566,7 +566,41 @@ function initDirectionalHover() {
 }
 
 // ============================================================
-// 8. INIT ON DOM READY
+// 8. EMAIL DIRECT (mailto assembled at interaction time)
+// ============================================================
+// The address never appears in the served HTML. The Designer holds it split on
+// a pipe — data-oa-email="user|domain" — so there is no '@' for a harvester's
+// regex to match, and the href is only written once a real person hovers,
+// focuses or touches the control. Both layers scored 100% against 698 harvesters
+// in Mortensen's 2026 honeypot (JS concatenation + user-interaction trigger);
+// layering them is his own recommendation, since a harvester must break both.
+//
+// Fail-open: with this file dead the link keeps whatever href the Designer set
+// (/contact), so the control still goes somewhere useful. Never point the
+// Designer link at a mailto — that reinstates exactly what this removes.
+function initEmailDirect() {
+  document.querySelectorAll('[data-oa-email]').forEach(mount => {
+    // The Lumos Clickable renders both an <a> and a display:none <button>;
+    // only the anchor is the live control.
+    const link = mount.matches('a') ? mount : mount.querySelector('a');
+    if (!link) return;
+
+    const reveal = () => {
+      const [user, domain] = (mount.dataset.oaEmail || '').split('|');
+      if (!user || !domain) return; // malformed attribute — leave the fallback href
+      link.href = 'mailto:' + user + '@' + domain;
+    };
+
+    // once + passive: reveal is idempotent, so whichever input arrives first wins.
+    ['pointerenter', 'focusin', 'touchstart'].forEach(evt => {
+      mount.addEventListener(evt, reveal, { once: true, passive: true });
+    });
+  });
+}
+
+
+// ============================================================
+// 9. INIT ON DOM READY
 // ============================================================
 // Run the loader immediately, NOT on DOMContentLoaded. This is a footer script so
 // the loader markup (near the top of <body>) is already parsed, and GSAP is injected
@@ -576,7 +610,7 @@ function initDirectionalHover() {
 initLogoRevealLoader();
 
 // ============================================================
-// 9. STRIP ORPHANED WEBFLOW SCROLL HANDLER
+// 10. STRIP ORPHANED WEBFLOW SCROLL HANDLER
 // ============================================================
 // The "OA Statement [Scroll]" IX2 interaction (continuous "While scrolling in
 // view" on the homepage statement block) is applied site-wide, so Webflow writes
@@ -631,6 +665,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initNavAnchorLinks();
     initDirectionalHover();
     initLocalTime();
+    initEmailDirect();
     return;
   }
   initSmoothScroll();
@@ -640,6 +675,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initNavAnchorLinks();
   initDirectionalHover();
   initLocalTime();
+  initEmailDirect();
   initMarkDraw();
 });
 
