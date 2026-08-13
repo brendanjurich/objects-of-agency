@@ -26,6 +26,7 @@ keys, tokens, or `.env` files.**
 | `src/css/oa-all-products.css` | /all-products page styles. | Raw file → CDN |
 | `src/js/oa-infinite-grid.js` | Osmo infinite draggable grid (embedded variant) for product pages. Drag + idle drift via GSAP Observer; reuses `window.gsap`/`window.Observer` (no CDN GSAP). | Raw file → CDN |
 | `src/css/oa-infinite-grid.css` | Infinite grid behavioural glue (`touch-action`, status states, Designer preview). Sizing/radius/height live in the Designer. | Raw file → CDN |
+| `src/js/oa-about.js` | Osmo welcoming-words intro for /about (video beat → blur crossfade → word roll → ABOUT settles). Gates on page reveal + video `canplay`, each raced against a cap. Beat timings are Designer knobs (`data-oa_about_intro-*`). No paired CSS — nothing it needs is inexpressible in the Designer. | Raw file → CDN |
 
 **There is no build step.** Every file is served raw via jsDelivr. (The old
 Rollup → `dist/oa-homepage.js` bundle was removed at v1.0.131 — the homepage
@@ -78,6 +79,7 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 - `oa-homepage.js` — homepage (needs `window.oaLoadSwiper` from `oa-slider.js`)
 - `oa-all-products.js` + `oa-all-products.css` — /all-products
 - `oa-infinite-grid.js` + `oa-infinite-grid.css` — product template (the grid section ships per-product via a CMS toggle; the script no-ops when it's absent)
+- `oa-about.js` — /about (no ordering constraint beyond the sitewide footer: it reads `window.gsap`, and its readiness gate is its own, not `oa-global.js`'s loader gate — /about carries no `[data-load-wrap]`)
 
 > Note: `oa-configurator.js` currently loads sitewide but is only needed on
 > product pages. Scoping it to product pages would drop one script request on
