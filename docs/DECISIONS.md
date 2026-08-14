@@ -787,3 +787,66 @@ silently reinstates the exposure and leaves no trace in this repo.
 
 Latent, not yet cleared: the `• oa CTA` instance carries a second Text prop still set
 to the plaintext address on a branch that currently renders nowhere.
+
+## 2026-08-14 — About intro: the pre-hide it depends on, and three traps, v1.0.160–162
+
+`/about` gained an intro: clean video beat, then the background blur and the ABOUT
+title arrive on the same frame and resolve together (~3.6s from navigation). It began
+as an adaptation of Osmo's "Welcoming Words Loader" (v1.0.160) with a five-word roll
+and a dot; by v1.0.162 the roll, the dot, the word list and both wrapper divs were
+gone, leaving one text element under the mount. Nothing of the Osmo resource survives
+— the banner in `oa-about.js` says so rather than claiming a lineage it no longer has.
+
+Beat timings are Designer knobs on `[data-oa_about_intro-container]` —
+`-hold`, `-blur`, `-scramble` — following the `data-draw-duration` precedent. Retuning
+the sequence is a publish, not a redeploy. The entrance/exit *shapes* are not knobs;
+those are the animation's character and need a tag.
+
+**The trap: this intro has no pre-hide of its own.** Between parse and
+`DOMContentLoaded` the blur sits at opacity 1 and the title is fully visible — the
+finished frame — because `gsap.set()` has not run yet. It is invisible only because
+`/about` carries `[data-page-transition]`, so the `oa-styles.css` guard
+(`html.w-mod-js:not(.wf-design-mode) [data-page-transition]:not(:has([data-load-wrap]))`)
+holds the whole page at opacity 0 until `window.load`. Measured live: elements sit at
+their end values from ~287ms, page reveals at ~1294ms. **Remove that wrapper from
+/about and you get a ~190ms flash of the ending.** Deliberately not fixed — the failure
+needs a structural change that would also kill the page's enter fade, so it cannot go
+unnoticed for long, and the fix would put a global rule in `oa-styles.css` to serve one
+page's two elements. If the premise ever changes, this is the rule:
+
+```css
+html.w-mod-js:not(.wf-design-mode) [data-oa_about_video-blur],
+html.w-mod-js:not(.wf-design-mode) [data-oa_about_word-target] { opacity: 0; }
+```
+
+**ScrambleTextPlugin is not in Webflow's default GSAP set.** The integration ships core
++ ScrollTrigger + SplitText + CustomEase; ScrambleText needs its own toggle in Site
+Settings, and settings changes only take effect on publish. Webflow hosts the plugin at
+`cdn.prod.website-files.com/gsap/<version>/ScrambleTextPlugin.min.js`, so a per-page
+`<script>` is a viable alternative — a plugin registering against the existing core, not
+a second `window.gsap`, so it does not break the no-CDN-GSAP rule. It was shipped that
+way at v1.0.161 and replaced by the site-wide toggle at v1.0.162, which was briefly
+loading the plugin **twice**. `oa-about.js` degrades to a plain fade when the plugin is
+absent rather than failing.
+
+**Removing a combo class over the Data API reports under the child class's name.**
+Deleting `.oa_about-bg-video.u-video` returned a style called `u-video` — indistinguishable
+in the response from having just deleted the Lumos utility the whole site depends on.
+It had not; the style ids differ, and the live stylesheet still carries all 9 `.u-video`
+rules. **`.u-video` is a Lumos utility — never delete it.** Verify against the published
+CSS, not the API response, and not `document.styleSheets` (Webflow's sheet is
+cross-origin, so `cssRules` throws and a naive enumeration returns an empty list that
+reads as "no rules found").
+
+**The Data element/style APIs work without the Designer MCP app connected** — only the
+canvas tools (`designer_tool`) need it. The whole of this build's structural work was
+done that way while the Designer was unreachable. The cost: deletions made over the
+Data API **do not enter the Designer's undo history**. Removing the word roll was a
+one-way door, not an un-hide.
+
+### Verified live
+
+Reduced motion never scrambles, snaps the blur on and pauses the video at frame 0.
+Mobile 390×844 at 4× CPU throttle: 47 frames through the animation, median 16.7ms,
+p95 17.9ms, worst 23.3ms, zero frames over 32ms — a 50px `backdrop-filter` crossfade
+is not the perf problem it looks like.
