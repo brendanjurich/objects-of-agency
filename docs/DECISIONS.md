@@ -850,3 +850,32 @@ Reduced motion never scrambles, snaps the blur on and pauses the video at frame 
 Mobile 390×844 at 4× CPU throttle: 47 frames through the animation, median 16.7ms,
 p95 17.9ms, worst 23.3ms, zero frames over 32ms — a 50px `backdrop-filter` crossfade
 is not the perf problem it looks like.
+
+## 2026-08-14 — Background video: Stream vs storage, and what the source file does not control
+
+**Bunny Stream re-encodes to its own bitrate ladder regardless of source.** Measured
+the homepage hero (29.03s) from a 125MB ProRes master and from a 21MB HandBrake
+re-encode: renditions identical within noise (240p 1.21MB, 360p 2.32, 480p 3.65,
+720p 7.08, 1080p 14.71 → 15.08 after the re-encode, marginally *larger* from
+generation loss). **Compressing the source buys upload time and storage, not delivery.**
+The only lever on delivered bytes is the library's encoding settings.
+
+**Serve direct MP4 from storage only when one rendition suits everyone.** /about is
+2.2MB and hits `canplay` in ~80ms — a manifest round-trip would be pure overhead.
+Above roughly 3–5MB, Stream wins: the homepage hero delivers ~15MB to desktop but as
+little as 1.2–3.7MB to a phone, because ABR picks the rung. A single 21MB file would
+have been ~40% worse on desktop and 6–17× worse on mobile. hls.js costs 158KB.
+**The master file size is not what visitors download** — don't reason from it.
+
+**The Bunny embed toggles (Responsive/Autoplay/Preload/Loop/Muted) do nothing here.**
+They only parameterise the `<iframe>` snippet beneath them. We consume the HLS playlist
+URL into our own `<video>` via hls.js — zero iframes on the page — so playback flags
+come from attributes `oa-homepage.js` sets, with `autoplay` deliberately false so the
+loader controls start.
+
+**`bunny-bg__placeholder` is the poster, and it must stay a Webflow Image, not a
+`poster` attribute.** It loads eager at ~143ms with a 5-entry `srcset`, holds until
+`data-player-status="playing"`, then crossfades out over ~350ms. A `poster` attribute
+would lose the responsive srcset, lose the Designer swap, and **cannot crossfade** —
+the browser hard-cuts it the instant the first frame paints. It also means a slow
+first frame never exposes frame-mush, so the loader's 4s cap is not a risk.
