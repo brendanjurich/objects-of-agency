@@ -26,7 +26,7 @@ keys, tokens, or `.env` files.**
 | `src/css/oa-all-products.css` | /all-products page styles. | Raw file → CDN |
 | `src/js/oa-infinite-grid.js` | Osmo infinite draggable grid (embedded variant) for product pages. Drag + idle drift via GSAP Observer; reuses `window.gsap`/`window.Observer` (no CDN GSAP). | Raw file → CDN |
 | `src/css/oa-infinite-grid.css` | Infinite grid behavioural glue (`touch-action`, status states, Designer preview). Sizing/radius/height live in the Designer. | Raw file → CDN |
-| `src/js/oa-about.js` | /about intro: video beat → blur crossfade → ABOUT scrambles in (blur and title start together and resolve together). Gates on page reveal + video `canplay`, each raced against a cap. Needs **ScrambleTextPlugin**, loaded per-page (see Script Load Order); degrades to a plain fade without it. Beat timings are Designer knobs (`data-oa_about_intro-*`). No paired CSS — nothing it needs is inexpressible in the Designer. | Raw file → CDN |
+| `src/js/oa-about.js` | /about intro: video beat → blur crossfade → ABOUT scrambles in (blur and title start together and resolve together). Gates on page reveal + video `canplay`, each raced against a cap. Needs **ScrambleTextPlugin**, enabled site-wide in Webflow's GSAP integration; degrades to a plain fade without it. Beat timings are Designer knobs (`data-oa_about_intro-*`). No paired CSS — nothing it needs is inexpressible in the Designer. | Raw file → CDN |
 
 **There is no build step.** Every file is served raw via jsDelivr. (The old
 Rollup → `dist/oa-homepage.js` bundle was removed at v1.0.131 — the homepage
@@ -79,7 +79,7 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 - `oa-homepage.js` — homepage (needs `window.oaLoadSwiper` from `oa-slider.js`)
 - `oa-all-products.js` + `oa-all-products.css` — /all-products
 - `oa-infinite-grid.js` + `oa-infinite-grid.css` — product template (the grid section ships per-product via a CMS toggle; the script no-ops when it's absent)
-- `oa-about.js` — /about. Its readiness gate is its own, not `oa-global.js`'s loader gate (/about carries no `[data-load-wrap]`). **Ordering constraint:** `ScrambleTextPlugin.min.js` must load before it. ScrambleText is not enabled in this site's GSAP integration (which ships core + ScrollTrigger + SplitText + CustomEase), so /about's page footer loads it from Webflow's own GSAP CDN at the matching version — `https://cdn.prod.website-files.com/gsap/<gsap-version>/ScrambleTextPlugin.min.js`. This is a plugin registering against the existing core, **not** a second `window.gsap`, so it does not break the no-CDN-GSAP rule. If Webflow's GSAP version is ever bumped, bump this path with it.
+- `oa-about.js` — /about (no ordering constraint beyond the sitewide footer). Its readiness gate is its own, not `oa-global.js`'s loader gate — /about carries no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
 
 > Note: `oa-configurator.js` currently loads sitewide but is only needed on
 > product pages. Scoping it to product pages would drop one script request on
