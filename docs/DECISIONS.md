@@ -934,3 +934,20 @@ least able to absorb it. H.264 decodes in hardware everywhere.
 
 **Net:** 13.73MB → 8.53MB on the HEVC path (−38%), 11.49MB on the fallback (still
 under today), minus 158KB of JS and minus 1.15s to first byte on both.
+
+### Verified live
+
+Published 15-08-2026 at v1.0.163. Desktop 1200×1222 dpr2 and mobile 390×844 dpr3
+both select the HEVC file and play; one request each, **zero hls.js**. Media
+requests on the homepage went 11 → 1, total page requests 62 → 44. Bunny serves
+both files byte-exact (8,525,277 / 11,485,085) as `video/mp4` with
+`cache-control: public, max-age=2592000` off the Perth edge.
+
+**Mobile now downloads 8.53MB where it downloaded 13.73MB — the saving is on the
+device the old config was supposed to be protecting and wasn't.**
+
+One limit on that: viewport emulation does not emulate codec support, so the
+*bytes* are measured but HEVC selection on real mobile silicon is inferred (iOS
+Safari decodes HEVC natively; most Android SoCs have a hardware decoder). The
+H.264 fallback is verified by harness against the real file plus a live 200 on its
+URL, not by a browser that genuinely lacks HEVC.
