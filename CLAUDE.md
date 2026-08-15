@@ -56,6 +56,13 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 - `dev` — all active work
 - `main` — release branch; merge dev → main after tagging
 
+**Always `git merge --no-ff dev` into main**, with a `merge: <summary> (v1.0.X)`
+message. `main` receives nothing but merge commits and `dev` never merges back, so
+the two permanently diverge and `--ff-only` will always fail. `main` is routinely
+several releases behind — a merge normally carries every tag since the last one,
+not just the newest. Tags are pinned to commits, so merging never moves them and
+never requires a republish.
+
 ---
 
 ## Script Load Order & Placement (Webflow Custom Code)
