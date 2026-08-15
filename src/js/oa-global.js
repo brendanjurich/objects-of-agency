@@ -604,9 +604,10 @@ function initEmailDirect() {
 // ============================================================
 // Run the loader immediately, NOT on DOMContentLoaded. This is a footer script so
 // the loader markup (near the top of <body>) is already parsed, and GSAP is injected
-// ahead of footer code — both ready. DOMContentLoaded is itself held back until the
-// heavy footer scripts (hls.js, ~157KB) finish, which delayed the loader ~15s on slow
-// connections. Requires oa-global.js to load before hls.js in the footer.
+// ahead of footer code — both ready. DOMContentLoaded is itself held back until every
+// footer script finishes, so any heavy one delays the loader (a 157KB hls.js once cost
+// ~15s on slow connections; it has since been deleted entirely). Keep the loader off
+// DOMContentLoaded regardless of what the footer currently carries.
 initLogoRevealLoader();
 
 // ============================================================

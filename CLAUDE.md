@@ -17,7 +17,7 @@ keys, tokens, or `.env` files.**
 
 | File | Purpose | Delivery |
 |------|---------|----------|
-| `src/js/oa-homepage.js` | Homepage hero carousels (hero_feed_top, hero_feed_right) + Bunny background video. Swiper via `window.oaLoadSwiper` (oa-slider.js); injects hls.js on demand (`HLS_VERSION` constant, exact-pinned). Dispatches `oa:hero-media-ready` for the loader gate. | Raw file → CDN |
+| `src/js/oa-homepage.js` | Homepage hero carousels (hero_feed_top, hero_feed_right) + Bunny background video. Swiper via `window.oaLoadSwiper` (oa-slider.js); picks the HEVC or H.264 encode via `canPlayType` (`HEVC_CODEC` constant, pinned to the encode). Dispatches `oa:hero-media-ready` for the loader gate. | Raw file → CDN |
 | `src/js/oa-global.js` | GSAP fail-open guard, loader, page transitions, slideshow (data-slideshow), nav animations, custom eases, Lenis smooth scroll, Email Direct mailto assembly (`data-oa-email`). | Raw file → CDN |
 | `src/js/oa-slider.js` | Lumos slider init (product + homepage menu). Loads the Swiper 12.2.0 bundle from jsDelivr when a slider exists and exposes the loader as `window.oaLoadSwiper` — the **single Swiper source sitewide**. | Raw file → CDN |
 | `src/js/oa-configurator.js` | Cascading slider (product carousels with GSAP, touch/click), pricing engine, summary. | Raw file → CDN |
@@ -26,6 +26,7 @@ keys, tokens, or `.env` files.**
 | `src/css/oa-all-products.css` | /all-products page styles. | Raw file → CDN |
 | `src/js/oa-infinite-grid.js` | Osmo infinite draggable grid (embedded variant) for product pages. Drag + idle drift via GSAP Observer; reuses `window.gsap`/`window.Observer` (no CDN GSAP). | Raw file → CDN |
 | `src/css/oa-infinite-grid.css` | Infinite grid behavioural glue (`touch-action`, status states, Designer preview). Sizing/radius/height live in the Designer. | Raw file → CDN |
+| `src/js/oa-about.js` | /about intro: video beat → blur crossfade → ABOUT scrambles in (blur and title start together and resolve together). Gates on page reveal + video `canplay`, each raced against a cap. Needs **ScrambleTextPlugin**, enabled site-wide in Webflow's GSAP integration; degrades to a plain fade without it. Beat timings are Designer knobs (`data-oa_about_intro-*`). No paired CSS — nothing it needs is inexpressible in the Designer. | Raw file → CDN |
 
 **There is no build step.** Every file is served raw via jsDelivr. (The old
 Rollup → `dist/oa-homepage.js` bundle was removed at v1.0.131 — the homepage
@@ -72,12 +73,13 @@ When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@
 
 `oa-slider.js` **must** load before any page-level embed that calls `window.oaLoadSwiper` (currently `oa-homepage.js`). Webflow appends page-level footer code after sitewide footer code, so this holds automatically — just never move `oa-slider.js` out of the sitewide footer.
 
-**There is no `hls.js` footer script.** It was removed at v1.0.131: `oa-homepage.js` injects `hls.js` on demand (exact-pinned via its `HLS_VERSION` constant) only when a Bunny background player exists on the page. The old "oa-global.js before hls.js" ordering constraint is gone with it.
+**There is no `hls.js` anywhere.** Removed as a footer script at v1.0.131 (on-demand inject), then deleted outright when the hero moved to direct MP4 — see DECISIONS.md 2026-08-15. No page streams HLS; the old "oa-global.js before hls.js" ordering constraint is gone with it. Don't reintroduce it without re-reading that entry.
 
 **Page-level embeds** (load after the sitewide footer):
 - `oa-homepage.js` — homepage (needs `window.oaLoadSwiper` from `oa-slider.js`)
 - `oa-all-products.js` + `oa-all-products.css` — /all-products
 - `oa-infinite-grid.js` + `oa-infinite-grid.css` — product template (the grid section ships per-product via a CMS toggle; the script no-ops when it's absent)
+- `oa-about.js` — /about (no ordering constraint beyond the sitewide footer). Its readiness gate is its own, not `oa-global.js`'s loader gate — /about carries no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
 
 > Note: `oa-configurator.js` currently loads sitewide but is only needed on
 > product pages. Scoping it to product pages would drop one script request on
@@ -152,12 +154,15 @@ restart it — see DECISIONS.md 2026-06). `initSmoothScroll()` fails open if the
 CDN is down (native scroll). Bumping the version requires re-testing: scroll
 feel, menu open/close lock, page transitions, back/forward restore.
 
-### hls.js
+### Background video (no dependency)
 
-**Not a footer script** (removed at v1.0.131). Injected on demand by
-`oa-homepage.js` (`loadHls()`, exact-pinned via its `HLS_VERSION` constant —
-currently `1.6.11`) only on pages with a `[data-bunny-background-init]` player.
-Bumping the version requires re-testing video.
+Both hero encodes are direct MP4 from **Bunny storage** — no hls.js, no Bunny
+Stream, no third-party player. `oa-homepage.js` reads two Designer attributes on
+`[data-bunny-background-init]`: `data-player-src` (H.264, required) and
+`data-player-src-hevc` (HEVC, optional — clearing it falls everything back to
+H.264). Re-encoding the HEVC file at a different profile/tier/level means updating
+the `HEVC_CODEC` string in that file, or capable browsers silently take the
+fallback. Encoding recipe and the reasoning: DECISIONS.md 2026-08-15.
 
 ### Swiper
 

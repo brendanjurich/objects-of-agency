@@ -787,3 +787,167 @@ silently reinstates the exposure and leaves no trace in this repo.
 
 Latent, not yet cleared: the `• oa CTA` instance carries a second Text prop still set
 to the plaintext address on a branch that currently renders nowhere.
+
+## 2026-08-14 — About intro: the pre-hide it depends on, and three traps, v1.0.160–162
+
+`/about` gained an intro: clean video beat, then the background blur and the ABOUT
+title arrive on the same frame and resolve together (~3.6s from navigation). It began
+as an adaptation of Osmo's "Welcoming Words Loader" (v1.0.160) with a five-word roll
+and a dot; by v1.0.162 the roll, the dot, the word list and both wrapper divs were
+gone, leaving one text element under the mount. Nothing of the Osmo resource survives
+— the banner in `oa-about.js` says so rather than claiming a lineage it no longer has.
+
+Beat timings are Designer knobs on `[data-oa_about_intro-container]` —
+`-hold`, `-blur`, `-scramble` — following the `data-draw-duration` precedent. Retuning
+the sequence is a publish, not a redeploy. The entrance/exit *shapes* are not knobs;
+those are the animation's character and need a tag.
+
+**The trap: this intro has no pre-hide of its own.** Between parse and
+`DOMContentLoaded` the blur sits at opacity 1 and the title is fully visible — the
+finished frame — because `gsap.set()` has not run yet. It is invisible only because
+`/about` carries `[data-page-transition]`, so the `oa-styles.css` guard
+(`html.w-mod-js:not(.wf-design-mode) [data-page-transition]:not(:has([data-load-wrap]))`)
+holds the whole page at opacity 0 until `window.load`. Measured live: elements sit at
+their end values from ~287ms, page reveals at ~1294ms. **Remove that wrapper from
+/about and you get a ~190ms flash of the ending.** Deliberately not fixed — the failure
+needs a structural change that would also kill the page's enter fade, so it cannot go
+unnoticed for long, and the fix would put a global rule in `oa-styles.css` to serve one
+page's two elements. If the premise ever changes, this is the rule:
+
+```css
+html.w-mod-js:not(.wf-design-mode) [data-oa_about_video-blur],
+html.w-mod-js:not(.wf-design-mode) [data-oa_about_word-target] { opacity: 0; }
+```
+
+**ScrambleTextPlugin is not in Webflow's default GSAP set.** The integration ships core
++ ScrollTrigger + SplitText + CustomEase; ScrambleText needs its own toggle in Site
+Settings, and settings changes only take effect on publish. Webflow hosts the plugin at
+`cdn.prod.website-files.com/gsap/<version>/ScrambleTextPlugin.min.js`, so a per-page
+`<script>` is a viable alternative — a plugin registering against the existing core, not
+a second `window.gsap`, so it does not break the no-CDN-GSAP rule. It was shipped that
+way at v1.0.161 and replaced by the site-wide toggle at v1.0.162, which was briefly
+loading the plugin **twice**. `oa-about.js` degrades to a plain fade when the plugin is
+absent rather than failing.
+
+**Removing a combo class over the Data API reports under the child class's name.**
+Deleting `.oa_about-bg-video.u-video` returned a style called `u-video` — indistinguishable
+in the response from having just deleted the Lumos utility the whole site depends on.
+It had not; the style ids differ, and the live stylesheet still carries all 9 `.u-video`
+rules. **`.u-video` is a Lumos utility — never delete it.** Verify against the published
+CSS, not the API response, and not `document.styleSheets` (Webflow's sheet is
+cross-origin, so `cssRules` throws and a naive enumeration returns an empty list that
+reads as "no rules found").
+
+**The Data element/style APIs work without the Designer MCP app connected** — only the
+canvas tools (`designer_tool`) need it. The whole of this build's structural work was
+done that way while the Designer was unreachable. The cost: deletions made over the
+Data API **do not enter the Designer's undo history**. Removing the word roll was a
+one-way door, not an un-hide.
+
+### Verified live
+
+Reduced motion never scrambles, snaps the blur on and pauses the video at frame 0.
+Mobile 390×844 at 4× CPU throttle: 47 frames through the animation, median 16.7ms,
+p95 17.9ms, worst 23.3ms, zero frames over 32ms — a 50px `backdrop-filter` crossfade
+is not the perf problem it looks like.
+
+## 2026-08-14 — Background video: Stream vs storage, and what the source file does not control
+
+**Bunny Stream re-encodes to its own bitrate ladder regardless of source.** Measured
+the homepage hero (29.03s) from a 125MB ProRes master and from a 21MB HandBrake
+re-encode: renditions identical within noise (240p 1.21MB, 360p 2.32, 480p 3.65,
+720p 7.08, 1080p 14.71 → 15.08 after the re-encode, marginally *larger* from
+generation loss). **Compressing the source buys upload time and storage, not delivery.**
+The only lever on delivered bytes is the library's encoding settings.
+
+**Serve direct MP4 from storage only when one rendition suits everyone.** /about is
+2.2MB and hits `canplay` in ~80ms — a manifest round-trip would be pure overhead.
+Above roughly 3–5MB, Stream wins: the homepage hero delivers ~15MB to desktop but as
+little as 1.2–3.7MB to a phone, because ABR picks the rung. A single 21MB file would
+have been ~40% worse on desktop and 6–17× worse on mobile. hls.js costs 158KB.
+**The master file size is not what visitors download** — don't reason from it.
+
+**The Bunny embed toggles (Responsive/Autoplay/Preload/Loop/Muted) do nothing here.**
+They only parameterise the `<iframe>` snippet beneath them. We consume the HLS playlist
+URL into our own `<video>` via hls.js — zero iframes on the page — so playback flags
+come from attributes `oa-homepage.js` sets, with `autoplay` deliberately false so the
+loader controls start.
+
+**`bunny-bg__placeholder` is the poster, and it must stay a Webflow Image, not a
+`poster` attribute.** It loads eager at ~143ms with a 5-entry `srcset`, holds until
+`data-player-status="playing"`, then crossfades out over ~350ms. A `poster` attribute
+would lose the responsive srcset, lose the Designer swap, and **cannot crossfade** —
+the browser hard-cuts it the instant the first frame paints. It also means a slow
+first frame never exposes frame-mush, so the loader's 4s cap is not a risk.
+
+## 2026-08-15 — Background video: HLS retired, two direct MP4s from storage
+
+**Correction to the 2026-08-14 entry above.** That entry said ABR delivers "as
+little as 1.2–3.7MB to a phone" and treated the 6–17× mobile advantage as the
+reason to keep Stream. Measured on the live site, that is false. A 390×844 dpr3
+phone downloads **13.73MB — byte-identical to desktop**. Both pull `480p/video0`
+then `1080p/video1–7`.
+
+Cause: `capLevelToPlayerSize: true` resolved to `autoLevelCapping: 4`, the *top*
+rung. hls.js sizes the cap against the media element in device pixels, and the hero
+is full-viewport-height — 2532px tall at dpr3. No rung is that tall, so
+`getMaxLevelByMediaSize` falls through to the maximum. The cap was present and
+load-bearing in the comment, and did nothing. **Don't reason about ABR from the
+config; read `autoLevelCapping` off the live instance.** The real ladder, for
+reference: 240p 1.27 / 360p 2.44 / 480p 3.83 / 720p 7.42 / 1080p 15.43MB.
+
+**Retired: HLS, hls.js, and Bunny Stream for this video.** The hero was the only
+HLS consumer sitewide (`/about` has always been direct-from-storage), so the 158KB
+on-demand hls.js inject and the `HLS_VERSION` pin are both gone with it. Also gone:
+~1.15s of serial manifest round-trips (`playlist.m3u8` 576ms → `480p/video.m3u8`
+571ms) before the first video byte. The old ABR/self-heal machinery went with it —
+those existed to work around hls.js stalling permanently on a fatal network error,
+which the native media stack does not do.
+
+**Two encodes, picked by `canPlayType`.** Both direct MP4 from Bunny *storage*:
+
+| | Codec string | Size | Encode |
+|---|---|---|---|
+| `data-player-src-hevc` | `hvc1.1.6.L120.90` | 8.53MB | x265 CRF 25, `slower` |
+| `data-player-src` | `avc1.640028` | 11.49MB | x264 CRF 24, `slower` |
+
+HEVC is doing real work — at 2.35Mbps it is roughly the quality of Bunny's 1080p
+rung. The same 7–8MB in H.264 is about half the bitrate-per-pixel of Bunny's *720p*
+rung and bands visibly in dark gradients, which is most of this clip.
+
+**A bare `hvc1` fails `canPlayType` even where HEVC decodes** — Chrome returns `''`.
+The full profile/compat/tier/level string is required, which is why `HEVC_CODEC` is
+pinned to the encode. Re-encoding at a different level or tier means editing it.
+
+**`high-tier=0` is mandatory in the x265 options.** x265 defaults high-tier *on*
+whenever a Level is pinned, producing `H120`. Nothing here needs it (Main tier
+Level 4.0 allows 12Mbps; this peaks nowhere near) and it narrows hardware-decoder
+acceptance on exactly the platforms already at risk. Verify in the container, not
+the HandBrake UI — the tier bit is in `hvcC`, and x265 stamps its full option
+string into the stream.
+
+**Rejected for the fallback: VP9 and AV1.** Both beat H.264 on size, and VP9 would
+cover Windows/Linux Chrome without needing the HEVC extension. Neither has
+universal *hardware* decode. This clip loops forever behind Lenis smooth scroll and
+ScrollTrigger; software-decoding 1080p30 in perpetuity is a jank risk on the page
+least able to absorb it. H.264 decodes in hardware everywhere.
+
+**Net:** 13.73MB → 8.53MB on the HEVC path (−38%), 11.49MB on the fallback (still
+under today), minus 158KB of JS and minus 1.15s to first byte on both.
+
+### Verified live
+
+Published 15-08-2026 at v1.0.163. Desktop 1200×1222 dpr2 and mobile 390×844 dpr3
+both select the HEVC file and play; one request each, **zero hls.js**. Media
+requests on the homepage went 11 → 1, total page requests 62 → 44. Bunny serves
+both files byte-exact (8,525,277 / 11,485,085) as `video/mp4` with
+`cache-control: public, max-age=2592000` off the Perth edge.
+
+**Mobile now downloads 8.53MB where it downloaded 13.73MB — the saving is on the
+device the old config was supposed to be protecting and wasn't.**
+
+One limit on that: viewport emulation does not emulate codec support, so the
+*bytes* are measured but HEVC selection on real mobile silicon is inferred (iOS
+Safari decodes HEVC natively; most Android SoCs have a hardware decoder). The
+H.264 fallback is verified by harness against the real file plus a live 200 on its
+URL, not by a browser that genuinely lacks HEVC.

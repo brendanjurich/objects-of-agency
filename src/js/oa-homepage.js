@@ -4,8 +4,8 @@
    Raw-served (no build step). Swiper comes from window.oaLoadSwiper
    (oa-slider.js, sitewide footer) — one Swiper source for the whole
    site; the swiper-bundle registers every module, so no `modules`
-   arrays are needed. hls.js is injected on demand below, only when a
-   Bunny background player exists on the page.
+   arrays are needed. The background video is a direct MP4 from Bunny
+   storage, in two encodes — see initBunnyPlayerBackground below.
    ============================================================ */
 
 function initHeroFeedTopSwiper() {
@@ -83,20 +83,12 @@ function initHeroFeedRightSwiper() {
   });
 }
 
-// hls.js, injected on demand. This used to be a parser-blocking 157KB sitewide
-// footer <script> that every page paid for while only pages with a Bunny player
-// use it. Exact-pinned; bumping the version requires re-testing video.
-var HLS_VERSION = '1.6.11';
-function loadHls() {
-  return new Promise(function(resolve) {
-    if (window.Hls) return resolve();
-    var script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@' + HLS_VERSION;
-    script.onload = resolve;
-    script.onerror = resolve; // fail-open — the init below falls back to direct video.src
-    document.head.appendChild(script);
-  });
-}
+// The HEVC encode's exact codec string. A bare 'hvc1' returns '' even in browsers
+// that can decode it, so the full profile.compat.tier+level.constraints is required
+// to get a meaningful answer out of canPlayType. Tied to the file: Main profile,
+// Main tier, Level 4.0 (encoded with x265 high-tier=0). Re-encode at a different
+// level or tier and this string must change with it.
+var HEVC_CODEC = 'video/mp4; codecs="hvc1.1.6.L120.90"';
 
 function initBunnyPlayerBackground() {
   var players = document.querySelectorAll('[data-bunny-background-init]');
@@ -108,13 +100,21 @@ function initBunnyPlayerBackground() {
         document.addEventListener('oa:loader-complete', resolve, { once: true });
       });
 
-  loadHls().then(function() {
   players.forEach(function(player) {
-    var src = player.getAttribute('data-player-src');
-    if (!src) return;
-
     var video = player.querySelector('video');
     if (!video) return;
+
+    // Two encodes of the same clip, both direct MP4 from Bunny storage: HEVC where
+    // the browser can decode it, H.264 everywhere else. This is a real branch, not a
+    // formality — Chrome and Edge decode HEVC only via a hardware decoder, so Windows
+    // without the HEVC extension and desktop Linux both land on the H.264 file.
+    // data-player-src is the H.264 URL and is required; the HEVC one is optional, so
+    // clearing it in the Designer falls the whole site back to H.264.
+    var srcHevc = player.getAttribute('data-player-src-hevc');
+    var src = (srcHevc && video.canPlayType(HEVC_CODEC))
+      ? srcHevc
+      : player.getAttribute('data-player-src');
+    if (!src) return;
 
     try { video.pause(); } catch(_) {}
     try { video.removeAttribute('src'); video.load(); } catch(_) {}
@@ -144,14 +144,6 @@ function initBunnyPlayerBackground() {
     if (typeof video.disableRemotePlayback !== 'undefined') video.disableRemotePlayback = true;
     if (autoplay) video.autoplay = false;
 
-    // Prefer hls.js wherever it's supported; native HLS is the Safari-only fallback.
-    // Chrome returns "maybe" for canPlayType('application/vnd.apple.mpegurl'), so gating
-    // on canPlayType wrongly flagged Chrome as Safari-native and bypassed hls.js entirely —
-    // taking our ABR config + error recovery offline with it.
-    var canUseHlsJs    = !!(window.Hls && Hls.isSupported());
-    var isSafariNative = !canUseHlsJs && !!video.canPlayType('application/vnd.apple.mpegurl');
-    if (!window.Hls && !isSafariNative) { console.warn('[oa-homepage] HLS.js not loaded — falling back to direct video.src. Adaptive streaming unavailable.'); }
-
     var isAttached = false;
     var userInteracted = false;
     var lastPauseBy = '';
@@ -160,43 +152,11 @@ function initBunnyPlayerBackground() {
       if (isAttached) return;
       isAttached = true;
 
-      if (player._hls) { try { player._hls.destroy(); } catch(_) {} player._hls = null; }
-
-      if (isSafariNative) {
-        video.preload = isLazyTrue ? 'none' : 'auto';
-        video.src = src;
-        video.addEventListener('loadedmetadata', function() {
-          readyIfIdle(player, pendingPlay);
-        }, { once: true });
-      } else if (canUseHlsJs) {
-        var hls = new Hls({
-          maxBufferLength: 10,
-          abrEwmaDefaultEstimate: 3000000, // seed ~3Mbps so ABR cold-starts on a sharp rung, not the lowest (kills the blurry first 1-2s)
-          capLevelToPlayerSize: true        // backdrop never needs 1080p — caps wasted bytes
-        });
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MEDIA_ATTACHED, function() { hls.loadSource(src); });
-        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-          readyIfIdle(player, pendingPlay);
-        });
-        // hls.js self-heal: without an ERROR handler a fatal network/media error
-        // (e.g. a connection drop mid-playback) halts fragment loading for good and
-        // the video never resumes. Recover per hls.js's documented pattern.
-        hls.on(Hls.Events.ERROR, function(_, data) {
-          if (!data.fatal) return;
-          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-          else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { if (navigator.onLine) hls.startLoad(); }
-          else { try { hls.destroy(); } catch(_) {} }
-        });
-        // Connection restored after a full drop: restart loading and resume — but
-        // only if it was still mid-playback (not manually paused / scrolled away).
-        window.addEventListener('online', function() {
-          if (player._hls && !video.paused) { player._hls.startLoad(); safePlay(video); }
-        });
-        player._hls = hls;
-      } else {
-        video.src = src;
-      }
+      video.preload = isLazyTrue ? 'none' : 'auto';
+      video.src = src;
+      video.addEventListener('loadedmetadata', function() {
+        readyIfIdle(player, pendingPlay);
+      }, { once: true });
     }
 
     if (isLazyTrue) {
@@ -271,7 +231,6 @@ function initBunnyPlayerBackground() {
       player._io = io;
     }
   });
-  }); // loadHls().then — per-player setup waits for the on-demand hls.js inject
 
   function readyIfIdle(player, pendingPlay) {
     if (!pendingPlay &&
