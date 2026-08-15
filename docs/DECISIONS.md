@@ -879,3 +879,58 @@ loader controls start.
 would lose the responsive srcset, lose the Designer swap, and **cannot crossfade** —
 the browser hard-cuts it the instant the first frame paints. It also means a slow
 first frame never exposes frame-mush, so the loader's 4s cap is not a risk.
+
+## 2026-08-15 — Background video: HLS retired, two direct MP4s from storage
+
+**Correction to the 2026-08-14 entry above.** That entry said ABR delivers "as
+little as 1.2–3.7MB to a phone" and treated the 6–17× mobile advantage as the
+reason to keep Stream. Measured on the live site, that is false. A 390×844 dpr3
+phone downloads **13.73MB — byte-identical to desktop**. Both pull `480p/video0`
+then `1080p/video1–7`.
+
+Cause: `capLevelToPlayerSize: true` resolved to `autoLevelCapping: 4`, the *top*
+rung. hls.js sizes the cap against the media element in device pixels, and the hero
+is full-viewport-height — 2532px tall at dpr3. No rung is that tall, so
+`getMaxLevelByMediaSize` falls through to the maximum. The cap was present and
+load-bearing in the comment, and did nothing. **Don't reason about ABR from the
+config; read `autoLevelCapping` off the live instance.** The real ladder, for
+reference: 240p 1.27 / 360p 2.44 / 480p 3.83 / 720p 7.42 / 1080p 15.43MB.
+
+**Retired: HLS, hls.js, and Bunny Stream for this video.** The hero was the only
+HLS consumer sitewide (`/about` has always been direct-from-storage), so the 158KB
+on-demand hls.js inject and the `HLS_VERSION` pin are both gone with it. Also gone:
+~1.15s of serial manifest round-trips (`playlist.m3u8` 576ms → `480p/video.m3u8`
+571ms) before the first video byte. The old ABR/self-heal machinery went with it —
+those existed to work around hls.js stalling permanently on a fatal network error,
+which the native media stack does not do.
+
+**Two encodes, picked by `canPlayType`.** Both direct MP4 from Bunny *storage*:
+
+| | Codec string | Size | Encode |
+|---|---|---|---|
+| `data-player-src-hevc` | `hvc1.1.6.L120.90` | 8.53MB | x265 CRF 25, `slower` |
+| `data-player-src` | `avc1.640028` | 11.49MB | x264 CRF 24, `slower` |
+
+HEVC is doing real work — at 2.35Mbps it is roughly the quality of Bunny's 1080p
+rung. The same 7–8MB in H.264 is about half the bitrate-per-pixel of Bunny's *720p*
+rung and bands visibly in dark gradients, which is most of this clip.
+
+**A bare `hvc1` fails `canPlayType` even where HEVC decodes** — Chrome returns `''`.
+The full profile/compat/tier/level string is required, which is why `HEVC_CODEC` is
+pinned to the encode. Re-encoding at a different level or tier means editing it.
+
+**`high-tier=0` is mandatory in the x265 options.** x265 defaults high-tier *on*
+whenever a Level is pinned, producing `H120`. Nothing here needs it (Main tier
+Level 4.0 allows 12Mbps; this peaks nowhere near) and it narrows hardware-decoder
+acceptance on exactly the platforms already at risk. Verify in the container, not
+the HandBrake UI — the tier bit is in `hvcC`, and x265 stamps its full option
+string into the stream.
+
+**Rejected for the fallback: VP9 and AV1.** Both beat H.264 on size, and VP9 would
+cover Windows/Linux Chrome without needing the HEVC extension. Neither has
+universal *hardware* decode. This clip loops forever behind Lenis smooth scroll and
+ScrollTrigger; software-decoding 1080p30 in perpetuity is a jank risk on the page
+least able to absorb it. H.264 decodes in hardware everywhere.
+
+**Net:** 13.73MB → 8.53MB on the HEVC path (−38%), 11.49MB on the fallback (still
+under today), minus 158KB of JS and minus 1.15s to first byte on both.
