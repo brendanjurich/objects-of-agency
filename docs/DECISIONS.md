@@ -951,3 +951,41 @@ One limit on that: viewport emulation does not emulate codec support, so the
 Safari decodes HEVC natively; most Android SoCs have a hardware decoder). The
 H.264 fallback is verified by harness against the real file plus a live 200 on its
 URL, not by a browser that genuinely lacks HEVC.
+
+---
+
+## 2026-08-17 — Loader hidden in the Designer canvas (no code release)
+
+### Site custom code never reaches the Designer canvas — only an Embed's `<style>` does
+
+`oa-styles.css` has carried `html.wf-design-mode .loader { display: none !important }`
+since the loader shipped, and it works fine on the published site. It has **never**
+worked in the Designer, because the stylesheet is a `<link>` in Site Settings → Custom
+Code, and Webflow does not load site custom code into the canvas. The `.wf-design-mode`
+class is there; the rule that reads it is not. So the loader sat over the homepage in
+the Designer and had to be visibility-toggled by hand for every edit underneath it.
+
+An Embed's own `<style>` **does** render in the canvas — the same property the mark
+embed already relies on for its `:not(.wf-design-mode)` dash guard and its colour
+knobs. Any Designer-visible CSS has to live in an Embed on the page, full stop.
+
+### Fix: a dedicated `Loader — Designer Hide` embed
+
+New HtmlEmbed, first child of `.loader[data-load-wrap]` on Home:
+
+```css
+html.wf-design-mode .loader:not([data-load-peek]) { display: none !important; }
+```
+
+**Its own embed, not appended to the mark embed.** The mark embed is a
+paste-from-file artifact (`02-brand/oa-logo/animation/oa-loader-mark-embed.html` in
+the command centre) — anything added to it in the Designer dies at the next re-paste,
+silently. A separate element is immune to that.
+
+**`:not([data-load-peek])` is the escape hatch.** `!important` beats the class rule,
+so the eye icon can no longer reveal the loader. To style the loader itself, add a
+bare `data-load-peek` attribute to the Loader element and remove it afterwards. This
+inverts the toggling deliberately: zero effort for the common case (editing the page
+under the loader), one attribute for the rare one (styling the loader).
+
+Designer-only. No effect on the published site, no CDN file changed, no tag.
