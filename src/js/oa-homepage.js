@@ -123,9 +123,26 @@ function initBunnyPlayerBackground() {
       if (player.getAttribute('data-player-status') !== s) {
         player.setAttribute('data-player-status', s);
       }
+      // Mirrored onto the controls because a control is not necessarily inside the
+      // player — see ownerOf() below. The play/pause icon swap is a descendant
+      // selector off [data-player-status], so an outside control needs its own copy.
+      controls.forEach(function(btn) { btn.setAttribute('data-player-status', s); });
     }
     function setActivated(v) { player.setAttribute('data-player-activated', v ? 'true' : 'false'); }
     if (!player.hasAttribute('data-player-activated')) setActivated(false);
+
+    // Controls usually sit inside the player, but the homepage play/pause lives in the
+    // hero CTA row (.hero_feed_cta-wrap) — a sibling branch, outside
+    // [data-bunny-background-init] entirely. A control inside a player drives that
+    // player; a control outside every player drives the only player on the page. With
+    // more than one player an outside control is ambiguous, so it drives nothing
+    // rather than guessing.
+    function ownerOf(btn) {
+      return btn.closest('[data-bunny-background-init]') ||
+             (players.length === 1 ? players[0] : null);
+    }
+    var controls = [].slice.call(document.querySelectorAll('[data-player-control]'))
+      .filter(function(btn) { return ownerOf(btn) === player; });
 
     var lazyMode   = player.getAttribute('data-player-lazy');
     var isLazyTrue = lazyMode === 'true';
@@ -184,9 +201,11 @@ function initBunnyPlayerBackground() {
       player.setAttribute('data-player-muted', video.muted ? 'true' : 'false');
     }
 
-    player.addEventListener('click', function(e) {
+    // Delegated on the document, not on the player: a listener on the player can only
+    // ever see controls inside it, and the homepage play/pause is not.
+    document.addEventListener('click', function(e) {
       var btn = e.target.closest('[data-player-control]');
-      if (!btn || !player.contains(btn)) return;
+      if (!btn || ownerOf(btn) !== player) return;
       var type = btn.getAttribute('data-player-control');
       if (type === 'play' || type === 'pause' || type === 'playpause') togglePlay();
       else if (type === 'mute') toggleMute();

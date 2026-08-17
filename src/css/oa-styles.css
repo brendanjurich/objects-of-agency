@@ -802,13 +802,17 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   visibility: hidden;
 }
 
-[data-bunny-background-init][data-player-status="playing"] .bunny-bg__play-svg,
-[data-bunny-background-init][data-player-status="loading"] .bunny-bg__play-svg {
+/* Icon swap. Deliberately NOT prefixed with [data-bunny-background-init] — the
+   homepage play/pause sits in the hero CTA row, outside the player, so the status
+   is mirrored onto the control itself (oa-homepage.js setStatus). One rule set then
+   covers both placements. [data-player-status] appears nowhere else. */
+[data-player-status="playing"] .bunny-bg__play-svg,
+[data-player-status="loading"] .bunny-bg__play-svg {
   display: none;
 }
 
-[data-bunny-background-init][data-player-status="playing"] .bunny-bg__pause-svg,
-[data-bunny-background-init][data-player-status="loading"] .bunny-bg__pause-svg {
+[data-player-status="playing"] .bunny-bg__pause-svg,
+[data-player-status="loading"] .bunny-bg__pause-svg {
   display: block;
 }
 
