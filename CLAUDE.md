@@ -163,13 +163,26 @@ feel, menu open/close lock, page transitions, back/forward restore.
 
 ### Background video (no dependency)
 
-Both hero encodes are direct MP4 from **Bunny storage** — no hls.js, no Bunny
-Stream, no third-party player. `oa-homepage.js` reads two Designer attributes on
-`[data-bunny-background-init]`: `data-player-src` (H.264, required) and
-`data-player-src-hevc` (HEVC, optional — clearing it falls everything back to
-H.264). Re-encoding the HEVC file at a different profile/tier/level means updating
-the `HEVC_CODEC` string in that file, or capable browsers silently take the
-fallback. Encoding recipe and the reasoning: DECISIONS.md 2026-08-15.
+All four hero encodes are direct MP4 from **Bunny storage** — no hls.js, no Bunny
+Stream, no third-party player. Two sizes × two codecs, as Designer attributes on
+`[data-bunny-background-init]`:
+
+| Attribute | File |
+|---|---|
+| `data-player-src` | H.264 1920×1080 — **the only required one** |
+| `data-player-src-hevc` | HEVC 1920×1080 |
+| `data-player-src-mobile` | H.264 1280×720 |
+| `data-player-src-hevc-mobile` | HEVC 1280×720 |
+
+Each optional attribute degrades on its own: clear `-hevc` and everything takes
+H.264; clear either `-mobile` and that codec serves 1080p to phones. Size is chosen
+**once at attach** from `max-width: 767px` (`data-player-mobile-max` moves the
+threshold) and never re-evaluated — a src swap on rotate restarts and re-downloads
+the clip. Re-encoding the HEVC files at a different profile/tier/level means
+updating the `HEVC_CODEC` string in `oa-homepage.js`, or capable browsers silently
+take the fallback; it is deliberately probed with the 1080p string, which the lower
+720p Level can only under-report. Encoding recipe and reasoning: DECISIONS.md
+2026-08-15.
 
 ### Swiper
 

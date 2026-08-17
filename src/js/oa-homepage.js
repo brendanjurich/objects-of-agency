@@ -104,16 +104,31 @@ function initBunnyPlayerBackground() {
     var video = player.querySelector('video');
     if (!video) return;
 
-    // Two encodes of the same clip, both direct MP4 from Bunny storage: HEVC where
-    // the browser can decode it, H.264 everywhere else. This is a real branch, not a
-    // formality — Chrome and Edge decode HEVC only via a hardware decoder, so Windows
-    // without the HEVC extension and desktop Linux both land on the H.264 file.
-    // data-player-src is the H.264 URL and is required; the HEVC one is optional, so
-    // clearing it in the Designer falls the whole site back to H.264.
-    var srcHevc = player.getAttribute('data-player-src-hevc');
-    var src = (srcHevc && video.canPlayType(HEVC_CODEC))
-      ? srcHevc
-      : player.getAttribute('data-player-src');
+    // Four encodes of the same clip, all direct MP4 from Bunny storage: two sizes
+    // (1920x1080, 1280x720) x two codecs (HEVC, H.264). The codec branch is a real
+    // one, not a formality — Chrome and Edge decode HEVC only via a hardware decoder,
+    // so Windows without the HEVC extension and desktop Linux both land on H.264.
+    //
+    // Size is decided ONCE, here, and never re-evaluated. Swapping src on resize or
+    // rotate restarts the clip and re-downloads it, which costs far more than serving
+    // a landscape phone the 720p file ever saves. 767px is Webflow's "small"
+    // breakpoint (mobile landscape and below); data-player-mobile-max moves it.
+    var mobileMax = parseInt(player.getAttribute('data-player-mobile-max'), 10);
+    if (!(mobileMax > 0)) mobileMax = 767;
+    var wantsSmall = window.matchMedia('(max-width: ' + mobileMax + 'px)').matches;
+
+    // data-player-src (H.264 1080p) is the only required one. Each of the other three
+    // degrades independently: clear -hevc and everything takes H.264, clear either
+    // -mobile and that codec serves the 1080p file to phones. No combination breaks.
+    function srcFor(codec) {
+      return (wantsSmall && player.getAttribute('data-player-src' + codec + '-mobile')) ||
+             player.getAttribute('data-player-src' + codec);
+    }
+    // Probed with the 1080p codec string deliberately. The 720p encode is a lower
+    // Level, so anything that decodes the big file decodes the small one — this can
+    // only ever be conservative (a false negative drops to H.264, never a broken src).
+    var srcHevc = srcFor('-hevc');
+    var src = (srcHevc && video.canPlayType(HEVC_CODEC)) ? srcHevc : srcFor('');
     if (!src) return;
 
     try { video.pause(); } catch(_) {}
