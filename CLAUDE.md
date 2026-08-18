@@ -169,16 +169,22 @@ Stream, no third-party player. Two sizes × two codecs, as Designer attributes o
 
 | Attribute | File |
 |---|---|
-| `data-player-src` | H.264 1920×1080 — **the only required one** |
-| `data-player-src-hevc` | HEVC 1920×1080 |
-| `data-player-src-mobile` | H.264 1280×720 |
-| `data-player-src-hevc-mobile` | HEVC 1280×720 |
+| `data-player-src` | H.264 1920×1080 landscape — **the only required one** |
+| `data-player-src-hevc` | HEVC 1920×1080 landscape |
+| `data-player-src-mobile` | H.264 1080×1920 portrait |
+| `data-player-src-hevc-mobile` | HEVC 1080×1920 portrait |
+
+The mobile pair is a **9:16 portrait reframe, not a downscale** — same pixel count
+as the landscape pair, so it buys sharpness on a phone (1.3× upscale instead of
+2.3×), not bandwidth. Because it is a reframe, selection is gated on
+`(max-width: 767px) and (orientation: portrait)`: a portrait file in a landscape
+viewport crops to a ~26% sliver, worse than just serving the landscape file.
 
 Each optional attribute degrades on its own: clear `-hevc` and everything takes
-H.264; clear either `-mobile` and that codec serves 1080p to phones. Size is chosen
-**once at attach** from `max-width: 767px` (`data-player-mobile-max` moves the
-threshold) and never re-evaluated — a src swap on rotate restarts and re-downloads
-the clip. Re-encoding the HEVC files at a different profile/tier/level means
+H.264; clear either `-mobile` and that codec serves the landscape file to phones.
+Chosen **once at attach** (`data-player-mobile-max` moves the threshold) and never
+re-evaluated — a src swap on rotate restarts and re-downloads the clip, so a phone
+rotated after load keeps whichever file it opened with. Re-encoding the HEVC files at a different profile/tier/level means
 updating the `HEVC_CODEC` string in `oa-homepage.js`, or capable browsers silently
 take the fallback; it is deliberately probed with the 1080p string, which the lower
 720p Level can only under-report. Encoding recipe and reasoning: DECISIONS.md

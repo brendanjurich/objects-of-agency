@@ -104,29 +104,40 @@ function initBunnyPlayerBackground() {
     var video = player.querySelector('video');
     if (!video) return;
 
-    // Four encodes of the same clip, all direct MP4 from Bunny storage: two sizes
-    // (1920x1080, 1280x720) x two codecs (HEVC, H.264). The codec branch is a real
-    // one, not a formality — Chrome and Edge decode HEVC only via a hardware decoder,
-    // so Windows without the HEVC extension and desktop Linux both land on H.264.
+    // Four encodes of the same clip, all direct MP4 from Bunny storage: two framings
+    // (1920x1080 landscape, 1080x1920 portrait) x two codecs (HEVC, H.264). The codec
+    // branch is a real one, not a formality — Chrome and Edge decode HEVC only via a
+    // hardware decoder, so Windows without the HEVC extension and desktop Linux both
+    // land on H.264.
     //
-    // Size is decided ONCE, here, and never re-evaluated. Swapping src on resize or
-    // rotate restarts the clip and re-downloads it, which costs far more than serving
-    // a landscape phone the 720p file ever saves. 767px is Webflow's "small"
-    // breakpoint (mobile landscape and below); data-player-mobile-max moves it.
+    // The mobile file is a 9:16 PORTRAIT REFRAME, not a downscale of the landscape
+    // one, so orientation is part of the test and not an optional refinement. Handing
+    // a portrait file to a landscape phone crops it to a ~26% horizontal sliver of the
+    // frame — worse than simply serving the landscape file, which is what happens now.
+    //
+    // Decided ONCE, here, and never re-evaluated: swapping src on rotate restarts the
+    // clip and re-downloads it. A phone rotated after load therefore keeps whichever
+    // file it opened with. 767px is Webflow's "small" breakpoint;
+    // data-player-mobile-max moves it.
     var mobileMax = parseInt(player.getAttribute('data-player-mobile-max'), 10);
     if (!(mobileMax > 0)) mobileMax = 767;
-    var wantsSmall = window.matchMedia('(max-width: ' + mobileMax + 'px)').matches;
+    var wantsSmall = window.matchMedia(
+      '(max-width: ' + mobileMax + 'px) and (orientation: portrait)'
+    ).matches;
 
-    // data-player-src (H.264 1080p) is the only required one. Each of the other three
-    // degrades independently: clear -hevc and everything takes H.264, clear either
-    // -mobile and that codec serves the 1080p file to phones. No combination breaks.
+    // data-player-src (H.264 landscape) is the only required one. Each of the other
+    // three degrades independently: clear -hevc and everything takes H.264, clear
+    // either -mobile and that codec serves the landscape file to phones — a centre
+    // crop, never a broken source. No combination breaks.
     function srcFor(codec) {
       return (wantsSmall && player.getAttribute('data-player-src' + codec + '-mobile')) ||
              player.getAttribute('data-player-src' + codec);
     }
-    // Probed with the 1080p codec string deliberately. The 720p encode is a lower
-    // Level, so anything that decodes the big file decodes the small one — this can
-    // only ever be conservative (a false negative drops to H.264, never a broken src).
+    // One probe covers both HEVC files: same pixel count, same Main profile, same
+    // Level, so a device that decodes one decodes the other. Keep it that way — if the
+    // two encodes ever diverge in profile or Level, this single string starts lying.
+    // A false negative merely drops to H.264; a false POSITIVE is a black hero, because
+    // the codec is chosen up front and there is no decode-failure fallback.
     var srcHevc = srcFor('-hevc');
     var src = (srcHevc && video.canPlayType(HEVC_CODEC)) ? srcHevc : srcFor('');
     if (!src) return;
