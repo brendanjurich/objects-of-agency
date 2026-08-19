@@ -29,6 +29,28 @@
    Page-level embed (/about). Raw-served (no build).
    ============================================================ */
 
+// The HEVC encode's exact codec string — Main10 (10-bit), Main tier, Level 4.0,
+// same as the homepage hero. A bare 'hvc1' returns '' even where HEVC decodes, so
+// the full string is required. Pinned to the file: re-encode at a different
+// profile, level or tier and this must change with it.
+var HEVC_CODEC = 'video/mp4; codecs="hvc1.2.4.L120.90"';
+
+// The Designer holds the HEVC file in the video's src and the H.264 URL in
+// data-oa_about_video-fallback on the wrap (the video itself is a component
+// instance). A browser that cannot decode HEVC is swapped down here, at parse
+// time — this is a footer embed, so the element already exists and the wrong
+// file has barely started. No attribute means no swap: HEVC for everyone,
+// which is what shipped before.
+(function swapAboutVideoFallback() {
+  var wrap = document.querySelector('[data-oa_about_vid-wrap]');
+  var video = wrap && wrap.querySelector('video');
+  if (!video) return;
+  var fallback = wrap.getAttribute('data-oa_about_video-fallback');
+  if (!fallback || video.canPlayType(HEVC_CODEC)) return;
+  video.src = fallback;
+  video.load();
+})();
+
 function initAboutIntro() {
   const mount = document.querySelector('[data-oa_about_intro-container]');
   if (!mount) return; // not the About page — no-op

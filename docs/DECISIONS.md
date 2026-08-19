@@ -989,3 +989,44 @@ inverts the toggling deliberately: zero effort for the common case (editing the 
 under the loader), one attribute for the rare one (styling the loader).
 
 Designer-only. No effect on the published site, no CDN file changed, no tag.
+
+---
+
+## 2026-08-19 — Video set re-cut: main/fallback naming, and the codec string that went stale
+
+All hero video re-encoded and renamed to one convention across both pages:
+**`-main` = HEVC, `-fallback` = H.264**, in `Home/` and `About/` on Bunny storage.
+Six files, all faststart, all video-only:
+
+| Use | File | Frame | Size |
+|---|---|---|---|
+| Home desktop | `Home/oa-home-intro-main` / `-fallback` | 2048×1024 | 6.8 / 7.3 MB |
+| Home mobile portrait | `Home/oa-home-vertical-main` / `-fallback` | 720×1280 | 3.3 / 3.5 MB |
+| About | `About/about-intro-main` / `-fallback` | 2048×1024 | 0.4 / 1.3 MB |
+
+**The pinned HEVC string was still describing the old files.** The new encodes are
+**Main10 (10-bit)** — `hvc1.2.4.L120.90`, and `L93` for the vertical. `HEVC_CODEC`
+still claimed 8-bit Main (`hvc1.1.6.L120.90`), so a device that decodes 8-bit HEVC
+but not 10-bit answers "probably", takes the HEVC file and shows a black hero — the
+one failure mode with no recovery, since the codec is chosen up front. Corrected in
+`oa-homepage.js`. **Re-encoding means reading the string back out of the file
+(`hvcC`), never off the encoder preset** — the profile changes without being asked
+for.
+
+**`/about` had no fallback at all** — a single HEVC `src`, nothing for a browser
+that can't decode it. The H.264 URL now lives in `data-oa_about_video-fallback` on
+`[data-oa_about_vid-wrap]` — on the *wrap*, because the `<video>` is a component
+instance. `oa-about.js` swaps at parse time (footer embed, element already there),
+so the wrong file barely starts. No attribute = no swap, i.e. previous behaviour.
+
+**The mobile vertical hold image is wired but cannot show.** Asset and framing are
+right (720×1280, matching the vertical encode), but
+`.bunny-bg__placeholder.is-portrait` is `display: none` at base with **no breakpoint
+override**, and the landscape hold is never hidden on small — so phones get the 2:1
+still over a 9:16 video, everywhere. Designer fix (display at ≤767 on both classes),
+no code. Also on that img: a stray `data-player-activated="true"`, mis-pasted from
+the player wrapper — inert, but remove it.
+
+Desktop framing is now **2:1, not 16:9**, and the desktop hold (2048×1024) matches
+it. The `<video>` element still carries `width="1920" height="1080"`; harmless —
+it is absolutely positioned at 100%/100% with `object-fit: cover`.

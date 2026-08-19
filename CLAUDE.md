@@ -163,13 +163,40 @@ feel, menu open/close lock, page transitions, back/forward restore.
 
 ### Background video (no dependency)
 
-Both hero encodes are direct MP4 from **Bunny storage** — no hls.js, no Bunny
-Stream, no third-party player. `oa-homepage.js` reads two Designer attributes on
-`[data-bunny-background-init]`: `data-player-src` (H.264, required) and
-`data-player-src-hevc` (HEVC, optional — clearing it falls everything back to
-H.264). Re-encoding the HEVC file at a different profile/tier/level means updating
-the `HEVC_CODEC` string in that file, or capable browsers silently take the
-fallback. Encoding recipe and the reasoning: DECISIONS.md 2026-08-15.
+All hero video is direct MP4 from **Bunny storage** — no hls.js, no Bunny Stream, no
+third-party player. One naming convention across both pages: **`-main` is the HEVC
+encode, `-fallback` is H.264.** The homepage carries four, as Designer attributes on
+`[data-bunny-background-init]`:
+
+| Attribute | File |
+|---|---|
+| `data-player-src` | H.264 2048×1024 landscape — **the only required one** |
+| `data-player-src-hevc` | HEVC 2048×1024 landscape |
+| `data-player-src-mobile` | H.264 720×1280 portrait |
+| `data-player-src-hevc-mobile` | HEVC 720×1280 portrait |
+
+The mobile pair is a **9:16 portrait reframe, not a downscale**, so selection is
+gated on `(max-width: 767px) and (orientation: portrait)`: a portrait file in a
+landscape viewport crops to a ~26% sliver, worse than just serving the landscape
+file.
+
+Each optional attribute degrades on its own: clear `-hevc` and everything takes
+H.264; clear either `-mobile` and that codec serves the landscape file to phones.
+Chosen **once at attach** (`data-player-mobile-max` moves the threshold) and never
+re-evaluated — a src swap on rotate restarts and re-downloads the clip, so a phone
+rotated after load keeps whichever file it opened with.
+
+**Re-encoding means re-reading the codec string out of the file** (`hvcC`), never
+off the encoder preset, and updating `HEVC_CODEC` in `oa-homepage.js` *and*
+`oa-about.js` — currently `hvc1.2.4.L120.90` (Main10, Main tier, L4.0). Claiming a
+profile the file does not use is the one failure with no recovery: the codec is
+picked up front, so a device that says "probably" and then can't decode gets a black
+hero. Understating is safe (drops to H.264). Reasoning: DECISIONS.md 2026-08-15 and
+2026-08-19.
+
+`/about` runs the same main/fallback pair on a plain `<video>`: HEVC in `src`, H.264
+in `data-oa_about_video-fallback` on `[data-oa_about_vid-wrap]` (on the wrap — the
+video is a component instance). `oa-about.js` swaps at parse time.
 
 ### Swiper
 

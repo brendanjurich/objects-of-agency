@@ -85,10 +85,12 @@ function initHeroFeedRightSwiper() {
 
 // The HEVC encode's exact codec string. A bare 'hvc1' returns '' even in browsers
 // that can decode it, so the full profile.compat.tier+level.constraints is required
-// to get a meaningful answer out of canPlayType. Tied to the file: Main profile,
-// Main tier, Level 4.0 (encoded with x265 high-tier=0). Re-encode at a different
-// level or tier and this string must change with it.
-var HEVC_CODEC = 'video/mp4; codecs="hvc1.1.6.L120.90"';
+// to get a meaningful answer out of canPlayType. Tied to the file: Main10 profile
+// (10-bit), Main tier, Level 4.0. The vertical file is the same profile at Level
+// 3.1, which this string covers in the safe direction. Re-encode at a different
+// profile, level or tier and this string must change with it — claiming a profile
+// the file does not use is the one failure with no recovery (black hero).
+var HEVC_CODEC = 'video/mp4; codecs="hvc1.2.4.L120.90"';
 
 function initBunnyPlayerBackground() {
   var players = document.querySelectorAll('[data-bunny-background-init]');
@@ -104,16 +106,42 @@ function initBunnyPlayerBackground() {
     var video = player.querySelector('video');
     if (!video) return;
 
-    // Two encodes of the same clip, both direct MP4 from Bunny storage: HEVC where
-    // the browser can decode it, H.264 everywhere else. This is a real branch, not a
-    // formality — Chrome and Edge decode HEVC only via a hardware decoder, so Windows
-    // without the HEVC extension and desktop Linux both land on the H.264 file.
-    // data-player-src is the H.264 URL and is required; the HEVC one is optional, so
-    // clearing it in the Designer falls the whole site back to H.264.
-    var srcHevc = player.getAttribute('data-player-src-hevc');
-    var src = (srcHevc && video.canPlayType(HEVC_CODEC))
-      ? srcHevc
-      : player.getAttribute('data-player-src');
+    // Four encodes of the same clip, all direct MP4 from Bunny storage: two framings
+    // (1920x1080 landscape, 1080x1920 portrait) x two codecs (HEVC, H.264). The codec
+    // branch is a real one, not a formality — Chrome and Edge decode HEVC only via a
+    // hardware decoder, so Windows without the HEVC extension and desktop Linux both
+    // land on H.264.
+    //
+    // The mobile file is a 9:16 PORTRAIT REFRAME, not a downscale of the landscape
+    // one, so orientation is part of the test and not an optional refinement. Handing
+    // a portrait file to a landscape phone crops it to a ~26% horizontal sliver of the
+    // frame — worse than simply serving the landscape file, which is what happens now.
+    //
+    // Decided ONCE, here, and never re-evaluated: swapping src on rotate restarts the
+    // clip and re-downloads it. A phone rotated after load therefore keeps whichever
+    // file it opened with. 767px is Webflow's "small" breakpoint;
+    // data-player-mobile-max moves it.
+    var mobileMax = parseInt(player.getAttribute('data-player-mobile-max'), 10);
+    if (!(mobileMax > 0)) mobileMax = 767;
+    var wantsSmall = window.matchMedia(
+      '(max-width: ' + mobileMax + 'px) and (orientation: portrait)'
+    ).matches;
+
+    // data-player-src (H.264 landscape) is the only required one. Each of the other
+    // three degrades independently: clear -hevc and everything takes H.264, clear
+    // either -mobile and that codec serves the landscape file to phones — a centre
+    // crop, never a broken source. No combination breaks.
+    function srcFor(codec) {
+      return (wantsSmall && player.getAttribute('data-player-src' + codec + '-mobile')) ||
+             player.getAttribute('data-player-src' + codec);
+    }
+    // One probe covers both HEVC files: same pixel count, same Main profile, same
+    // Level, so a device that decodes one decodes the other. Keep it that way — if the
+    // two encodes ever diverge in profile or Level, this single string starts lying.
+    // A false negative merely drops to H.264; a false POSITIVE is a black hero, because
+    // the codec is chosen up front and there is no decode-failure fallback.
+    var srcHevc = srcFor('-hevc');
+    var src = (srcHevc && video.canPlayType(HEVC_CODEC)) ? srcHevc : srcFor('');
     if (!src) return;
 
     try { video.pause(); } catch(_) {}
