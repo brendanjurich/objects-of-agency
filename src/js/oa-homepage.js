@@ -85,10 +85,12 @@ function initHeroFeedRightSwiper() {
 
 // The HEVC encode's exact codec string. A bare 'hvc1' returns '' even in browsers
 // that can decode it, so the full profile.compat.tier+level.constraints is required
-// to get a meaningful answer out of canPlayType. Tied to the file: Main profile,
-// Main tier, Level 4.0 (encoded with x265 high-tier=0). Re-encode at a different
-// level or tier and this string must change with it.
-var HEVC_CODEC = 'video/mp4; codecs="hvc1.1.6.L120.90"';
+// to get a meaningful answer out of canPlayType. Tied to the file: Main10 profile
+// (10-bit), Main tier, Level 4.0. The vertical file is the same profile at Level
+// 3.1, which this string covers in the safe direction. Re-encode at a different
+// profile, level or tier and this string must change with it — claiming a profile
+// the file does not use is the one failure with no recovery (black hero).
+var HEVC_CODEC = 'video/mp4; codecs="hvc1.2.4.L120.90"';
 
 function initBunnyPlayerBackground() {
   var players = document.querySelectorAll('[data-bunny-background-init]');
