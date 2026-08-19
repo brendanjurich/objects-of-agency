@@ -1030,3 +1030,37 @@ the player wrapper — inert, but remove it.
 Desktop framing is now **2:1, not 16:9**, and the desktop hold (2048×1024) matches
 it. The `<video>` element still carries `width="1920" height="1080"`; harmless —
 it is absolutely positioned at 100%/100% with `object-fit: cover`.
+
+---
+
+## 2026-08-19 — The verify step is a gate, not a formality (v1.0.168)
+
+`oa-styles.css` was bumped to `@v1.0.168` in Webflow and published **before the tag
+existed**. jsDelivr answered `404` as `text/plain`, the browser ORB-blocked it, and
+the sitewide stylesheet vanished from every page.
+
+Two things make this worse than it sounds:
+
+1. **It is one link for the whole site.** A bad JS URL degrades a feature; a bad
+   `oa-styles.css` URL unstyles everything, on every page, immediately.
+2. **Creating the tag afterwards does not fix the URL.** Both
+   `raw.githubusercontent.com` and jsDelivr cached the miss. GitHub's API confirmed
+   `refs/tags/v1.0.168 → 86a8371b` while both CDNs still served `404`, and a purge
+   reported `finished` on both providers with no effect. The negative cache is
+   time-based — up to ~1h. **Fixing the cause does not clear the symptom.**
+
+**Recovery is the commit-SHA URL** (`@86a8371b3e35…`) — immutable, resolves
+independently of the tag ref, needs no purge, `200` immediately. Good to leave in
+place permanently; swapping back to the tag later is cosmetic.
+
+### The order, and where it went wrong
+
+```
+commit → tag → push tag → curl -sI the tag URL (200 + text/css) → bump → publish
+                                      ↑ gate
+```
+
+The handoff that caused this presented the tag command and the Webflow bump as one
+block, with the verify shown alongside rather than between them — easy to read as a
+checklist item rather than a precondition. **Never hand over a bump and a tag in the
+same breath.** Give the tag command, wait for the `200`, then give the URL swap.
