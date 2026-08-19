@@ -194,6 +194,15 @@ picked up front, so a device that says "probably" and then can't decode gets a b
 hero. Understating is safe (drops to H.264). Reasoning: DECISIONS.md 2026-08-15 and
 2026-08-19.
 
+```
+python3 tools/codec-string.py <file-or-url> [more...]
+```
+
+Reads the string straight out of the container and prints what the repo currently
+pins beside it, so the two can be compared by eye. Takes a local export or a URL
+(range-requested, ~1.5MB, not the whole video). `tools/` is dev-only — nothing in
+there is served.
+
 `/about` runs the same main/fallback pair on a plain `<video>`: HEVC in `src`, H.264
 in `data-oa_about_video-fallback` on `[data-oa_about_vid-wrap]` (on the wrap — the
 video is a component instance). `oa-about.js` swaps at parse time.
