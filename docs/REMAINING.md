@@ -163,6 +163,18 @@ ever leaks past the neutraliser it renders correct art, not stale). Consequence:
       srcset-right-sized, so a data-src gate would drop srcset on 3 hero images
       for a small, device-narrow residual win — not worth it once AVIF halves them.
 
+- [ ] **iPad portrait: the hero video is cropped to ~37% of the frame.** The mobile
+      gate is `(max-width: 767px) and (orientation: portrait)`, so a 768×1024 iPad
+      clears it by one pixel and takes the **2048×1024 (2:1)** desktop encode. With
+      `object-fit: cover` into a 768-wide, full-height slot that shows **768 of 2048
+      px — 37.5% of the frame**, centre-cropped; the other ~62% is thrown away. Not
+      a bug — a consequence of the gate sitting on Webflow's breakpoint — but the
+      composition was never judged at that crop. **Look at it on a real iPad first**,
+      then choose: widen the portrait gate to ≤991 (the vertical file is only 720px
+      wide, so a 768@2dpr iPad would upscale ~2.1× — probably worse), cut a third
+      tablet-framed encode, or accept it and compose the shot to survive a centre
+      slice. Same question applies to the hold image, which is cropped identically.
+
 ---
 
 ## Post-Launch
