@@ -230,20 +230,11 @@ acting on them mid-build.
 
 ---
 
-## How to Work With Me
-
-- I'm the lead creative director and designer; I own design direction.
-- Push back on design decisions that stray from convention or best practice when they'd hurt the goal — a premium, high-performing, beautifully designed site that designers love. I value your opinion here.
-- You're my technical lead and engineer. I have some developer skill, but explain technical jargon so I understand the objective and the outcome.
-- Use direct shorthand. Give tightly constrained recommendations over option lists. Surface trade-offs, then recommend one path.
-
----
-
 ## Engineering Conduct
 
-Behavioural guardrails for Claude Code on this repo. Bias toward caution over speed; use judgment on trivial changes.
+Working style and general engineering discipline are in `~/.claude/CLAUDE.md`;
+this section carries only what is specific to this repo.
 
-- **Think before coding.** State assumptions. If a *requirement* is genuinely ambiguous, name the ambiguity and ask — don't guess silently. (For *approach*, still recommend one path with trade-offs, not a menu.)
-- **Simplicity first.** Write the minimum that solves the problem. No speculative features, no abstractions for single-use code, no configurability or error handling that wasn't asked for. If it could be half the lines, rewrite it.
-- **Surgical changes.** Touch only what the task requires. Don't "improve," refactor, or reformat adjacent working code; match the existing style even if you'd do it differently. Remove only the imports/variables *your own* change orphaned — flag pre-existing dead code, don't delete it. Every changed line should trace to the request. *Especially here: jsDelivr serves these files by path and Webflow pins exact tags, so an unrequested edit can ship straight to the live site.*
+- **Surgical changes, especially here:** jsDelivr serves these files by path and
+  Webflow pins exact tags, so an unrequested edit can ship straight to the live site.
 - **Verify before "done."** Turn the task into a success criterion and confirm it's met before declaring completion. Verification on this project is visual/behavioural on staging or the published site, plus the deploy checklist for shipped changes — there is no test suite to lean on.
