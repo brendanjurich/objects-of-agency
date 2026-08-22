@@ -1,7 +1,7 @@
 /* ============================================================
-   OA — About page intro
+   OA — Intro hero
    ------------------------------------------------------------
-   Video beat → background blur → ABOUT scrambles into place.
+   Video beat → background blur → the word scrambles into place.
    Blur and title start on the same frame and resolve together,
    so the sequence lands in one moment rather than two.
 
@@ -21,12 +21,16 @@
        against a cap, plus the hero video's `canplay` raced
        against a cap — so the opening beat is real moving
        picture, not an empty box.
-     • Beat timings are Designer knobs (data-oa_about_intro-*),
+     • Beat timings are Designer knobs (data-oa_intro_*) on the
+       component's section root,
        following the data-draw-duration precedent, so retuning
        never needs a redeploy.
      • Reduced motion lands the end state with zero tweens and
        pauses the video.
-   Page-level embed (/about). Raw-served (no build).
+   Drives the `• oa Intro Hero` component, so it runs on any page
+   that carries one. Page-level embed — adding the component to a
+   page means adding this embed there too, or it renders static.
+   Raw-served (no build).
    ============================================================ */
 
 // The HEVC encode's exact codec string — Main10 (10-bit), Main tier, Level 4.0,
@@ -36,32 +40,38 @@
 var HEVC_CODEC = 'video/mp4; codecs="hvc1.2.4.L120.90"';
 
 // The Designer holds the HEVC file in the video's src and the H.264 URL in
-// data-oa_about_video-fallback on the wrap (the video itself is a component
-// instance). A browser that cannot decode HEVC is swapped down here, at parse
-// time — this is a footer embed, so the element already exists and the wrong
-// file has barely started. No attribute means no swap: HEVC for everyone,
-// which is what shipped before.
-(function swapAboutVideoFallback() {
-  var wrap = document.querySelector('[data-oa_about_vid-wrap]');
+// data-oa_intro_video-fallback on the component's section root. Root, not the
+// wrap: Webflow only binds an attribute value to a component prop on a DOM
+// element, and the section is the only one in this component's tree — the
+// wrap is a Block, which takes static attributes only. A browser that cannot
+// decode HEVC is swapped down here, at parse time — this is a footer embed, so
+// the element already exists and the wrong file has barely started. No
+// attribute means no swap: HEVC for everyone, which is what shipped before.
+(function swapIntroVideoFallback() {
+  var root = document.querySelector('[data-oa_intro-hero]');
+  var wrap = root && root.querySelector('[data-oa_intro_vid-wrap]');
   var video = wrap && wrap.querySelector('video');
   if (!video) return;
-  var fallback = wrap.getAttribute('data-oa_about_video-fallback');
+  var fallback = root.getAttribute('data-oa_intro_video-fallback');
   if (!fallback || video.canPlayType(HEVC_CODEC)) return;
   video.src = fallback;
   video.load();
 })();
 
-function initAboutIntro() {
-  const mount = document.querySelector('[data-oa_about_intro-container]');
-  if (!mount) return; // not the About page — no-op
+function initIntroHero() {
+  const root = document.querySelector('[data-oa_intro-hero]');
+  if (!root) return; // no intro hero on this page — no-op
 
-  const title = mount.querySelector('[data-oa_about_word-target]');
-  const blur = document.querySelector('[data-oa_about_video-blur]');
-  const vidWrap = document.querySelector('[data-oa_about_vid-wrap]');
+  const mount = root.querySelector('[data-oa_intro_container]');
+  if (!mount) return;
+
+  const title = mount.querySelector('[data-oa_intro_word-target]');
+  const blur = root.querySelector('[data-oa_intro_video-blur]');
+  const vidWrap = root.querySelector('[data-oa_intro_vid-wrap]');
   const video = vidWrap ? vidWrap.querySelector('video') : null;
 
   if (!title || !blur) {
-    console.warn('[oa-about] intro markup incomplete — skipping init.');
+    console.warn('[oa-intro] intro markup incomplete — skipping init.');
     return;
   }
 
@@ -77,7 +87,7 @@ function initAboutIntro() {
   };
 
   if (!window.gsap) {
-    console.warn('[oa-about] gsap unavailable — skipping intro animation.');
+    console.warn('[oa-intro] gsap unavailable — skipping intro animation.');
     endState();
     return;
   }
@@ -86,21 +96,23 @@ function initAboutIntro() {
   if (Scramble) {
     gsap.registerPlugin(Scramble); // no-op if Webflow already registered it
   } else {
-    console.warn('[oa-about] ScrambleTextPlugin unavailable — title will fade instead.');
+    console.warn('[oa-intro] ScrambleTextPlugin unavailable — title will fade instead.');
   }
 
   // Designer-owned beats. Read live so retuning is a publish, not a redeploy.
   const knob = (name, fallback) => {
-    const raw = parseFloat(mount.getAttribute('data-oa_about_intro-' + name));
+    const raw = parseFloat(root.getAttribute('data-oa_intro_' + name));
     return isNaN(raw) ? fallback : raw;
   };
   const HOLD = knob('hold', 2.3); // clean video before anything moves
   const BLUR = knob('blur', 1); // blur crossfade
   const SCRAMBLE = knob('scramble', 1); // how long the title takes to resolve
 
-  // Starting frame. Safe to set here without a CSS pre-hide: /about carries
-  // [data-page-transition], so oa-styles.css is still holding the whole page
-  // at opacity 0 and oa-global.js does not reveal it until window.load.
+  // Starting frame. Safe to set here without a CSS pre-hide, because every
+  // page carrying this component also carries [data-page-transition] on
+  // .page_wrap — oa-styles.css is still holding the whole page at opacity 0
+  // and oa-global.js does not reveal it until window.load. Put the component
+  // on a page without that attribute and the opening frame flashes unhidden.
   gsap.set(blur, {opacity: 0});
   gsap.set(title, {opacity: 0});
 
@@ -158,7 +170,7 @@ function initAboutIntro() {
   });
 }
 
-// Initialize About page intro
+// Initialize the intro hero
 document.addEventListener('DOMContentLoaded', () => {
-  initAboutIntro();
+  initIntroHero();
 });

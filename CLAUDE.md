@@ -26,7 +26,7 @@ keys, tokens, or `.env` files.**
 | `src/css/oa-all-products.css` | /all-products page styles. | Raw file → CDN |
 | `src/js/oa-infinite-grid.js` | Osmo infinite draggable grid (embedded variant) for product pages. Drag + idle drift via GSAP Observer; reuses `window.gsap`/`window.Observer` (no CDN GSAP). | Raw file → CDN |
 | `src/css/oa-infinite-grid.css` | Infinite grid behavioural glue (`touch-action`, status states, Designer preview). Sizing/radius/height live in the Designer. | Raw file → CDN |
-| `src/js/oa-about.js` | /about intro: video beat → blur crossfade → ABOUT scrambles in (blur and title start together and resolve together). Gates on page reveal + video `canplay`, each raced against a cap. Needs **ScrambleTextPlugin**, enabled site-wide in Webflow's GSAP integration; degrades to a plain fade without it. Beat timings are Designer knobs (`data-oa_about_intro-*`). No paired CSS — nothing it needs is inexpressible in the Designer. | Raw file → CDN |
+| `src/js/oa-intro.js` | Intro hero: video beat → blur crossfade → ABOUT scrambles in (blur and title start together and resolve together). Gates on page reveal + video `canplay`, each raced against a cap. Needs **ScrambleTextPlugin**, enabled site-wide in Webflow's GSAP integration; degrades to a plain fade without it. Markup comes from the reusable `• oa Intro Hero` component; beat timings are Designer knobs (`data-oa_intro_*`) on its section root. No paired CSS — nothing it needs is inexpressible in the Designer. | Raw file → CDN |
 
 **There is no build step.** Every file is served raw via jsDelivr. (The old
 Rollup → `dist/oa-homepage.js` bundle was removed at v1.0.131 — the homepage
@@ -86,7 +86,7 @@ never requires a republish.
 - `oa-homepage.js` — homepage (needs `window.oaLoadSwiper` from `oa-slider.js`)
 - `oa-all-products.js` + `oa-all-products.css` — /all-products
 - `oa-infinite-grid.js` + `oa-infinite-grid.css` — product template (the grid section ships per-product via a CMS toggle; the script no-ops when it's absent)
-- `oa-about.js` — /about (no ordering constraint beyond the sitewide footer). Its readiness gate is its own, not `oa-global.js`'s loader gate — /about carries no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
+- `oa-intro.js` — every page carrying the `• oa Intro Hero` component (/about, /contact); page-level embed, no ordering constraint beyond the sitewide footer. Its readiness gate is its own, not `oa-global.js`'s loader gate — those pages carry no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
 
 > Note: `oa-configurator.js` currently loads sitewide but is only needed on
 > product pages. Scoping it to product pages would drop one script request on
@@ -188,7 +188,7 @@ rotated after load keeps whichever file it opened with.
 
 **Re-encoding means re-reading the codec string out of the file** (`hvcC`), never
 off the encoder preset, and updating `HEVC_CODEC` in `oa-homepage.js` *and*
-`oa-about.js` — currently `hvc1.2.4.L120.90` (Main10, Main tier, L4.0). Claiming a
+`oa-intro.js` — currently `hvc1.2.4.L120.90` (Main10, Main tier, L4.0). Claiming a
 profile the file does not use is the one failure with no recovery: the codec is
 picked up front, so a device that says "probably" and then can't decode gets a black
 hero. Understating is safe (drops to H.264). Reasoning: DECISIONS.md 2026-08-15 and
@@ -204,8 +204,10 @@ pins beside it, so the two can be compared by eye. Takes a local export or a URL
 there is served.
 
 `/about` runs the same main/fallback pair on a plain `<video>`: HEVC in `src`, H.264
-in `data-oa_about_video-fallback` on `[data-oa_about_vid-wrap]` (on the wrap — the
-video is a component instance). `oa-about.js` swaps at parse time.
+in `data-oa_intro_video-fallback` on `[data-oa_intro-hero]` — the `• oa Intro Hero`
+component's section root, not the wrap, because Webflow only binds an attribute
+value to a component prop on a **DOM** element and the section is the only one in
+that tree. `oa-intro.js` swaps at parse time.
 
 ### Swiper
 
