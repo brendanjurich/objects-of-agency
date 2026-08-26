@@ -27,6 +27,7 @@ keys, tokens, or `.env` files.**
 | `src/js/oa-infinite-grid.js` | Osmo infinite draggable grid (embedded variant) for product pages. Drag + idle drift via GSAP Observer; reuses `window.gsap`/`window.Observer` (no CDN GSAP). | Raw file → CDN |
 | `src/css/oa-infinite-grid.css` | Infinite grid behavioural glue (`touch-action`, status states, Designer preview). Sizing/radius/height live in the Designer. | Raw file → CDN |
 | `src/js/oa-intro.js` | Intro hero: video beat → blur crossfade → ABOUT scrambles in (blur and title start together and resolve together). Gates on page reveal + video `canplay`, each raced against a cap. Needs **ScrambleTextPlugin**, enabled site-wide in Webflow's GSAP integration; degrades to a plain fade without it. Markup comes from the reusable `• oa Intro Hero` component; beat timings are Designer knobs (`data-oa_intro_*`) on its section root. No paired CSS — nothing it needs is inexpressible in the Designer. | Raw file → CDN |
+| `src/js/oa-text-reveal.js` | Text reveal: section headings and lead paragraphs blur in line by line on scroll, with a short scramble on the front of each line. Opt in with `data-oa-reveal` in the Designer; timings are Designer knobs (`data-oa_reveal_*`). Uses **SplitText** (`type:'lines'`, `autoSplit`, `aria:'auto'`) + **ScrambleTextPlugin**, both from Webflow's GSAP integration. Gated on `oa:loader-complete` + fonts ready. Paired pre-hide in `oa-styles.css`. | Raw file → CDN |
 
 **There is no build step.** Every file is served raw via jsDelivr. (The old
 Rollup → `dist/oa-homepage.js` bundle was removed at v1.0.131 — the homepage
@@ -75,8 +76,11 @@ never requires a republish.
 2. `oa-slider.js`
 3. `lenis` (npm, exact-pinned `@1.3.23` — JS + `lenis.css`)
 4. `oa-configurator.js`
+5. `oa-text-reveal.js`
 
 `oa-global.js` **must** load before `oa-configurator.js` (both read `window.gsap`). GSAP and its plugins are injected by Webflow ahead of the footer code, so `window.gsap` is available when these run.
+
+`oa-text-reveal.js` is the **first real ScrollTrigger consumer sitewide**. The Lenis↔ScrollTrigger glue in `oa-global.js` (`lenis.on('scroll', ScrollTrigger.update)`) was written as a documented no-op and now actually does work — verify scroll-triggered starts against Lenis, not native scroll. It must load after `oa-global.js` so Lenis exists when its triggers are created.
 
 `oa-slider.js` **must** load before any page-level embed that calls `window.oaLoadSwiper` (currently `oa-homepage.js`). Webflow appends page-level footer code after sitewide footer code, so this holds automatically — just never move `oa-slider.js` out of the sitewide footer.
 

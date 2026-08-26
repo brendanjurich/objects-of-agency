@@ -38,6 +38,17 @@ html.w-mod-js:not(.wf-design-mode) [data-page-transition]:not(:has([data-load-wr
   opacity: 0;
 }
 
+/* Pre-hide text-reveal blocks from first paint so the per-line blur-in has
+   something to reveal. Released by oa-text-reveal.js adding .oa-reveal-ready to
+   <html>, which it does on every exit path — including the fail-open ones, so a
+   missing GSAP leaves the text visible rather than blank. Scoped to Webflow's
+   own .w-mod-js (no JS = never hidden) and off in the Designer canvas.
+   Mechanism only: blur radius, durations and stagger are Designer knobs
+   (data-oa_reveal_*) on the element, never CSS values here. */
+html.w-mod-js:not(.wf-design-mode):not(.oa-reveal-ready) [data-oa-reveal] {
+  opacity: 0;
+}
+
 /* Loader — hidden in Designer & no-JS fallback */
 html.wf-design-mode .loader,
 .no-js .loader {
