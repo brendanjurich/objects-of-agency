@@ -26,7 +26,8 @@ keys, tokens, or `.env` files.**
 | `src/css/oa-all-products.css` | /all-products page styles. | Raw file → CDN |
 | `src/js/oa-infinite-grid.js` | Osmo infinite draggable grid (embedded variant) for product pages. Drag + idle drift via GSAP Observer; reuses `window.gsap`/`window.Observer` (no CDN GSAP). | Raw file → CDN |
 | `src/css/oa-infinite-grid.css` | Infinite grid behavioural glue (`touch-action`, status states, Designer preview). Sizing/radius/height live in the Designer. | Raw file → CDN |
-| `src/js/oa-about.js` | /about intro: video beat → blur crossfade → ABOUT scrambles in (blur and title start together and resolve together). Gates on page reveal + video `canplay`, each raced against a cap. Needs **ScrambleTextPlugin**, enabled site-wide in Webflow's GSAP integration; degrades to a plain fade without it. Beat timings are Designer knobs (`data-oa_about_intro-*`). No paired CSS — nothing it needs is inexpressible in the Designer. | Raw file → CDN |
+| `src/js/oa-intro.js` | Intro hero: video beat → blur crossfade → ABOUT scrambles in (blur and title start together and resolve together). Gates on page reveal + video `canplay`, each raced against a cap. Needs **ScrambleTextPlugin**, enabled site-wide in Webflow's GSAP integration; degrades to a plain fade without it. Markup comes from the reusable `• oa Intro Hero` component; beat timings are Designer knobs (`data-oa_intro_*`) on its section root. No paired CSS — nothing it needs is inexpressible in the Designer. | Raw file → CDN |
+| `src/js/oa-text-reveal.js` | Text reveal: section headings and lead paragraphs blur in line by line on scroll, with a short scramble on the front of each line. Opt in with `data-oa-reveal` in the Designer; timings are Designer knobs (`data-oa_reveal_*`). Uses **SplitText** (`type:'lines'`, `autoSplit`, `aria:'auto'`) + **ScrambleTextPlugin**, both from Webflow's GSAP integration. Gated on `oa:loader-complete` + fonts ready. Paired pre-hide in `oa-styles.css`. | Raw file → CDN |
 
 **There is no build step.** Every file is served raw via jsDelivr. (The old
 Rollup → `dist/oa-homepage.js` bundle was removed at v1.0.131 — the homepage
@@ -75,8 +76,11 @@ never requires a republish.
 2. `oa-slider.js`
 3. `lenis` (npm, exact-pinned `@1.3.23` — JS + `lenis.css`)
 4. `oa-configurator.js`
+5. `oa-text-reveal.js`
 
 `oa-global.js` **must** load before `oa-configurator.js` (both read `window.gsap`). GSAP and its plugins are injected by Webflow ahead of the footer code, so `window.gsap` is available when these run.
+
+`oa-text-reveal.js` is the **first real ScrollTrigger consumer sitewide**. The Lenis↔ScrollTrigger glue in `oa-global.js` (`lenis.on('scroll', ScrollTrigger.update)`) was written as a documented no-op and now actually does work — verify scroll-triggered starts against Lenis, not native scroll. It must load after `oa-global.js` so Lenis exists when its triggers are created.
 
 `oa-slider.js` **must** load before any page-level embed that calls `window.oaLoadSwiper` (currently `oa-homepage.js`). Webflow appends page-level footer code after sitewide footer code, so this holds automatically — just never move `oa-slider.js` out of the sitewide footer.
 
@@ -86,7 +90,7 @@ never requires a republish.
 - `oa-homepage.js` — homepage (needs `window.oaLoadSwiper` from `oa-slider.js`)
 - `oa-all-products.js` + `oa-all-products.css` — /all-products
 - `oa-infinite-grid.js` + `oa-infinite-grid.css` — product template (the grid section ships per-product via a CMS toggle; the script no-ops when it's absent)
-- `oa-about.js` — /about (no ordering constraint beyond the sitewide footer). Its readiness gate is its own, not `oa-global.js`'s loader gate — /about carries no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
+- `oa-intro.js` — every page carrying the `• oa Intro Hero` component (/about, /contact); page-level embed, no ordering constraint beyond the sitewide footer. Its readiness gate is its own, not `oa-global.js`'s loader gate — those pages carry no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
 
 > Note: `oa-configurator.js` currently loads sitewide but is only needed on
 > product pages. Scoping it to product pages would drop one script request on
@@ -188,15 +192,26 @@ rotated after load keeps whichever file it opened with.
 
 **Re-encoding means re-reading the codec string out of the file** (`hvcC`), never
 off the encoder preset, and updating `HEVC_CODEC` in `oa-homepage.js` *and*
-`oa-about.js` — currently `hvc1.2.4.L120.90` (Main10, Main tier, L4.0). Claiming a
+`oa-intro.js` — currently `hvc1.2.4.L120.90` (Main10, Main tier, L4.0). Claiming a
 profile the file does not use is the one failure with no recovery: the codec is
 picked up front, so a device that says "probably" and then can't decode gets a black
 hero. Understating is safe (drops to H.264). Reasoning: DECISIONS.md 2026-08-15 and
 2026-08-19.
 
+```
+python3 tools/codec-string.py <file-or-url> [more...]
+```
+
+Reads the string straight out of the container and prints what the repo currently
+pins beside it, so the two can be compared by eye. Takes a local export or a URL
+(range-requested, ~1.5MB, not the whole video). `tools/` is dev-only — nothing in
+there is served.
+
 `/about` runs the same main/fallback pair on a plain `<video>`: HEVC in `src`, H.264
-in `data-oa_about_video-fallback` on `[data-oa_about_vid-wrap]` (on the wrap — the
-video is a component instance). `oa-about.js` swaps at parse time.
+in `data-oa_intro_video-fallback` on `[data-oa_intro-hero]` — the `• oa Intro Hero`
+component's section root, not the wrap, because Webflow only binds an attribute
+value to a component prop on a **DOM** element and the section is the only one in
+that tree. `oa-intro.js` swaps at parse time.
 
 ### Swiper
 
@@ -221,20 +236,11 @@ acting on them mid-build.
 
 ---
 
-## How to Work With Me
-
-- I'm the lead creative director and designer; I own design direction.
-- Push back on design decisions that stray from convention or best practice when they'd hurt the goal — a premium, high-performing, beautifully designed site that designers love. I value your opinion here.
-- You're my technical lead and engineer. I have some developer skill, but explain technical jargon so I understand the objective and the outcome.
-- Use direct shorthand. Give tightly constrained recommendations over option lists. Surface trade-offs, then recommend one path.
-
----
-
 ## Engineering Conduct
 
-Behavioural guardrails for Claude Code on this repo. Bias toward caution over speed; use judgment on trivial changes.
+Working style and general engineering discipline are in `~/.claude/CLAUDE.md`;
+this section carries only what is specific to this repo.
 
-- **Think before coding.** State assumptions. If a *requirement* is genuinely ambiguous, name the ambiguity and ask — don't guess silently. (For *approach*, still recommend one path with trade-offs, not a menu.)
-- **Simplicity first.** Write the minimum that solves the problem. No speculative features, no abstractions for single-use code, no configurability or error handling that wasn't asked for. If it could be half the lines, rewrite it.
-- **Surgical changes.** Touch only what the task requires. Don't "improve," refactor, or reformat adjacent working code; match the existing style even if you'd do it differently. Remove only the imports/variables *your own* change orphaned — flag pre-existing dead code, don't delete it. Every changed line should trace to the request. *Especially here: jsDelivr serves these files by path and Webflow pins exact tags, so an unrequested edit can ship straight to the live site.*
+- **Surgical changes, especially here:** jsDelivr serves these files by path and
+  Webflow pins exact tags, so an unrequested edit can ship straight to the live site.
 - **Verify before "done."** Turn the task into a success criterion and confirm it's met before declaring completion. Verification on this project is visual/behavioural on staging or the published site, plus the deploy checklist for shipped changes — there is no test suite to lean on.

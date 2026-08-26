@@ -38,6 +38,17 @@ html.w-mod-js:not(.wf-design-mode) [data-page-transition]:not(:has([data-load-wr
   opacity: 0;
 }
 
+/* Pre-hide text-reveal blocks from first paint so the per-line blur-in has
+   something to reveal. Released by oa-text-reveal.js adding .oa-reveal-ready to
+   <html>, which it does on every exit path — including the fail-open ones, so a
+   missing GSAP leaves the text visible rather than blank. Scoped to Webflow's
+   own .w-mod-js (no JS = never hidden) and off in the Designer canvas.
+   Mechanism only: blur radius, durations and stagger are Designer knobs
+   (data-oa_reveal_*) on the element, never CSS values here. */
+html.w-mod-js:not(.wf-design-mode):not(.oa-reveal-ready) [data-oa-reveal] {
+  opacity: 0;
+}
+
 /* Loader — hidden in Designer & no-JS fallback */
 html.wf-design-mode .loader,
 .no-js .loader {
@@ -800,6 +811,18 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 [data-bunny-background-init][data-player-activated="true"] .bunny-bg__placeholder {
   opacity: 0;
   visibility: hidden;
+}
+
+/* Hold-image framing follows the VIDEO's gate, not Webflow's breakpoint.
+   oa-homepage.js picks the vertical encode on (max-width:767px) AND portrait; the
+   Designer can only express the width half, so it shows the portrait hold on every
+   viewport under 767 — including a small phone held sideways, which is being served
+   the landscape file. This restores the orientation half. Loads after Webflow's
+   stylesheet, so equal specificity is enough; no !important needed.
+   Move data-player-mobile-max and this query moves with it. */
+@media (max-width: 767px) and (orientation: landscape) {
+  .bunny-bg__placeholder { display: block; }
+  .bunny-bg__placeholder.is-portrait { display: none; }
 }
 
 /* Icon swap. Deliberately NOT prefixed with [data-bunny-background-init] — the

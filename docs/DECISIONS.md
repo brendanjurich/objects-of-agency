@@ -1030,3 +1030,120 @@ the player wrapper — inert, but remove it.
 Desktop framing is now **2:1, not 16:9**, and the desktop hold (2048×1024) matches
 it. The `<video>` element still carries `width="1920" height="1080"`; harmless —
 it is absolutely positioned at 100%/100% with `object-fit: cover`.
+
+---
+
+## 2026-08-19 — The verify step is a gate, not a formality (v1.0.168)
+
+`oa-styles.css` was bumped to `@v1.0.168` in Webflow and published **before the tag
+existed**. jsDelivr answered `404` as `text/plain`, the browser ORB-blocked it, and
+the sitewide stylesheet vanished from every page.
+
+Two things make this worse than it sounds:
+
+1. **It is one link for the whole site.** A bad JS URL degrades a feature; a bad
+   `oa-styles.css` URL unstyles everything, on every page, immediately.
+2. **Creating the tag afterwards does not fix the URL.** Both
+   `raw.githubusercontent.com` and jsDelivr cached the miss. GitHub's API confirmed
+   `refs/tags/v1.0.168 → 86a8371b` while both CDNs still served `404`, and a purge
+   reported `finished` on both providers with no effect. The negative cache is
+   time-based — up to ~1h. **Fixing the cause does not clear the symptom.**
+
+**Recovery is the commit-SHA URL** (`@86a8371b3e35…`) — immutable, resolves
+independently of the tag ref, needs no purge, `200` immediately. Good to leave in
+place permanently; swapping back to the tag later is cosmetic.
+
+### The order, and where it went wrong
+
+```
+commit → tag → push tag → curl -sI the tag URL (200 + text/css) → bump → publish
+                                      ↑ gate
+```
+
+The handoff that caused this presented the tag command and the Webflow bump as one
+block, with the verify shown alongside rather than between them — easy to read as a
+checklist item rather than a precondition. **Never hand over a bump and a tag in the
+same breath.** Give the tag command, wait for the `200`, then give the URL swap.
+
+---
+
+## 2026-08-22 — About hero generalised into `• oa Intro Hero`
+
+### `oa_about_*` → `oa_intro_*`, classes and attributes together
+
+The About hero was always a component (`• oa Intro Hero`, group `1. OA Components`),
+but everything inside it was named for the one page it ran on. Renamed all eight
+classes and all seven data attributes to the `oa_intro` prefix so the component can
+be dropped on any page. `oa_about_intro-container` would have become
+`oa_intro_intro-container` under a literal swap — the duplicated word was dropped:
+it is `oa_intro_container`, and its knobs lost the second `intro-` segment with it
+(`data-oa_intro_hold`, not `data-oa_intro_intro-hold`).
+
+Nothing outside the component definition used any of these classes, and only
+`oa-about.js` read the attributes — no CSS did. The `[data-oa_about_video-blur]`
+pre-hide rule quoted in the 2026-07 entry never shipped to `src/css/`.
+
+### Attribute values bind to props only on **DOM** elements
+
+The whole point of the rename was to expose the knobs as props. That is where it got
+interesting: `Block` elements take static custom attributes only. A prop binding on
+an attribute value requires a **DOM** element, and this component has exactly one —
+the `<section>` root. The blur, the wrap and the text container are all Blocks.
+
+So the four prop-driven attributes all live on the root:
+
+```
+[data-oa_intro-hero]                 marker, static
+  data-oa_intro_video-fallback   →   prop "Fallback Url"
+  data-oa_intro_hold             →   prop "Hold"    (number)
+  data-oa_intro_blur             →   prop "Blur"    (number)
+  data-oa_intro_scramble         →   prop "Scramble"(number)
+```
+
+and the Blocks keep bare marker attributes for querying. The script — renamed
+`oa-about.js` → `oa-intro.js` in the same release, since it is no longer about one
+page — now resolves the root first and scopes every lookup inside it, which is also
+what stops a second instance on the same page from cross-wiring. It stays a
+**page-level** embed: adding the component to a page means adding the embed there
+too. Its opacity-0 opening frame is only safe because the pages carrying it also
+carry `[data-page-transition]` on `.page_wrap`; on a page without that, the first
+frame flashes unhidden.
+
+Number props *do* bind to attribute values — `bindableTo` on a number prop includes
+`string`. Verified, not assumed.
+
+### The MCP `value_binding` field does not work — use `static_json`
+
+`data_element_settings_tool > set_settings` documents `value_binding` on an
+`attributes[]` entry. Every call with it returns:
+
+```
+attributes[0] ("data-…"): value must be a string or a binding
+```
+
+on Blocks *and* on DOM elements, with a valid prop id. What works is writing the
+Designer's own stored shape through `static_json` on the same key:
+
+```json
+[{"name":"data-oa_intro_hold","value":{"sourceType":"prop","propId":"3c87b626-…"}}]
+```
+
+`camelCase`, and `propId` — not the tool's own `source_type` / `prop_id` casing.
+Read an existing working binding back with `get_settings type:"all_raw_settings"`
+to copy the shape; `Visual Video` is the reference. Note that `set_settings` on the
+`attributes` key **replaces the whole list**, and an operation is atomic — one bad
+entry rolls back the good ones alongside it.
+
+Binding a *nested instance's* prop to an outer prop is unaffected:
+`set_component_instance_prop_values` with `type:"bindable"` works as documented.
+
+### The component still carries dead props
+
+15 of its props (`Eyebrow`, `Heading`, `Paragraph`, `Button 1`, `Button 2`, `Image`,
+and the `Video` group's `Visibility`) bind to nothing — leftovers from whatever Lumos
+hero it was duplicated from. The elements they addressed were deleted long ago. They
+are still listed in the Designer's component panel, which makes the real knobs harder
+to find. Left in place deliberately; removing them is a separate decision.
+
+`oa_about_vid-placeholder` is an orphan style with the same history — not applied to
+any element, renamed to nothing, left alone.
