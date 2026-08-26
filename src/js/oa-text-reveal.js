@@ -123,11 +123,22 @@ function initTextReveal() {
 
     var played = false;
 
-    // aria:'auto' puts the full text on the block as an aria-label and marks
+    // Split the text leaves, not the block. Handed a container, SplitText wraps
+    // the whole subtree as a single "line": nothing staggers, and every line then
+    // carries markup — which trips the scramble guard in play() and drops the
+    // gesture outright. Splitting the leaves gives back plain-text lines the
+    // scramble can rewrite. One instance over several targets keeps the lines in
+    // document order, so heading and paragraph share one stagger and still read
+    // as one gesture. A block that IS the text — the attribute straight on an h2,
+    // as the Designer usage describes — has no leaves and splits itself.
+    var leaves = block.querySelectorAll('h1, h2, h3, h4, h5, h6, p');
+    var targets = leaves.length ? leaves : block;
+
+    // aria:'auto' puts the full text on each target as an aria-label and marks
     // every line aria-hidden, so a screen reader still hears one sentence.
     // autoSplit re-measures on resize and font swap — the thing Oimachi's
     // frozen inline-block lines can't do.
-    var split = SplitTextPlugin.create(block, {
+    var split = SplitTextPlugin.create(targets, {
       type: 'lines',
       aria: 'auto',
       autoSplit: true,
