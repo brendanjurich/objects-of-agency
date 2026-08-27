@@ -436,6 +436,23 @@ function initNavAnchorLinks() {
     // — it would run after ours and drag the page the last 130px back down.
     e.stopPropagation();
 
+    // That same stopPropagation also blinds Webflow's dropdown-close handler,
+    // which is delegated on document — so a category link in the mega menu
+    // scrolled the page but left the dropdown hanging open. Confirmed by
+    // neutralising stopPropagation live: Webflow then closes it correctly, which
+    // pins the cause here rather than on the dropdown's open-on-hover setting.
+    // Escape is the only programmatic close Webflow honours — .click() on the
+    // toggle is ignored, and so is a synthetic outside click. It reads the
+    // LEGACY keyCode, not key: dispatching { key: 'Escape' } alone does nothing.
+    // A fresh keydown propagates normally; only this click was stopped.
+    const dropdown = a.closest('.w-dropdown');
+    const dropdownToggle = dropdown && dropdown.querySelector('.w-dropdown-toggle');
+    if (dropdownToggle && dropdownToggle.classList.contains('w--open')) {
+      dropdownToggle.dispatchEvent(new KeyboardEvent('keydown', {
+        bubbles: true, key: 'Escape', keyCode: 27, which: 27
+      }));
+    }
+
     const scrollToTarget = function () {
       // Clearance under the fixed nav comes from the section's own
       // scroll-margin-top, so it stays one number, editable in the Designer —
