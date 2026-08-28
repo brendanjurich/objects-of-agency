@@ -32,10 +32,10 @@
        publish, not a redeploy. Defaults are Oimachi's numbers.
      • The pre-hide lives in oa-styles.css under Webflow's own
        .w-mod-js, so a dead script leaves every block visible.
-     • Gated on oa:loader-complete — an above-the-fold heading would
-       otherwise burn its reveal behind the loader — and on fonts
-       being ready, since line breaks measured in a fallback face
-       are the wrong line breaks.
+     • Gated on oa:page-revealed — an above-the-fold heading would
+       otherwise burn its reveal behind the loader, or behind the page
+       transition's own fade — and on fonts being ready, since line
+       breaks measured in a fallback face are the wrong line breaks.
      • Reduced motion lands the end state with zero tweens and no
        split at all.
    Sitewide footer embed, after oa-global.js. Raw-served (no build).
@@ -49,6 +49,10 @@ var OA_REVEAL_DEFAULTS = {
   duration: 1,
   stagger: 0.15,
   scramble: 0.4,
+  // Lead-in before the first line moves. 0 by default: the reveal already
+  // starts on the frame the page finishes fading in, so this is a tuning
+  // lever for pushing a block clear of that fade, not part of the fix.
+  delay: 0,
   start: 'top 90%',
 };
 
@@ -96,13 +100,26 @@ function initTextReveal() {
         new Promise(function (resolve) { setTimeout(resolve, 1500); }),
       ]);
 
-  var loaderDone = document.documentElement.classList.contains('loader-complete')
+  // The page transition holds the whole page at opacity 0 until its enter fade
+  // finishes, so `oa:page-revealed` (oa-global.js §4) is the first frame anything
+  // here can actually be seen. Gating on the loader instead fired at
+  // DOMContentLoaded on the no-loader pages, and an above-the-fold heading burnt
+  // its whole reveal behind the black — invisible uncached, fine cached, which is
+  // exactly how it was reported (28-08-2026). Two fail-opens: a page with no
+  // transition wrapper never fires the event, and a cap covers a transition that
+  // dies mid-flight. The cap sits above the transition's own worst case (1.2s
+  // load cap + 0.6s fade).
+  var pageRevealed = !document.querySelector('[data-page-transition]')
+      || document.documentElement.classList.contains('page-revealed')
     ? Promise.resolve()
-    : new Promise(function (resolve) {
-        document.addEventListener('oa:loader-complete', resolve, { once: true });
-      });
+    : Promise.race([
+        new Promise(function (resolve) {
+          document.addEventListener('oa:page-revealed', resolve, { once: true });
+        }),
+        new Promise(function (resolve) { setTimeout(resolve, 3000); }),
+      ]);
 
-  Promise.all([fontsReady, loaderDone]).then(function () {
+  Promise.all([fontsReady, pageRevealed]).then(function () {
     blocks.forEach(buildBlock);
     releaseTextReveal();
     // Masonry, lazy images and the page transition all settle around now; start
@@ -119,6 +136,7 @@ function initTextReveal() {
     var DURATION = knob('duration', OA_REVEAL_DEFAULTS.duration);
     var STAGGER = knob('stagger', OA_REVEAL_DEFAULTS.stagger);
     var SCRAMBLE = knob('scramble', OA_REVEAL_DEFAULTS.scramble);
+    var DELAY = knob('delay', OA_REVEAL_DEFAULTS.delay);
     var START = block.getAttribute('data-oa_reveal_start') || OA_REVEAL_DEFAULTS.start;
 
     var played = false;
@@ -164,7 +182,7 @@ function initTextReveal() {
 
     function play(lines) {
       lines.forEach(function (line, i) {
-        var delay = i * STAGGER;
+        var delay = DELAY + i * STAGGER;
 
         // Hint only for the duration of the tween — a permanent will-change on
         // a blurred layer is an expensive thing to leave lying around.

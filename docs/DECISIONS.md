@@ -1147,3 +1147,36 @@ to find. Left in place deliberately; removing them is a separate decision.
 
 `oa_about_vid-placeholder` is an orphan style with the same history — not applied to
 any element, renamed to nothing, left alone.
+
+---
+
+## 2026-08-28 — Text reveal re-gated on the page transition, not the loader
+
+### The reveal was playing behind an invisible page
+
+On All Products and the product template the blur-in read as static text unless the
+page was cached. Same shape as the 2026-06-03 pop-in, one layer up: those pages carry
+no `[data-load-wrap]`, so `initLoader()` calls `revealAfterLoader()` synchronously
+during `DOMContentLoaded` and `oa:loader-complete` — the reveal's old gate — fires
+immediately. The page itself is still at `opacity:0` until `initPageTransition()`
+fades it in at `window.load`. Uncached, an above-the-fold block had fully resolved
+before the fade landed; cached, `window.load` arrived early enough that the two
+overlapped and it looked correct.
+
+The fix is a new event, `oa:page-revealed`, dispatched from the *end* of the enter
+fade (`onComplete`, or immediately in the loader/reduced-motion snap branch), plus
+`.page-revealed` on `<html>` for late listeners. `oa-text-reveal.js` gates on that
+instead of the loader. **A fixed delay was rejected** — it would have to be tuned
+against an unknowable load time and would break again on the next slow asset.
+
+Two fail-opens on the new gate, or the text stays pre-hidden for the life of the
+page: resolve immediately when the page carries no `[data-page-transition]`, and race
+a 3s cap (above the transition's own worst case of a 1.2s load cap + 0.6s fade).
+Homepage behaviour is unchanged — the snap branch fires on the same frame
+`oa:loader-complete` did.
+
+### `data-oa_reveal_delay` is a tuning lever, not the fix
+
+Added alongside, default `0`, applied ahead of the per-line stagger. It exists to push
+a block clear of the fade's tail in the Designer without a redeploy. If it ever needs
+a large value to make the reveal visible, the gate is broken — fix the gate.

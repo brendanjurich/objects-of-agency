@@ -66,11 +66,27 @@ function initPageTransition() {
   // Content starts hidden via the CSS guard in oa-styles.css. Loader pages let
   // the loader own the reveal moment (snap, no double fade); same for reduced
   // motion. Otherwise fade it in.
+  // `oa:page-revealed` marks the frame the content is actually visible — the
+  // END of the fade, not its start. oa-text-reveal.js gates on it: started any
+  // earlier, an above-the-fold block plays its blur-in behind a page still at
+  // opacity 0 and, on an uncached load, has fully resolved by the time the fade
+  // lands (bug, 28-08-2026). The class is for listeners that attach late.
+  const revealed = function () {
+    document.documentElement.classList.add('page-revealed');
+    document.dispatchEvent(new CustomEvent('oa:page-revealed'));
+  };
+
   const reveal = function () {
     if (loaderWillRun || reduce) {
       gsap.set(content, { autoAlpha: 1 });
+      revealed();
     } else {
-      gsap.to(content, { autoAlpha: 1, duration: 0.6, ease: 'slideshow-wipe' });
+      gsap.to(content, {
+        autoAlpha: 1,
+        duration: 0.6,
+        ease: 'slideshow-wipe',
+        onComplete: revealed,
+      });
     }
   };
 
