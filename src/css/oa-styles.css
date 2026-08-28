@@ -838,13 +838,3 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 [data-player-status="loading"] .bunny-bg__pause-svg {
   display: block;
 }
-
-
-/* oa_statement_blur: soften the wipe's leading (top) edge as the overlay sweeps
-   down through the text. Load-bearing on this light theme — black text fading on
-   the light bg makes the moving edge conspicuous; the extra feather (beyond the
-   40px blur) keeps it from reading as a line. Do NOT remove. */
-.oa_statement_blur {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
-}
