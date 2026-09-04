@@ -800,6 +800,25 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   will-change: transform;
 }
 
+/* Product slider — WebKit cold-load collapse. The slide's height comes only from
+   .static_design_card's aspect-ratio, but .slider_list is a flex row with the
+   default align-items:stretch, and its ancestors are height-driven
+   (.static_slider_contain height:100% → .static_slider_offset flex:1 1 0%). So
+   stretch hands the slide a *definite* cross size from a parent that has no size
+   of its own, a definite height beats aspect-ratio, and Safari settles on the
+   empty flex line's strut (10.65625px) and never re-resolves — the frame renders
+   as an ~11px strip of the image, clipped by the overflow:hidden above.
+   Chrome resolves the same chain correctly. A reload hides it: the cached <img>
+   has intrinsic height at first layout, so the aspect-ratio is never needed —
+   which is why it only ever showed on a first, uncached visit (desktop Safari
+   too, not just mobile). Opting the slides out of the stretch puts the card back
+   on its own aspect-ratio. No-op in Chrome and on warm loads; verified in WebKit
+   cold-load to match the warm layout exactly at both mobile and desktop.
+   Scoped to the product slider — the homepage .slider_wrap slider is unaffected. */
+.static_slider_contain .slider_list > * {
+  align-self: flex-start;
+}
+
 /* Bunny Background Video Player */
 [data-bunny-background-init] .bunny-bg__placeholder {
   transition: opacity 0.3s linear, visibility 0.3s linear;
