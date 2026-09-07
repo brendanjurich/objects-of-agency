@@ -228,14 +228,6 @@ The greeting rotation in `oa-styles.css` is hardcoded for exactly **9 greetings*
 
 ---
 
-## Scope
-
-Until launch, stay focused on finishing the site. Out of scope for now: business
-strategy, marketing, and new features — capture stray ideas elsewhere rather than
-acting on them mid-build.
-
----
-
 ## Engineering Conduct
 
 Working style and general engineering discipline are in `~/.claude/CLAUDE.md`;
