@@ -56,7 +56,17 @@
   const startedAt = Date.now();
 
   // ---- values (inner-group scoping only; a step being hidden never hides its answers)
-  const off = el => !!el.closest('[data-oa-brief-branch][hidden],[data-oa-brief-when][hidden],[data-oa-brief-unless][hidden]');
+  // Step blocks carry branch attributes too, and a step that isn't current is hidden — that
+  // must never switch its answers off, only a scoped inner group (branch/when/unless) may.
+  const off = el => {
+    let n = el.parentElement;
+    while (n && n !== root) {
+      if (n.hidden && !n.hasAttribute('data-oa-brief-step') &&
+          (n.hasAttribute('data-oa-brief-branch') || n.hasAttribute('data-oa-brief-when') || n.hasAttribute('data-oa-brief-unless'))) return true;
+      n = n.parentElement;
+    }
+    return false;
+  };
   const inputs = n => $$('[name="' + n + '"]');
   function val(n) {
     const els = inputs(n); if (!els.length) return null;
@@ -98,7 +108,11 @@
     const h = $('.brief_question_title', st.els[0]) || st.els[0].querySelector('h2');
     if (status && h) status.textContent = h.textContent;
     if (back) back.hidden = idx === 0;
-    if (next) next.hidden = !!st.els.some(el => el.querySelector('[data-oa-brief-auto]')) || st.id === 'you' || st.id === 'looking';
+    // Auto-advance groups hide Continue only until they hold an answer — a restored draft
+    // re-checks the radio, and a re-click fires no change event, so the visitor would be stuck.
+    const auto = st.els.some(el => el.querySelector('[data-oa-brief-auto]'));
+    const autoAnswered = auto && st.els.some(el => el.querySelector('[data-oa-brief-auto] input:checked'));
+    if (next) next.hidden = (auto && !autoAnswered) || st.id === 'you' || st.id === 'looking';
     if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
     reveal(st.els);
     if (push) history.pushState({ oaBrief: idx }, '');
