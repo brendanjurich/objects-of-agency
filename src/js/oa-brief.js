@@ -252,6 +252,7 @@
   });
 
   // ---- init
+  const errInit = $('[data-oa-brief-error]'); if (errInit) errInit.hidden = true;
   restore();
   history.replaceState({ oaBrief: 0 }, '');
   show(0, false);
