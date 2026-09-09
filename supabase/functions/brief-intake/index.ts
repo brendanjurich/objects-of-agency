@@ -83,7 +83,7 @@ async function send(to: string, subject: string, html: string, text: string) {
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-    body: JSON.stringify({ from: FROM, to, subject, html, text }),
+    body: JSON.stringify({ from: FROM, to, subject, html, text, reply_to: STUDIO_TO }),
   });
   if (!r.ok) console.error("resend", r.status, await r.text());
 }
@@ -143,6 +143,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(origin) });
   if (req.method !== "POST") return json(405, { error: "method" }, origin);
 
+  const len = Number(req.headers.get("content-length") ?? 0);
+  if (len > 32_000) return json(413, { error: "size" }, origin);
   let body: Body;
   try { body = await req.json(); } catch { return json(400, { error: "json" }, origin); }
 
