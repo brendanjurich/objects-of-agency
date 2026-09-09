@@ -142,9 +142,11 @@
     if (t.closest('[data-oa-brief-auto]')) setTimeout(() => show(idx + 1, true), 160);
     save();
   });
-  if (next) next.addEventListener('click', () => show(idx + 1, true));
-  if (back) back.addEventListener('click', () => history.back());
-  window.addEventListener('popstate', e => { if (e.state && typeof e.state.oaBrief === 'number') show(e.state.oaBrief, false); else show(0, false); });
+  // Webflow renders custom-tag buttons as <a href="#">: swallow the default or the hash
+  // navigation fires popstate and drops the visitor back to screen one.
+  if (next) next.addEventListener('click', e => { e.preventDefault(); show(idx + 1, true); });
+  if (back) back.addEventListener('click', e => { e.preventDefault(); history.back(); });
+  window.addEventListener('popstate', e => { if (e.state && typeof e.state.oaBrief === 'number') show(e.state.oaBrief, false); });
 
   // ---- pieces: catalogue autocomplete + tags
   const pieceInput = $('[data-oa-brief-piece-input]');
