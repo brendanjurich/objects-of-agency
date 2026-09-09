@@ -1,6 +1,7 @@
 name: Supabase keep-alive
 # Free-tier projects pause after 7 days without an API request; every third day keeps it warm.
-# The URL and the publishable key are public by design (the same key ships in the browser).
+# No headers: the ping function is deployed with JWT verification off. GitHub refuses to
+# register a workflow file that contains an API-key-style header string (bisected 09-09-2026).
 on:
   workflow_dispatch:
   schedule:
@@ -9,4 +10,4 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - run: curl -fsS "https://nleekoypvxoagnwiqtzz.supabase.co/functions/v1/ping" -H "apikey: sb_publishable_FGXZjb4nFgynlvd1pyuoEA_KkbfXed8"
+      - run: curl -fsS "https://nleekoypvxoagnwiqtzz.supabase.co/functions/v1/ping"
