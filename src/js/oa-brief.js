@@ -72,7 +72,13 @@
     const els = inputs(n); if (!els.length) return null;
     if (els[0].type === 'checkbox') return els.filter(e => e.checked && !off(e)).map(e => e.value);
     if (els[0].type === 'radio') { const c = els.filter(e => e.checked && !off(e))[0]; return c ? c.value : null; }
-    const e = els.filter(e => !off(e))[0] || els[0]; return e.value;
+    // Text fields can exist on more than one step (email on looking + you, note on bespoke +
+    // when): prefer the one on the step currently shown, then any that holds a value.
+    const cand = els.filter(e => !off(e));
+    const vis = cand.filter(e => { const st = e.closest('[data-oa-brief-step]'); return st && !st.hidden; })[0];
+    if (vis) return vis.value;
+    const filled = cand.filter(e => e.value)[0];
+    return (filled || cand[0] || els[0]).value;
   }
   const has = cond => { const i = cond.indexOf('='); const k = cond.slice(0, i), v = cond.slice(i + 1); const x = val(k); return Array.isArray(x) ? x.indexOf(v) >= 0 : x === v; };
   const branch = () => val('audience');
