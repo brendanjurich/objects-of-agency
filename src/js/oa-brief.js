@@ -106,7 +106,8 @@
     const r = route(); idx = Math.max(0, Math.min(i, r.length - 1)); const st = r[idx];
     steps.forEach(s => s.els.forEach(el => { el.hidden = s !== st; }));
     scopeInner(st);
-    if (st.id === 'you') { renderSummary(); mountTurnstile(); }
+    if (st.id === 'you') renderSummary();
+    if (st.id === 'you' || st.id === 'looking') mountTurnstile();
     if (st.id === 'piece') renderPieces();
     const n = idx + 1, N = branch() ? r.length : '…';
     if (progress) progress.textContent = 'Question ' + n + ' of ' + N;
@@ -200,16 +201,34 @@
     });
   }
 
-  // ---- Turnstile (invisible), loaded only when the send screen is reached
-  let widgetId = null, turnstileLoading = false;
+  // ---- Turnstile (invisible). Host is a JS-made div on the root, outside any step, so it
+  // renders whether the send screen is 'looking' or 'you'. Tokens are single-use: reset after
+  // a failed send. Mount is lazy — first time a send screen shows.
+  let widgetId = null, turnstileLoading = false, token = '', tokenResolve = null;
+  const tokenReady = () => new Promise(res => { if (token) return res(token); tokenResolve = res; });
   function mountTurnstile() {
-    const host = $('[data-oa-brief-turnstile]'); if (!TURNSTILE_KEY || !host || widgetId !== null || turnstileLoading) return;
+    if (!TURNSTILE_KEY || widgetId !== null || turnstileLoading) return;
     turnstileLoading = true;
-    const render = () => { widgetId = window.turnstile.render(host, { sitekey: TURNSTILE_KEY, size: 'invisible' }); };
+    let host = $('[data-oa-brief-turnstile-host]');
+    if (!host) { host = document.createElement('div'); host.setAttribute('data-oa-brief-turnstile-host', ''); root.appendChild(host); }
+    const render = () => {
+      widgetId = window.turnstile.render(host, {
+        sitekey: TURNSTILE_KEY, size: 'invisible',
+        callback: t => { token = t; if (tokenResolve) { tokenResolve(t); tokenResolve = null; } },
+        'error-callback': () => { token = ''; if (tokenResolve) { tokenResolve(''); tokenResolve = null; } },
+        'expired-callback': () => { token = ''; }
+      });
+    };
     if (window.turnstile) return render();
     const s = document.createElement('script'); s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; s.async = true; s.onload = render; document.head.appendChild(s);
   }
-  const turnstileToken = () => (window.turnstile && widgetId !== null) ? window.turnstile.getResponse(widgetId) : '';
+  async function turnstileToken() {
+    if (!TURNSTILE_KEY) return '';
+    mountTurnstile();
+    if (token) return token;
+    return Promise.race([tokenReady(), new Promise(res => setTimeout(() => res(token), 10000))]);
+  }
+  function turnstileReset() { token = ''; if (window.turnstile && widgetId !== null) { try { window.turnstile.reset(widgetId); } catch (e) {} } }
 
   // ---- finish / send
   function finish(ref) {
@@ -224,22 +243,23 @@
     reveal(st.els);
     try { sessionStorage.removeItem(STORE); } catch (e) {}
   }
-  function payload() {
+  async function payload() {
     const p = {}; KEYS.forEach(k => { p[k] = val(k); });
     p.email = val('email'); p.pieces = state.pieces; p.website = val('website') || '';
-    p.referrer = document.referrer || ''; p.origin_url = location.href; p.started_at = startedAt; p.turnstile = turnstileToken();
+    p.referrer = document.referrer || ''; p.origin_url = location.href; p.started_at = startedAt; p.turnstile = await turnstileToken();
     return p;
   }
   async function send(btn) {
     if (!ENDPOINT) { console.warn('oa-brief: no data-oa-brief-endpoint'); return finish(''); }
     btn.disabled = true; if (status) status.textContent = 'Sending…';
     try {
-      const r = await fetch(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()) });
+      const body = JSON.stringify(await payload());
+      const r = await fetch(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || r.status);
       finish(j.ref || '');
     } catch (e) {
-      btn.disabled = false;
+      btn.disabled = false; turnstileReset();
       if (status) status.textContent = "That didn't send. Please try again, or email us directly.";
       console.error('oa-brief', e);
     }
