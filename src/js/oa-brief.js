@@ -28,6 +28,7 @@
     looking: "Thanks for looking. If you left an email, you'll hear from us when there's something worth showing."
   };
   const STORE = 'oa-brief';
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const $ = (sel, el) => (el || root).querySelector(sel);
   // Webflow renders a Rich Text block as <div class="w-richtext"><p>…</p></div>.
   // Setting textContent on the wrapper destroys the <p> and the Designer styling
@@ -289,7 +290,11 @@
     const err = $('[data-oa-brief-error]');
     const addr = (val('email') || '').trim();
     const field = inputs('email').filter(e => { const st = e.closest('[data-oa-brief-step]'); return st && !st.hidden; })[0];
-    if (!addr || (field && !field.checkValidity())) { if (err) err.hidden = false; if (field) field.focus(); if (status && err) status.textContent = err.textContent; return; }
+    // Never use checkValidity() here. Lumos's Form Input emits pattern="" when its
+    // Pattern prop is blank, and an empty pattern matches only the empty string, so
+    // every real address reports invalid. Validate the shape ourselves — same rule
+    // the Edge Function applies server-side.
+    if (!EMAIL_RE.test(addr)) { if (err) err.hidden = false; if (field) field.focus(); if (status && err) status.textContent = err.textContent; return; }
     if (err) err.hidden = true;
     send(sendBtn);
   });
