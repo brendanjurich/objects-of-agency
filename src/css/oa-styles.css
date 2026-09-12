@@ -857,3 +857,16 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 [data-player-status="loading"] .bunny-bg__pause-svg {
   display: block;
 }
+
+/* ============================================================
+   PROJECT BRIEF (/contact) — pre-hide
+   ============================================================
+   oa-brief.js is a page-level footer embed, so between first paint and the
+   script running every step is in the document and the whole brief flashes.
+   Show only the opening question until the engine marks the root ready; after
+   that the engine owns visibility (it sets display inline).
+   Gated on .w-mod-js and scoped to the opening step, so with JS off or the
+   script missing the visitor still sees the first question rather than nothing. */
+html.w-mod-js [data-oa-brief]:not([data-oa-brief-ready]) [data-oa-brief-step]:not([data-oa-brief-step="who"]) {
+  display: none !important;
+}

@@ -206,6 +206,30 @@
 
   // ---- summary
   function label(name, v) { const el = inputs(name).filter(e => e.value === v)[0]; const l = el && el.closest('label'); return l ? l.textContent.trim() : v; }
+  // If the Designer provides a row template inside [data-oa-brief-summary], clone it
+  // per answer and fill its key / value / change slots. That way the summary is built
+  // and styled in the Designer — visible on the canvas — instead of from class names
+  // invented here. Without a template we fall back to plain generated markup.
+  const summaryTpl = (() => {
+    const t = $('[data-oa-brief-summary-row]');
+    if (!t) return null;
+    const clone = t.cloneNode(true);
+    clone.removeAttribute('data-oa-brief-summary-row');
+    setHidden(t, true);
+    return clone;
+  })();
+  function rowFromTemplate(k, v, onChange) {
+    const row = summaryTpl.cloneNode(true);
+    const key = row.querySelector('[data-oa-brief-summary-key]');
+    const val = row.querySelector('[data-oa-brief-summary-value]');
+    const chg = row.querySelector('[data-oa-brief-summary-change]');
+    setText(key, k); setText(val, v);
+    if (chg) {
+      if (onChange) chg.addEventListener('click', e => { e.preventDefault(); onChange(); });
+      else setHidden(chg, true);
+    }
+    return row;
+  }
   function renderSummary() {
     const dl = $('[data-oa-brief-summary]'); if (!dl) return; dl.innerHTML = '';
     const rows = [];
@@ -222,12 +246,14 @@
     add(has('after=bespoke') ? 'bespoke' : 'when', 'Note', val('note'));
     const r = route();
     rows.forEach(([step, k, v]) => {
+      const at = r.findIndex(s => s.id === step);
+      const jump = at >= 0 ? () => show(at, true) : null;
+      if (summaryTpl) { dl.appendChild(rowFromTemplate(k, v, jump)); return; }
       const row = document.createElement('div'); row.className = 'brief_summary_row';
       const dt = document.createElement('div'); dt.className = 'brief_summary_key'; dt.textContent = k;
       const dd = document.createElement('div'); dd.className = 'brief_summary_value'; dd.textContent = v;
       row.append(dt, dd);
-      const at = r.findIndex(s => s.id === step);
-      if (at >= 0) { const b = document.createElement('button'); b.type = 'button'; b.className = 'brief_summary_change'; b.textContent = 'Change'; b.addEventListener('click', () => show(at, true)); row.appendChild(b); }
+      if (jump) { const b = document.createElement('button'); b.type = 'button'; b.className = 'brief_summary_change'; b.textContent = 'Change'; b.addEventListener('click', jump); row.appendChild(b); }
       dl.appendChild(row);
     });
   }
@@ -318,4 +344,6 @@
   restore();
   history.replaceState({ oaBrief: 0 }, '');
   show(0, false);
+  // Releases the pre-hide in oa-styles.css. From here the engine owns visibility.
+  root.setAttribute('data-oa-brief-ready', '');
 })();
