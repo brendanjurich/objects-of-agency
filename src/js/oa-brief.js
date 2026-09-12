@@ -30,6 +30,16 @@
   const STORE = 'oa-brief';
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const $ = (sel, el) => (el || root).querySelector(sel);
+  // `el.hidden` alone is not enough: the UA rule [hidden]{display:none} loses to any
+  // author rule that sets display (.brief_answers_step is display:flex), which left
+  // every step rendered at once. Drive display inline too; clearing it hands the
+  // visible value back to the Designer's class.
+  function setHidden(el, on) {
+    if (!el) return;
+    el.hidden = !!on;
+    if (on) el.style.setProperty('display', 'none', 'important');
+    else el.style.removeProperty('display');
+  }
   // Webflow renders a Rich Text block as <div class="w-richtext"><p>…</p></div>.
   // Setting textContent on the wrapper destroys the <p> and the Designer styling
   // that hangs off it, so write into the leaf when there is one.
@@ -97,9 +107,9 @@
 
   function scopeInner(st) {
     st.els.forEach(el => {
-      $$('[data-oa-brief-branch]', el).forEach(g => { g.hidden = !inBranch(g.getAttribute('data-oa-brief-branch')); });
-      $$('[data-oa-brief-when]', el).forEach(g => { g.hidden = !has(g.getAttribute('data-oa-brief-when')); });
-      $$('[data-oa-brief-unless]', el).forEach(g => { g.hidden = has(g.getAttribute('data-oa-brief-unless')); });
+      $$('[data-oa-brief-branch]', el).forEach(g => setHidden(g, !inBranch(g.getAttribute('data-oa-brief-branch'))));
+      $$('[data-oa-brief-when]', el).forEach(g => setHidden(g, !has(g.getAttribute('data-oa-brief-when'))));
+      $$('[data-oa-brief-unless]', el).forEach(g => setHidden(g, has(g.getAttribute('data-oa-brief-unless'))));
     });
   }
 
@@ -111,9 +121,10 @@
   }
 
   let idx = 0;
+  let first = true;
   function show(i, push) {
     const r = route(); idx = Math.max(0, Math.min(i, r.length - 1)); const st = r[idx];
-    steps.forEach(s => s.els.forEach(el => { el.hidden = s !== st; }));
+    steps.forEach(s => s.els.forEach(el => setHidden(el, s !== st)));
     scopeInner(st);
     if (st.id === 'you') renderSummary();
     if (st.id === 'you' || st.id === 'looking') mountTurnstile();
@@ -123,15 +134,18 @@
     document.title = 'Question ' + n + ' of ' + N + ' — New Project Brief';
     const h = $('.brief_question_title', st.els[0]) || st.els[0].querySelector('h2');
     if (status && h) status.textContent = h.textContent;
-    if (back) back.hidden = idx === 0;
+    setHidden(back, idx === 0);
     // Auto-advance groups hide Continue only until they hold an answer — a restored draft
     // re-checks the radio, and a re-click fires no change event, so the visitor would be stuck.
     const auto = st.els.some(el => el.querySelector('[data-oa-brief-auto]'));
     const autoAnswered = auto && st.els.some(el => el.querySelector('[data-oa-brief-auto] input:checked'));
-    if (next) next.hidden = (auto && !autoAnswered) || st.id === 'you' || st.id === 'looking';
-    if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+    setHidden(next, (auto && !autoAnswered) || st.id === 'you' || st.id === 'looking');
+    // Focus the heading only when the visitor moves between steps. Doing it on the
+    // first render puts a focus ring on the opening question before anyone has acted.
+    if (h && !first) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
     reveal(st.els);
     if (push) history.pushState({ oaBrief: idx }, '');
+    first = false;
     save();
   }
   const KEYS = ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','note','interest','name','first_name','last_name','practice'];
@@ -250,12 +264,12 @@
   // ---- finish / send
   function finish(ref) {
     const st = steps.filter(s => s.id === 'sent')[0];
-    steps.forEach(s => s.els.forEach(el => { el.hidden = s !== st; }));
+    steps.forEach(s => s.els.forEach(el => setHidden(el, s !== st)));
     const name = firstName();
     $$('[data-oa-brief-sent-heading]').forEach(h => setText(h, 'Sent.' + (name ? ' Thank you, ' + name + '.' : ' Thank you.')));
     $$('[data-oa-brief-sent-body]').forEach(b => setText(b, SENT[branch()] || SENT.client));
-    $$('[data-oa-brief-ref-line]').forEach(r => { setText(r, ref ? 'Your reference is ' + ref + '.' : ''); r.hidden = !ref; });
-    if (nav) nav.hidden = true; if (progress) setText(progress, ''); document.title = 'Sent — New Project Brief';
+    $$('[data-oa-brief-ref-line]').forEach(r => { setText(r, ref ? 'Your reference is ' + ref + '.' : ''); setHidden(r, !ref); });
+    setHidden(nav, true); if (progress) setText(progress, ''); document.title = 'Sent — New Project Brief';
     if (status) status.textContent = 'Brief sent.';
     reveal(st.els);
     try { sessionStorage.removeItem(STORE); } catch (e) {}
@@ -294,13 +308,13 @@
     // Pattern prop is blank, and an empty pattern matches only the empty string, so
     // every real address reports invalid. Validate the shape ourselves — same rule
     // the Edge Function applies server-side.
-    if (!EMAIL_RE.test(addr)) { if (err) err.hidden = false; if (field) field.focus(); if (status && err) status.textContent = err.textContent; return; }
-    if (err) err.hidden = true;
+    if (!EMAIL_RE.test(addr)) { setHidden(err, false); if (field) field.focus(); if (status && err) status.textContent = err.textContent; return; }
+    setHidden(err, true);
     send(sendBtn);
   });
 
   // ---- init
-  const errInit = $('[data-oa-brief-error]'); if (errInit) errInit.hidden = true;
+  setHidden($('[data-oa-brief-error]'), true);
   restore();
   history.replaceState({ oaBrief: 0 }, '');
   show(0, false);
