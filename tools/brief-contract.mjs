@@ -26,7 +26,7 @@ const check = (label, cond, detail = '') => (cond ? ok : fail).push(label + (det
 
 // 1. engine present and single root
 const ver = Number(((html.match(/v1\.0\.(\d+)\/src\/js\/oa-brief\.js/) || [])[1]) || 0);
-check('engine >= v1.0.183 (split-name support)', ver >= 183, 'page loads v1.0.' + ver);
+check('engine >= v1.0.184 (split name + email validation)', ver >= 184, 'page loads v1.0.' + ver);
 check('exactly one [data-oa-brief] root', count(/data-oa-brief=""/g) === 1, count(/data-oa-brief=""/g) + ' found');
 check('endpoint knob', has(/data-oa-brief-endpoint="https/));
 
