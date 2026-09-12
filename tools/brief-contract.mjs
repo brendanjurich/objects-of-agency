@@ -26,7 +26,7 @@ const check = (label, cond, detail = '') => (cond ? ok : fail).push(label + (det
 
 // 1. engine present and single root
 const ver = Number(((html.match(/v1\.0\.(\d+)\/src\/js\/oa-brief\.js/) || [])[1]) || 0);
-check('engine >= v1.0.184 (split name + email validation)', ver >= 184, 'page loads v1.0.' + ver);
+check('engine >= v1.0.185 (hides steps against class display overrides)', ver >= 185, 'page loads v1.0.' + ver);
 check('exactly one [data-oa-brief] root', count(/data-oa-brief=""/g) === 1, count(/data-oa-brief=""/g) + ' found');
 check('endpoint knob', has(/data-oa-brief-endpoint="https/));
 
@@ -67,6 +67,19 @@ check('every checkbox/radio carries a value', !/(type="(?:checkbox|radio)"[^>]*v
 // 7. conditional groups
 check('month reveal group (timing=date)', has(/data-oa-brief-when="timing=date"/));
 check('note suppression (unless after=bespoke)', has(/data-oa-brief-unless="after=bespoke"/));
+
+// Informational: a class that sets `display` on a step block outranks the UA
+// [hidden] rule. The engine forces display inline now, but knowing is useful.
+try {
+  const cssHref = (html.match(/https:\/\/cdn\.prod\.website-files\.com\/[^"']+\.css/) || [])[0];
+  if (cssHref) {
+    const css = await (await fetch(cssHref)).text();
+    for (const cls of ['brief_answers_step', 'brief_question']) {
+      const rule = new RegExp('\\.' + cls + '[^{]*\\{[^}]*display\\s*:', 'i');
+      if (rule.test(css)) console.log('  note  .' + cls + ' sets `display` — engine overrides it inline; do not rely on [hidden] alone');
+    }
+  }
+} catch {}
 
 console.log('PASS (' + ok.length + ')');
 ok.forEach(l => console.log('  ok   ' + l));
