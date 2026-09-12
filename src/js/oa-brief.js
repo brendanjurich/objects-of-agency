@@ -125,7 +125,15 @@
     if (push) history.pushState({ oaBrief: idx }, '');
     save();
   }
-  const KEYS = ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','note','interest','name','practice'];
+  const KEYS = ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','note','interest','name','first_name','last_name','practice'];
+  // The Designer splits the name into two fields. Compose the single `name` the
+  // Edge Function stores; fall back to a lone `name` input if one ever returns.
+  function fullName() {
+    const whole = val('name');
+    if (whole) return whole;
+    return [val('first_name'), val('last_name')].filter(Boolean).join(' ') || null;
+  }
+  const firstName = () => (val('first_name') || val('name') || '').trim().split(' ')[0];
   function save() {
     const s = {}; KEYS.forEach(k => { s[k] = val(k); }); s.pieces = state.pieces; s.skipWhat = state.skipWhat;
     try { sessionStorage.setItem(STORE, JSON.stringify(s)); } catch (e) {}
@@ -234,10 +242,10 @@
   function finish(ref) {
     const st = steps.filter(s => s.id === 'sent')[0];
     steps.forEach(s => s.els.forEach(el => { el.hidden = s !== st; }));
-    const name = (val('name') || '').split(' ')[0];
-    const h = $('[data-oa-brief-sent-heading]'); if (h) h.textContent = 'Sent.' + (name ? ' Thank you, ' + name + '.' : ' Thank you.');
-    const body = $('[data-oa-brief-sent-body]'); if (body) body.textContent = SENT[branch()] || SENT.client;
-    const refLine = $('[data-oa-brief-ref-line]'); if (refLine) { refLine.textContent = ref ? 'Your reference is ' + ref + '.' : ''; refLine.hidden = !ref; }
+    const name = firstName();
+    $$('[data-oa-brief-sent-heading]').forEach(h => { h.textContent = 'Sent.' + (name ? ' Thank you, ' + name + '.' : ' Thank you.'); });
+    $$('[data-oa-brief-sent-body]').forEach(b => { b.textContent = SENT[branch()] || SENT.client; });
+    $$('[data-oa-brief-ref-line]').forEach(r => { r.textContent = ref ? 'Your reference is ' + ref + '.' : ''; r.hidden = !ref; });
     if (nav) nav.hidden = true; if (progress) progress.textContent = ''; document.title = 'Sent — New Project Brief';
     if (status) status.textContent = 'Brief sent.';
     reveal(st.els);
@@ -245,6 +253,7 @@
   }
   async function payload() {
     const p = {}; KEYS.forEach(k => { p[k] = val(k); });
+    p.name = fullName(); delete p.first_name; delete p.last_name;
     p.email = val('email'); p.pieces = state.pieces; p.website = val('website') || '';
     p.referrer = document.referrer || ''; p.origin_url = location.href; p.started_at = startedAt; p.turnstile = await turnstileToken();
     return p;
@@ -269,10 +278,10 @@
   const sendBtn = $('[data-oa-brief-send]');
   if (sendBtn) sendBtn.addEventListener('click', e => {
     e.preventDefault();
-    const youStep = steps.filter(s => s.id === 'you')[0];
-    const email = youStep ? $('[name=email]', youStep.els[1] || youStep.els[0]) : null;
     const err = $('[data-oa-brief-error]');
-    if (!email || !email.value || !email.checkValidity()) { if (err) err.hidden = false; if (email) email.focus(); if (status && err) status.textContent = err.textContent; return; }
+    const addr = (val('email') || '').trim();
+    const field = inputs('email').filter(e => { const st = e.closest('[data-oa-brief-step]'); return st && !st.hidden; })[0];
+    if (!addr || (field && !field.checkValidity())) { if (err) err.hidden = false; if (field) field.focus(); if (status && err) status.textContent = err.textContent; return; }
     if (err) err.hidden = true;
     send(sendBtn);
   });
