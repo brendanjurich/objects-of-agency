@@ -29,6 +29,14 @@
   };
   const STORE = 'oa-brief';
   const $ = (sel, el) => (el || root).querySelector(sel);
+  // Webflow renders a Rich Text block as <div class="w-richtext"><p>…</p></div>.
+  // Setting textContent on the wrapper destroys the <p> and the Designer styling
+  // that hangs off it, so write into the leaf when there is one.
+  function setText(el, text) {
+    if (!el) return;
+    const leaf = el.querySelector('p, h1, h2, h3, h4, h5, h6');
+    (leaf || el).textContent = text;
+  }
   const $$ = (sel, el) => Array.prototype.slice.call((el || root).querySelectorAll(sel));
 
   // ---- steps: pair the two columns by step id, in DOM order of the question column
@@ -110,7 +118,7 @@
     if (st.id === 'you' || st.id === 'looking') mountTurnstile();
     if (st.id === 'piece') renderPieces();
     const n = idx + 1, N = branch() ? r.length : '…';
-    if (progress) progress.textContent = 'Question ' + n + ' of ' + N;
+    if (progress) setText(progress, 'Question ' + n + ' of ' + N);
     document.title = 'Question ' + n + ' of ' + N + ' — New Project Brief';
     const h = $('.brief_question_title', st.els[0]) || st.els[0].querySelector('h2');
     if (status && h) status.textContent = h.textContent;
@@ -243,10 +251,10 @@
     const st = steps.filter(s => s.id === 'sent')[0];
     steps.forEach(s => s.els.forEach(el => { el.hidden = s !== st; }));
     const name = firstName();
-    $$('[data-oa-brief-sent-heading]').forEach(h => { h.textContent = 'Sent.' + (name ? ' Thank you, ' + name + '.' : ' Thank you.'); });
-    $$('[data-oa-brief-sent-body]').forEach(b => { b.textContent = SENT[branch()] || SENT.client; });
-    $$('[data-oa-brief-ref-line]').forEach(r => { r.textContent = ref ? 'Your reference is ' + ref + '.' : ''; r.hidden = !ref; });
-    if (nav) nav.hidden = true; if (progress) progress.textContent = ''; document.title = 'Sent — New Project Brief';
+    $$('[data-oa-brief-sent-heading]').forEach(h => setText(h, 'Sent.' + (name ? ' Thank you, ' + name + '.' : ' Thank you.')));
+    $$('[data-oa-brief-sent-body]').forEach(b => setText(b, SENT[branch()] || SENT.client));
+    $$('[data-oa-brief-ref-line]').forEach(r => { setText(r, ref ? 'Your reference is ' + ref + '.' : ''); r.hidden = !ref; });
+    if (nav) nav.hidden = true; if (progress) setText(progress, ''); document.title = 'Sent — New Project Brief';
     if (status) status.textContent = 'Brief sent.';
     reveal(st.els);
     try { sessionStorage.removeItem(STORE); } catch (e) {}
