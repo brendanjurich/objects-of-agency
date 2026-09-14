@@ -187,8 +187,81 @@
   window.addEventListener('popstate', e => { if (e.state && typeof e.state.oaBrief === 'number') show(e.state.oaBrief, false); });
 
   // ---- pieces: catalogue autocomplete + tags
+  // A native <datalist> can't be styled, and Chrome only shows its arrow on hover, so
+  // touch visitors never find the list. If the Designer builds one in the piece step, the
+  // engine drives that instead: [data-oa-brief-piece-list] holding one
+  // [data-oa-brief-piece-option] (cloned per match; the keyboard highlight gets .is-active),
+  // plus an optional [data-oa-brief-piece-toggle] that opens it. Without them, datalist.
   const pieceInput = $('[data-oa-brief-piece-input]');
-  if (pieceInput) {
+  const pieceList = $('[data-oa-brief-piece-list]');
+  const pieceOptTpl = pieceList && $('[data-oa-brief-piece-option]', pieceList);
+  if (pieceInput && pieceOptTpl) {
+    const toggle = $('[data-oa-brief-piece-toggle]');
+    const tpl = pieceOptTpl.cloneNode(true); tpl.removeAttribute('data-oa-brief-piece-option'); pieceOptTpl.remove();
+    let active = -1;
+    // Picking an option or pressing the toggle blurs the input first, and blur fires
+    // `change`, which would add the half-typed text as a piece. pointerdown lands before both.
+    let picking = false;
+    pieceList.id = pieceList.id || 'oa-brief-catalogue';
+    pieceList.setAttribute('role', 'listbox');
+    pieceList.setAttribute('data-lenis-prevent', ''); // let a scrolling list scroll under Lenis
+    pieceInput.setAttribute('role', 'combobox'); pieceInput.setAttribute('aria-autocomplete', 'list');
+    pieceInput.setAttribute('aria-controls', pieceList.id); pieceInput.setAttribute('aria-expanded', 'false');
+    setHidden(pieceList, true);
+    const opts = () => $$('[role="option"]', pieceList);
+    const isOpen = () => !pieceList.hidden;
+    function openList() {
+      const q = pieceInput.value.trim().toLowerCase();
+      pieceList.innerHTML = ''; active = -1; pieceInput.removeAttribute('aria-activedescendant');
+      CATALOGUE.filter(n => n.toLowerCase().indexOf(q) >= 0).forEach((n, i) => {
+        const o = tpl.cloneNode(true); o.id = 'oa-brief-piece-' + i; o.dataset.value = n;
+        o.setAttribute('role', 'option'); o.setAttribute('aria-selected', 'false');
+        setText(o, n); pieceList.appendChild(o);
+      });
+      const any = pieceList.children.length > 0;
+      setHidden(pieceList, !any); pieceInput.setAttribute('aria-expanded', String(any));
+    }
+    function closeList() {
+      setHidden(pieceList, true); active = -1;
+      pieceInput.setAttribute('aria-expanded', 'false'); pieceInput.removeAttribute('aria-activedescendant');
+    }
+    function highlight(i) {
+      const os = opts(); if (!os.length) return;
+      active = (i + os.length) % os.length;
+      os.forEach((o, j) => { o.classList.toggle('is-active', j === active); o.setAttribute('aria-selected', String(j === active)); });
+      pieceInput.setAttribute('aria-activedescendant', os[active].id);
+      os[active].scrollIntoView({ block: 'nearest' });
+    }
+    function pick(n) { pieceInput.value = n; addPiece(); closeList(); }
+    pieceInput.addEventListener('input', () => { picking = false; openList(); });
+    pieceInput.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault(); if (!isOpen()) openList();
+        const down = e.key === 'ArrowDown';
+        highlight(active < 0 ? (down ? 0 : -1) : active + (down ? 1 : -1));
+      } else if (e.key === 'Enter') {
+        e.preventDefault(); const o = opts()[active];
+        if (isOpen() && o) pick(o.dataset.value); else { addPiece(); closeList(); }
+      } else if (e.key === 'Escape' || e.key === 'Tab') closeList();
+    });
+    pieceInput.addEventListener('change', () => { if (!picking) addPiece(); });
+    [pieceList, toggle].forEach(el => {
+      if (!el) return;
+      el.addEventListener('pointerdown', () => { picking = true; });
+      el.addEventListener('pointercancel', () => { picking = false; });
+      el.addEventListener('mousedown', e => e.preventDefault()); // keep focus in the input
+    });
+    pieceList.addEventListener('click', e => {
+      picking = false; const o = e.target.closest('[role="option"]'); if (o) pick(o.dataset.value);
+    });
+    if (toggle) {
+      toggle.setAttribute('aria-label', 'Show pieces'); toggle.setAttribute('tabindex', '-1');
+      toggle.addEventListener('click', e => { e.preventDefault(); picking = false; if (isOpen()) closeList(); else openList(); });
+    }
+    document.addEventListener('pointerdown', e => {
+      if (isOpen() && !pieceList.contains(e.target) && e.target !== pieceInput && !(toggle && toggle.contains(e.target))) closeList();
+    });
+  } else if (pieceInput) {
     const dl = document.createElement('datalist'); dl.id = 'oa-brief-catalogue';
     CATALOGUE.forEach(n => { const o = document.createElement('option'); o.value = n; dl.appendChild(o); });
     pieceInput.insertAdjacentElement('afterend', dl); pieceInput.setAttribute('list', dl.id);
