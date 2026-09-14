@@ -38,8 +38,11 @@ for (const id of ['who','looking','what','piece','bespoke','where','when','you',
   check('step pair: ' + id, byStep[id] === 2, (byStep[id] || 0) + ' block(s)');
 
 // 3. named inputs the engine reads
-for (const n of ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','interest','note','first_name','last_name','email','practice','piece_input','website'])
+for (const n of ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','interest','note','email','practice','piece_input','website'])
   check('input name="' + n + '"', names.has(n), names.has(n) ? '' : 'ABSENT from served DOM');
+
+// Name is one field or a first/last pair; the engine composes either into `name`.
+check('name field (name, or first_name + last_name)', names.has('name') || (names.has('first_name') && names.has('last_name')));
 
 // 4. controls and regions
 for (const [label, attr] of [
