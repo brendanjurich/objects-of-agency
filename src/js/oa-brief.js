@@ -462,7 +462,13 @@
       setText(h, fill(copyFor('sent-text', 'Sent. Thank you, {name}.'), { name: name })));
     $$('[data-oa-brief-sent-body]').forEach(b =>
       setText(b, fill(copyFor('sent-body-text', SENT[branch()] || SENT.client), { name: name })));
-    $$('[data-oa-brief-ref-line]').forEach(r => { setText(r, ref ? 'Your reference is ' + ref + '.' : ''); setHidden(r, !ref); });
+    // A reference is only useful to someone we emailed it to, and lookingEmail() never
+    // quotes one — so the just-looking screen shows no ref, email left or not.
+    const showRef = !!ref && branch() !== 'looking';
+    $$('[data-oa-brief-ref-line]').forEach(r => {
+      setText(r, showRef ? fill(copyFor('ref-text', 'Your reference is {ref}.'), { ref: ref }) : '');
+      setHidden(r, !showRef);
+    });
     setHidden(nav, true); if (progress) setText(progress, ''); document.title = copyFor('sent-title', 'Sent — New Project Brief');
     if (status) status.textContent = copyFor('sent-status-text', 'Brief sent.');
     reveal(st.els);

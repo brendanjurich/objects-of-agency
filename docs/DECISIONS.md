@@ -1239,5 +1239,36 @@ Two strings escaped that pass and were caught on the same screen: the tab title
 used the generic `copy()` rather than `copyFor()`, and the `aria-live` status
 announced a hardcoded "Brief sent." Both are `copyFor()` now —
 `data-oa-brief-sent-title-looking`, `data-oa-brief-sent-status-text-looking`.
-The reference line is still hardcoded, deliberately: whether the just-looking
-path should carry a reference at all is a copy decision, not a knob.
+The reference line was the last one left, and it turned out not to be a copy
+question at all. `lookingEmail()` in the Edge Function takes no `ref` argument —
+only `ackEmail()` prints one — so on the just-looking branch the reference was
+shown on screen and quoted nowhere else, whether or not the visitor left an
+email. It is now suppressed on that branch outright (`branch() !== 'looking'`),
+and its text is `copyFor('ref-text', …)` like everything else on the screen. The
+ref still exists on the row and in the studio email; that is how a browsing
+enquiry gets found.
+
+### The /contact brief carried a hidden second copy of itself
+
+Fifty elements inside `.new_brief_contain` were the pre-Lumos build of the
+brief, hidden in the Designer rather than deleted when the questions and answers
+were rebuilt on Typography and Form components. Deleted 16-09-2026.
+
+They looked load-bearing in the Navigator — seven carried real engine hooks
+(`-lede`, `-progress`, `-finish`, `-send`, `-sent-body`, `-ref-line`,
+`-sent-heading`) — but a hidden element never reaches published markup, so
+`oa-brief.js` could not see any of them. The tell was stale copy: the hidden
+twins still read "A rough shape is enough." and "Sent. Thank you." while the
+live components had moved on.
+
+The check before deleting, and the one to repeat if this recurs: every legacy
+class (`brief_question_title`, `brief_question_sub`, `brief_group_label`,
+`brief_field`, `brief_privacy`, `brief_progress`) must return zero occurrences
+in the published HTML, and every engine hook must appear exactly once. Do not
+match `brief_field` by substring — `brief_fields-toggle`,
+`brief_fields_list-wrap` and `brief_fields-list` are live parts of the piece
+picker.
+
+A side effect worth keeping: `data-oa-brief-sent-heading` had been stamped on
+both the step wrapper and the hidden `h2`, so `$$()` matched two nodes. It now
+matches one.
