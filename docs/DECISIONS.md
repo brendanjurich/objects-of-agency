@@ -1180,3 +1180,44 @@ Homepage behaviour is unchanged — the snap branch fires on the same frame
 Added alongside, default `0`, applied ahead of the per-line stagger. It exists to push
 a block clear of the fade's tail in the Designer without a redeploy. If it ever needs
 a large value to make the reveal visible, the gate is broken — fix the gate.
+
+---
+
+## 2026-09-16 — Brief piece list traps + Osmo text cursor, v1.0.190/191
+
+### Centring a scrolling flex column amputates the head of the list
+
+`.brief_fields_list-wrap` was set to `justify-content: center` in the Designer with
+`overflow: auto` and a fixed height. 28 options at 672px in a 320px box left 352px of
+overflow, and centring split it **evenly above and below**. `scrollTop` cannot go
+negative, so the 176px above the top edge — seven options — could never be scrolled
+to and never be clicked. `scrollHeight` reports 508 rather than 696, because overflow
+above the start edge isn't counted, which is the tell.
+
+It does not read as a cascade bug. It reads as a menu that is mysteriously cut off and
+clicks near the top that silently do nothing. **`justify-content: flex-start` is the
+only safe value on a scrolling column**; `center`, `flex-end` and the `space-*` values
+all put content out of reach. `tools/brief-contract.mjs` now fails on it.
+
+### A following cursor must be `pointer-events: none`, or it hit-tests itself
+
+`oa-cursor.js` resolves its hover target with `document.elementFromPoint` at pointer
+time rather than binding per node — deliberately, because the brief's piece tags are
+destroyed and rebuilt on every change and per-node binding would rot. The cost is that
+the bubble sits under the pointer: without `pointer-events: none` on
+`[data-cursor-init]`, `elementFromPoint` returns the bubble on every frame and the
+cursor can never resolve what it is actually over. The rule lives in `oa-cursor.css`
+with a comment saying it is load-bearing, not cosmetic.
+
+Stock Osmo queues a fresh `requestAnimationFrame` on **every** mousemove, so a fast
+pointer runs several `elementFromPoint` calls — each forcing layout — per paint. Ours
+keeps a `queued` flag so there is at most one hit-test per frame.
+
+### Every user-visible string in the brief is now a Designer knob
+
+The sent screen said "Sent. Thank you." on every branch, including the just-looking
+path where **Done submits an interest note, not a brief**. The copy was hardcoded, so
+rewording it meant a re-tag. Each string is now a root attribute falling back to the
+shipped text, and any knob takes a branch suffix that wins over the generic one —
+`data-oa-brief-sent-text-looking`. `{name}` takes the separator in front of it when
+empty, so one template reads correctly on a branch with a name and one without.

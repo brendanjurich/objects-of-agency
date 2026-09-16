@@ -1,0 +1,81 @@
+/* ============================================================
+   OSMO — Dynamic Text Cursor (behavioural glue only)
+   ------------------------------------------------------------
+   Adapted for Objects of Agency from osmo.supply's "Dynamic Text Cursor".
+   This file carries only what the Webflow Designer cannot express: the
+   fixed positioning oa-cursor.js moves, the [data-cursor-status] state
+   rules, the touch and reduced-motion branches, and the canvas preview.
+
+   Deliberately NOT set here, because they are Designer knobs: bubble
+   width, height, padding, background and text colour, border radius,
+   typography — and the padding on [data-cursor-init], which is what
+   decides how close to the right edge the bubble flips sides.
+
+   Selectors are attributes, never Osmo's BEM classes, so the class names
+   in the Designer are yours to choose and rename.
+   Page-level (/contact). Raw-served (no build).
+   ============================================================ */
+
+[data-cursor-init] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* Or elementFromPoint returns the bubble and the cursor can never
+     resolve what it is hovering. Load-bearing, not cosmetic. */
+  pointer-events: none;
+  /* Above the nav and modal (1000 / 1010), below the lightbox (2000). */
+  z-index: 1100;
+  /* padding: Designer knob (rem) — sets the right-edge flip threshold */
+}
+
+[data-cursor-bubble] {
+  opacity: 0;
+  will-change: transform;
+  /* width / height / padding / background / colour / radius / type: Designer (rem) */
+}
+
+/* The whole effect is mouse-only, so the resting and active transforms are
+   scoped to a real pointer — a coarse pointer never paints a half state. */
+@media (hover: hover) and (pointer: fine) {
+  [data-cursor-bubble] {
+    transform: translateX(0%) scale(0.9) rotate(0.001deg);
+    transition: transform 0.4s var(--ease-oa), opacity 0.4s var(--ease-oa);
+  }
+
+  [data-cursor-status='active'] [data-cursor-bubble] {
+    opacity: 1;
+    transform: translateX(0%) scale(1) rotate(0.001deg);
+  }
+
+  /* Near the right edge the bubble mirrors to the left of the pointer
+     instead of running off-screen. */
+  [data-cursor-status='active-edge'] [data-cursor-bubble] {
+    opacity: 1;
+    transform: translateX(-100%) scale(1) rotate(0.001deg);
+  }
+}
+
+/* No pointer to follow. */
+@media (hover: none) and (pointer: coarse) {
+  [data-cursor-init] {
+    display: none;
+  }
+}
+
+/* The label still appears and still tracks; it just doesn't scale or fade in. */
+@media (prefers-reduced-motion: reduce) {
+  [data-cursor-bubble] {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* The JS never runs in the canvas, so without this the bubble sits at
+   opacity 0 in a fixed overlay and cannot be found, selected or styled. */
+:is(.wf-design-mode, .wf-editor) [data-cursor-init] {
+  position: relative;
+}
+
+:is(.wf-design-mode, .wf-editor) [data-cursor-bubble] {
+  opacity: 1;
+  transform: none;
+}
