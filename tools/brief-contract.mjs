@@ -26,7 +26,7 @@ const check = (label, cond, detail = '') => (cond ? ok : fail).push(label + (det
 
 // 1. engine present and single root
 const ver = Number(((html.match(/v1\.0\.(\d+)\/src\/js\/oa-brief\.js/) || [])[1]) || 0);
-check('engine >= v1.0.188 (rotates the piece arrow, binds the option hover tile)', ver >= 188, 'page loads v1.0.' + ver);
+check('engine >= v1.0.189 (Designer-built piece tag, touch-safe dismiss, 300ms open)', ver >= 189, 'page loads v1.0.' + ver);
 check('exactly one [data-oa-brief] root', count(/data-oa-brief=""/g) === 1, count(/data-oa-brief=""/g) + ' found');
 check('endpoint knob', has(/data-oa-brief-endpoint="https/));
 
@@ -73,6 +73,13 @@ if (has(/data-oa-brief-piece-list="/)) {
 } else {
   console.log('  note  no [data-oa-brief-piece-list] — engine falls back to the native datalist (no arrow on touch)');
 }
+
+// The piece tag has the same template rule, and the same silent failure: renderPieces()
+// clears [data-oa-brief-pieces] on every change, so a tag built and styled in the
+// Designer but never attribute-marked is wiped before anyone sees it. Its styling just
+// never appears, which reads as a CSS problem rather than a missing hook.
+if (has(/data-oa-brief-pieces="/) && !has(/data-oa-brief-piece-tag="/))
+  console.log('  note  no [data-oa-brief-piece-tag] — engine generates a bare button.brief_tag; any Designer-built tag inside [data-oa-brief-pieces] is wiped unmarked');
 
 // 5. sent-state elements must live inside the sent step, not another step
 const sentBlock = (html.match(/data-oa-brief-step="sent"[^>]*class="brief_answers_step"[\s\S]{0,4000}/) || [''])[0];

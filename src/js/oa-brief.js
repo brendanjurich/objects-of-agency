@@ -222,18 +222,17 @@
       if (!tile) return;
       const exit = dir => dir === 'top' ? 'translateY(-100%)' : 'translateY(100%)';
       const edge = e => (e.clientY - opt.getBoundingClientRect().top) < opt.offsetHeight / 2 ? 'top' : 'bottom';
-      opt.addEventListener('pointerenter', e => {
-        if (e.pointerType !== 'mouse') return;
+      const enter = dir => {
         tile.style.transition = 'none';
-        tile.style.transform = exit(edge(e));
+        tile.style.transform = exit(dir);
         void tile.offsetHeight;    // forced reflow to flush the jump
         tile.style.transition = '';  // back to the CSS transition
         tile.style.transform = 'translate(0%, 0%)';
-      });
-      opt.addEventListener('pointerleave', e => {
-        if (e.pointerType !== 'mouse') return;
-        tile.style.transform = exit(edge(e));
-      });
+      };
+      const leave = dir => { tile.style.transform = exit(dir); };
+      opt.oaTile = { enter, leave }; // highlight() drives the same fill from the keyboard
+      opt.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') enter(edge(e)); });
+      opt.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') leave(edge(e)); });
     }
     function openList() {
       const q = pieceInput.value.trim().toLowerCase();
@@ -260,12 +259,20 @@
     // use .is-active, the State Manager's own class hook. It flips the same variable
     // and gives the Designer a real open state to style.
     function setToggleOpen(on) { if (toggle) toggle.classList.toggle('is-active', on); }
-    function highlight(i) {
+    // `down` is the arrow key's direction. A keyboard has no cursor to read an entry
+    // edge from, so take it from the key: moving down the list, the fill enters from
+    // the top and the row above empties upwards, so it reads as one continuous travel
+    // down the column — the same motion a mouse gets, rather than a separate look the
+    // Designer would have to style twice.
+    function highlight(i, down) {
       const os = opts(); if (!os.length) return;
+      const prev = os[active];
       active = (i + os.length) % os.length;
       os.forEach((o, j) => { o.classList.toggle('is-active', j === active); o.setAttribute('aria-selected', String(j === active)); });
       pieceInput.setAttribute('aria-activedescendant', os[active].id);
       os[active].scrollIntoView({ block: 'nearest' });
+      if (prev && prev !== os[active] && prev.oaTile) prev.oaTile.leave(down ? 'top' : 'bottom');
+      if (os[active].oaTile) os[active].oaTile.enter(down ? 'top' : 'bottom');
     }
     function pick(n) { pieceInput.value = n; addPiece(); closeList(); }
     pieceInput.addEventListener('input', () => { picking = false; openList(); });
@@ -273,7 +280,7 @@
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault(); if (!isOpen()) openList();
         const down = e.key === 'ArrowDown';
-        highlight(active < 0 ? (down ? 0 : -1) : active + (down ? 1 : -1));
+        highlight(active < 0 ? (down ? 0 : -1) : active + (down ? 1 : -1), down);
       } else if (e.key === 'Enter') {
         e.preventDefault(); const o = opts()[active];
         if (isOpen() && o) pick(o.dataset.value); else { addPiece(); closeList(); }
@@ -294,7 +301,21 @@
       toggle.addEventListener('click', e => { e.preventDefault(); picking = false; if (isOpen()) closeList(); else openList(); });
     }
     document.addEventListener('pointerdown', e => {
-      if (isOpen() && !pieceList.contains(e.target) && e.target !== pieceInput && !(toggle && toggle.contains(e.target))) closeList();
+      if (!isOpen()) return;
+      if (pieceList.contains(e.target) || e.target === pieceInput || (toggle && toggle.contains(e.target))) return;
+      if (e.pointerType === 'mouse') { closeList(); return; }
+      // Touch: a page scroll also begins with a pointerdown out here, so closing on it
+      // shut the list the moment the visitor tried to scroll. Wait for the gesture to
+      // finish and close only on a tap — a finger that stayed put. A scroll takes over
+      // the gesture and fires pointercancel instead, which leaves the list open.
+      const x = e.clientX, y = e.clientY;
+      const done = ev => {
+        document.removeEventListener('pointerup', done);
+        document.removeEventListener('pointercancel', done);
+        if (ev.type === 'pointerup' && Math.abs(ev.clientX - x) < 10 && Math.abs(ev.clientY - y) < 10) closeList();
+      };
+      document.addEventListener('pointerup', done);
+      document.addEventListener('pointercancel', done);
     });
   } else if (pieceInput) {
     const dl = document.createElement('datalist'); dl.id = 'oa-brief-catalogue';
@@ -304,11 +325,33 @@
     pieceInput.addEventListener('change', addPiece);
   }
   function addPiece() { const v = pieceInput.value.trim(); if (v && state.pieces.indexOf(v) < 0) state.pieces.push(v); pieceInput.value = ''; renderPieces(); save(); }
+  // Same template rule as the summary rows and the piece options: if the Designer
+  // marks one tag inside [data-oa-brief-pieces], the engine clones it per piece and
+  // the styling on the canvas is the styling that ships. Without one it falls back to
+  // the bare generated button, which is why a Designer-built tag styled but never
+  // attribute-marked lost its padding — innerHTML wipes it before it is ever seen.
+  const tagWrap = $('[data-oa-brief-pieces]');
+  const tagTplSrc = tagWrap && $('[data-oa-brief-piece-tag]', tagWrap);
+  const tagTpl = tagTplSrc && tagTplSrc.cloneNode(true);
+  if (tagTpl) tagTpl.removeAttribute('data-oa-brief-piece-tag');
   function renderPieces() {
-    const w = $('[data-oa-brief-pieces]'); if (!w) return; w.innerHTML = '';
+    const w = tagWrap; if (!w) return; w.innerHTML = '';
     state.pieces.forEach((p, i) => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'brief_tag'; b.textContent = p; b.setAttribute('aria-label', 'Remove ' + p);
-      b.addEventListener('click', () => { state.pieces.splice(i, 1); renderPieces(); save(); }); w.appendChild(b);
+      const remove = () => { state.pieces.splice(i, 1); renderPieces(); save(); };
+      let b;
+      if (tagTpl) {
+        // The generated button carried the remove affordance; a cloned div has to be
+        // given it back, or the tag is unremovable by keyboard and silent to a reader.
+        b = tagTpl.cloneNode(true); setText(b, p);
+        if (b.tagName !== 'BUTTON') { b.setAttribute('role', 'button'); b.setAttribute('tabindex', '0'); }
+        b.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); remove(); }
+        });
+      } else {
+        b = document.createElement('button'); b.type = 'button'; b.className = 'brief_tag'; b.textContent = p;
+      }
+      b.setAttribute('aria-label', 'Remove ' + p);
+      b.addEventListener('click', remove); w.appendChild(b);
     });
   }
 

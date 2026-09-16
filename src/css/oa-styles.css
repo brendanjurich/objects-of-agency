@@ -447,6 +447,32 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   z-index: -1;
 }
 
+/* The list opens from display:none, which nothing can transition out of, so the
+   entry runs off @starting-style: the resting state stays fully visible and the
+   browser animates from the starting values each time the list becomes rendered.
+   A class flipped on the next frame would do the same job but leaves the list
+   invisible if the engine ever fails to flip it; this degrades to no animation
+   instead. Opening only — closing is immediate, so a dismissed list never
+   lingers under a tap. Fade plus a short drop, so it reads as coming from the
+   field rather than blinking in; height is deliberately not animated, because it
+   would fight the list's own scroll. Duration and distance are knobs. */
+.brief_fields_list-wrap {
+  transition: opacity 0.3s var(--ease-oa), transform 0.3s var(--ease-oa);
+}
+
+@starting-style {
+  .brief_fields_list-wrap {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brief_fields_list-wrap {
+    transition-duration: 0.01ms;
+  }
+}
+
 /* ============================================================
    CASCADING SLIDER
    ============================================================ */
