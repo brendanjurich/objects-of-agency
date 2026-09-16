@@ -37,6 +37,75 @@ ever leaks past the neutraliser it renders correct art, not stale). Consequence:
 
 ---
 
+## ⚠️ Critical — The brief pipeline runs on free tiers
+
+**A paused Supabase project loses briefs silently.** `brief-intake` inserts the row
+before it mails anything, so if the database is unreachable the insert fails, the
+function returns non-200, and the visitor sees "That didn't send." Nothing is
+queued and nothing retries. You would not know a brief had been attempted — there
+is no alert on this path, and the studio email is only sent *after* a successful
+insert. This is the one failure in the whole site that destroys work a real person
+did rather than just looking wrong.
+
+Free projects pause after **7 days** without activity.
+`.github/workflows/keepalive.yml` pings every third day, which is the right
+cadence. The risk is not the cadence — it is that every link in the chain is
+itself free and unmonitored.
+
+### The chain that has to hold
+
+| Link | Fails when | Today |
+|---|---|---|
+| GitHub Actions cron | repo sits ~60 days with no activity — Actions **disables scheduled workflows** | active, green 10-09 / 13-09 / 16-09 |
+| `ping` reaches Postgres | function returns 200 without touching the database | fixed — now does a head-count on `briefs` |
+| Supabase project awake | 7 days idle | awake |
+| `brief-intake` insert | project paused, or schema drift | no alerting either way |
+
+The GitHub link is the weak one, and it gets weaker exactly as the site
+stabilises: the quieter this repo goes, the more likely Actions switches the cron
+off, and the pause follows about a week later.
+
+### Actions
+
+- [ ] **Deploy the hardened ping.** Written, not deployed:
+      `supabase functions deploy ping --project-ref nleekoypvxoagnwiqtzz --no-verify-jwt`.
+      Until this ships, the keep-alive only proves the Functions runtime is alive.
+- [ ] **Confirm the retention job is actually scheduled.** `delete_stale_briefs()`
+      exists and `20260909000000_briefs.sql` schedules it nightly — but only inside
+      an `if exists (… pg_extension where extname = 'pg_cron')` guard. If pg_cron
+      was not enabled when that migration ran, the block was a silent no-op and
+      **nothing is deleting anything**, while the ack email and the privacy policy
+      both promise twelve months. Check:
+      `select * from cron.job where jobname = 'delete-stale-briefs';`
+- [ ] **Put a reminder on the GitHub cron.** A calendar entry every ~45 days to
+      check the workflow is still enabled, or a second independent trigger.
+      `workflow_dispatch` is already on the workflow, so a manual run is one click.
+- [ ] **Decide the paid-tier trigger** (below) rather than discovering it.
+
+### Cost / benefit — when to go paid
+
+Verify current pricing before acting; the figures below are indicative.
+
+| Option | Cost | Buys | Cost of not doing it |
+|---|---|---|---|
+| Stay free + hardened ping | £0 | removes the Functions-only blind spot | still exposed to Actions disabling the cron |
+| Calendar reminder | £0 | covers the weakest link | a missed check ≈ one paused project |
+| **Supabase Pro** | ~US$25/mo | **no pause at all** — the whole chain above becomes irrelevant, plus daily backups and 7-day PITR | one lost commission enquiry costs more than a year of this |
+| Resend paid | ~US$20/mo | >100 emails/day | free tier is 100/day, 3,000/mo — nowhere near binding yet |
+
+**Recommendation:** stay free through pre-launch, and treat **the first real
+enquiry from a studio** as the trigger for Supabase Pro — not a date, not traffic.
+The moment a brief in that table represents actual revenue, £25/mo to remove an
+entire class of silent data loss stops being a judgement call. Resend can stay
+free well past that point; it is volume-bound, not reliability-bound, and 100/day
+is far beyond the expected rate.
+
+Until then the honest posture is: the keep-alive is real and working, but it is
+three free services in a trench coat, and the failure mode is losing a brief
+without ever knowing it arrived.
+
+---
+
 ## Foundation
 
 - [ ] Semantic HTML & structure audit
