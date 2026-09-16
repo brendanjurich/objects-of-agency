@@ -26,7 +26,7 @@ const check = (label, cond, detail = '') => (cond ? ok : fail).push(label + (det
 
 // 1. engine present and single root
 const ver = Number(((html.match(/v1\.0\.(\d+)\/src\/js\/oa-brief\.js/) || [])[1]) || 0);
-check('engine >= v1.0.185 (hides steps against class display overrides)', ver >= 185, 'page loads v1.0.' + ver);
+check('engine >= v1.0.188 (rotates the piece arrow, binds the option hover tile)', ver >= 188, 'page loads v1.0.' + ver);
 check('exactly one [data-oa-brief] root', count(/data-oa-brief=""/g) === 1, count(/data-oa-brief=""/g) + ' found');
 check('endpoint knob', has(/data-oa-brief-endpoint="https/));
 
@@ -54,6 +54,25 @@ for (const [label, attr] of [
   ['sent heading','data-oa-brief-sent-heading'], ['sent body','data-oa-brief-sent-body'],
   ['ref line','data-oa-brief-ref-line'],
 ]) check(label, has(new RegExp(attr + '="')), '');
+
+// 4b. the Designer-built piece list. Optional by contract — without it the engine
+// falls back to a native datalist — but once built, every part has to stay, because
+// a missing piece degrades silently rather than erroring.
+if (has(/data-oa-brief-piece-list="/)) {
+  const listBlock = (html.match(/data-oa-brief-piece-list="[\s\S]{0,2000}/) || [''])[0];
+  check('piece list wrapper', true);
+  check('piece option template inside the list', /data-oa-brief-piece-option="/.test(listBlock),
+    'the engine clones this one node per match');
+  check('option carries the hover tile', /nav_dropdown_hover_tile/.test(listBlock),
+    'oa-brief.js binds the directional fill to it; oa-styles.css supplies the mask box');
+  check('option holds a text leaf the engine can write into',
+    /data-oa-brief-piece-option="[\s\S]{0,600}<(?:p|h[1-6])[ >]/.test(listBlock),
+    'setText() targets p/h*; without one it would overwrite the tile');
+  check('piece toggle arrow', has(/data-oa-brief-piece-toggle="/),
+    'engine flips .is-active on it, which the State Manager turns into the rotation');
+} else {
+  console.log('  note  no [data-oa-brief-piece-list] — engine falls back to the native datalist (no arrow on touch)');
+}
 
 // 5. sent-state elements must live inside the sent step, not another step
 const sentBlock = (html.match(/data-oa-brief-step="sent"[^>]*class="brief_answers_step"[\s\S]{0,4000}/) || [''])[0];

@@ -431,6 +431,22 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   }
 }
 
+/* Third consumer: the brief's piece list reuses .nav_dropdown_hover_tile, so the
+   tile itself is already covered above. The option it sits in is a plain <li>
+   the Designer styles for padding and colour; only the mask box belongs here.
+   isolation + z-index keep the tile behind the option's own text without a rule
+   on that text — it's a Typography Paragraph instance carrying utility classes
+   only, so it can't take the position/z-index .nav_dropdown_text gets. */
+.brief_fields-list {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.brief_fields-list > .nav_dropdown_hover_tile {
+  z-index: -1;
+}
+
 /* ============================================================
    CASCADING SLIDER
    ============================================================ */

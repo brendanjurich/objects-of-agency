@@ -210,21 +210,56 @@
     setHidden(pieceList, true);
     const opts = () => $$('[role="option"]', pieceList);
     const isOpen = () => !pieceList.hidden;
+    // Each option carries the nav's hover tile, because Brendan built the option
+    // with .nav_dropdown_hover_tile. oa-global's initDirectionalHover() binds at
+    // DOMContentLoaded and cannot see options that only exist once the list opens,
+    // so bind per clone here instead of bumping the sitewide file. The list is
+    // rebuilt on every open, so listeners never accumulate. Vertical axis and mouse
+    // only, matching the stacked list on /about; the keyboard equivalent is the
+    // .is-active class, which the site's State Manager already hands the Designer.
+    function bindTile(opt) {
+      const tile = opt.querySelector('.nav_dropdown_hover_tile');
+      if (!tile) return;
+      const exit = dir => dir === 'top' ? 'translateY(-100%)' : 'translateY(100%)';
+      const edge = e => (e.clientY - opt.getBoundingClientRect().top) < opt.offsetHeight / 2 ? 'top' : 'bottom';
+      opt.addEventListener('pointerenter', e => {
+        if (e.pointerType !== 'mouse') return;
+        tile.style.transition = 'none';
+        tile.style.transform = exit(edge(e));
+        void tile.offsetHeight;    // forced reflow to flush the jump
+        tile.style.transition = '';  // back to the CSS transition
+        tile.style.transform = 'translate(0%, 0%)';
+      });
+      opt.addEventListener('pointerleave', e => {
+        if (e.pointerType !== 'mouse') return;
+        tile.style.transform = exit(edge(e));
+      });
+    }
     function openList() {
       const q = pieceInput.value.trim().toLowerCase();
       pieceList.innerHTML = ''; active = -1; pieceInput.removeAttribute('aria-activedescendant');
       CATALOGUE.filter(n => n.toLowerCase().indexOf(q) >= 0).forEach((n, i) => {
         const o = tpl.cloneNode(true); o.id = 'oa-brief-piece-' + i; o.dataset.value = n;
         o.setAttribute('role', 'option'); o.setAttribute('aria-selected', 'false');
-        setText(o, n); pieceList.appendChild(o);
+        setText(o, n); bindTile(o); pieceList.appendChild(o);
       });
       const any = pieceList.children.length > 0;
       setHidden(pieceList, !any); pieceInput.setAttribute('aria-expanded', String(any));
+      setToggleOpen(any);
     }
     function closeList() {
       setHidden(pieceList, true); active = -1;
       pieceInput.setAttribute('aria-expanded', 'false'); pieceInput.removeAttribute('aria-activedescendant');
+      setToggleOpen(false);
     }
+    // The arrow rotates off the site's State Manager, the same machinery as the nav
+    // dropdown caret: .brief_fields-toggle already carries the Designer's
+    // rotate(calc(-180deg * var(--_state---false))) and its transition. The nav flips
+    // that variable through [data-state~="expanded"] + aria-expanded; this toggle is a
+    // plain div with no ARIA of its own — the combobox input owns aria-expanded — so
+    // use .is-active, the State Manager's own class hook. It flips the same variable
+    // and gives the Designer a real open state to style.
+    function setToggleOpen(on) { if (toggle) toggle.classList.toggle('is-active', on); }
     function highlight(i) {
       const os = opts(); if (!os.length) return;
       active = (i + os.length) % os.length;
