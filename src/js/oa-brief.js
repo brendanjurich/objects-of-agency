@@ -21,6 +21,21 @@
   const ENDPOINT = root.getAttribute('data-oa-brief-endpoint') || '';
   const TURNSTILE_KEY = root.getAttribute('data-oa-brief-turnstile-key') || '';
   const RESPONSE = root.getAttribute('data-oa-brief-response') || 'two working days';
+  // ---- copy knobs. Every user-visible string the engine writes is reachable from the
+  // Designer as a root attribute, and each falls back to the string shipped here, so
+  // nothing changes until a knob is set. `{name}`, `{n}` and `{N}` are substituted.
+  // A knob may be suffixed with the branch — data-oa-brief-sent-text-looking — and that
+  // wins over the generic one, which is how the just-looking Done screen stops saying
+  // "Sent." when nothing was really sent on that path.
+  const copy = (key, fallback) => root.getAttribute('data-oa-brief-' + key) || fallback;
+  const copyFor = (key, fallback) => root.getAttribute('data-oa-brief-' + key + '-' + branch()) || copy(key, fallback);
+  // An empty value takes any separator in front of its token with it, so
+  // "Thank you, {name}." reads "Thank you." rather than "Thank you, ."
+  function fill(tpl, vars) {
+    return Object.keys(vars).reduce((out, k) => vars[k] === ''
+      ? out.replace(new RegExp('[,;:\\u2013\\u2014-]?\\s*\\{' + k + '\\}', 'g'), '')
+      : out.split('{' + k + '}').join(vars[k]), tpl);
+  }
   const SENT = {
     client: "We'll read this properly and come back within " + RESPONSE + " with first thoughts and a time to talk. A copy is on its way to your inbox — it's written up so you can drop it straight into the project folder.",
     home: "We'll come back within " + RESPONSE + ". A copy is on its way to your inbox with a short note on how a commission works from here.",
@@ -130,7 +145,7 @@
     if (st.id === 'you' || st.id === 'looking') mountTurnstile();
     if (st.id === 'piece') renderPieces();
     const n = idx + 1, N = branch() ? r.length : '…';
-    if (progress) setText(progress, 'Question ' + n + ' of ' + N);
+    if (progress) setText(progress, fill(copy('progress-text', 'Question {n} of {N}'), { n: n, N: N }));
     document.title = 'Question ' + n + ' of ' + N + ' — New Project Brief';
     const h = $('.brief_question_title', st.els[0]) || st.els[0].querySelector('h2');
     if (status && h) status.textContent = h.textContent;
@@ -443,10 +458,12 @@
     const st = steps.filter(s => s.id === 'sent')[0];
     steps.forEach(s => s.els.forEach(el => setHidden(el, s !== st)));
     const name = firstName();
-    $$('[data-oa-brief-sent-heading]').forEach(h => setText(h, 'Sent.' + (name ? ' Thank you, ' + name + '.' : ' Thank you.')));
-    $$('[data-oa-brief-sent-body]').forEach(b => setText(b, SENT[branch()] || SENT.client));
+    $$('[data-oa-brief-sent-heading]').forEach(h =>
+      setText(h, fill(copyFor('sent-text', 'Sent. Thank you, {name}.'), { name: name })));
+    $$('[data-oa-brief-sent-body]').forEach(b =>
+      setText(b, fill(copyFor('sent-body-text', SENT[branch()] || SENT.client), { name: name })));
     $$('[data-oa-brief-ref-line]').forEach(r => { setText(r, ref ? 'Your reference is ' + ref + '.' : ''); setHidden(r, !ref); });
-    setHidden(nav, true); if (progress) setText(progress, ''); document.title = 'Sent — New Project Brief';
+    setHidden(nav, true); if (progress) setText(progress, ''); document.title = copy('sent-title', 'Sent — New Project Brief');
     if (status) status.textContent = 'Brief sent.';
     reveal(st.els);
     try { sessionStorage.removeItem(STORE); } catch (e) {}
@@ -469,7 +486,7 @@
       finish(j.ref || '');
     } catch (e) {
       btn.disabled = false; turnstileReset();
-      if (status) status.textContent = "That didn't send. Please try again, or email us directly.";
+      if (status) status.textContent = copy('error-text', "That didn't send. Please try again, or email us directly.");
       console.error('oa-brief', e);
     }
   }

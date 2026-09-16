@@ -26,7 +26,7 @@ const check = (label, cond, detail = '') => (cond ? ok : fail).push(label + (det
 
 // 1. engine present and single root
 const ver = Number(((html.match(/v1\.0\.(\d+)\/src\/js\/oa-brief\.js/) || [])[1]) || 0);
-check('engine >= v1.0.189 (Designer-built piece tag, touch-safe dismiss, 300ms open)', ver >= 189, 'page loads v1.0.' + ver);
+check('engine >= v1.0.190 (Designer-reachable copy knobs)', ver >= 190, 'page loads v1.0.' + ver);
 check('exactly one [data-oa-brief] root', count(/data-oa-brief=""/g) === 1, count(/data-oa-brief=""/g) + ' found');
 check('endpoint knob', has(/data-oa-brief-endpoint="https/));
 
@@ -107,6 +107,13 @@ try {
       const rule = new RegExp('\\.' + cls + '[^{]*\\{[^}]*display\\s*:', 'i');
       if (rule.test(css)) console.log('  note  .' + cls + ' sets `display` — engine overrides it inline; do not rely on [hidden] alone');
     }
+    // Centring a scrolling column puts the overflow on BOTH sides of the box, and
+    // scrollTop cannot go negative, so everything above the top edge is unreachable
+    // and unclickable — it reads as a list that is simply cut off. Cost real time
+    // on 16-09-2026: seven options were silently amputated from the piece list.
+    const listRule = (css.match(/\.brief_fields_list-wrap[^{]*\{[^}]*\}/) || [''])[0];
+    if (/overflow\s*:\s*(auto|scroll)/.test(listRule) && /justify-content\s*:\s*(center|flex-end|space-)/.test(listRule))
+      fail.push('.brief_fields_list-wrap centres a scrolling column — options above the top edge cannot be scrolled to or clicked; use justify-content: flex-start');
   }
 } catch {}
 
