@@ -463,8 +463,8 @@
     $$('[data-oa-brief-sent-body]').forEach(b =>
       setText(b, fill(copyFor('sent-body-text', SENT[branch()] || SENT.client), { name: name })));
     $$('[data-oa-brief-ref-line]').forEach(r => { setText(r, ref ? 'Your reference is ' + ref + '.' : ''); setHidden(r, !ref); });
-    setHidden(nav, true); if (progress) setText(progress, ''); document.title = copy('sent-title', 'Sent — New Project Brief');
-    if (status) status.textContent = 'Brief sent.';
+    setHidden(nav, true); if (progress) setText(progress, ''); document.title = copyFor('sent-title', 'Sent — New Project Brief');
+    if (status) status.textContent = copyFor('sent-status-text', 'Brief sent.');
     reveal(st.els);
     try { sessionStorage.removeItem(STORE); } catch (e) {}
   }

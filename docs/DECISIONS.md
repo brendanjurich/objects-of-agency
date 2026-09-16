@@ -1234,3 +1234,10 @@ rewording it meant a re-tag. Each string is now a root attribute falling back to
 shipped text, and any knob takes a branch suffix that wins over the generic one —
 `data-oa-brief-sent-text-looking`. `{name}` takes the separator in front of it when
 empty, so one template reads correctly on a branch with a name and one without.
+
+Two strings escaped that pass and were caught on the same screen: the tab title
+used the generic `copy()` rather than `copyFor()`, and the `aria-live` status
+announced a hardcoded "Brief sent." Both are `copyFor()` now —
+`data-oa-brief-sent-title-looking`, `data-oa-brief-sent-status-text-looking`.
+The reference line is still hardcoded, deliberately: whether the just-looking
+path should carry a reference at all is a copy decision, not a knob.
