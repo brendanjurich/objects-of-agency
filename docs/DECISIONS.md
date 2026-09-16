@@ -1213,6 +1213,19 @@ Stock Osmo queues a fresh `requestAnimationFrame` on **every** mousemove, so a f
 pointer runs several `elementFromPoint` calls — each forcing layout — per paint. Ours
 keeps a `queued` flag so there is at most one hit-test per frame.
 
+### The cursor label must be written into the text leaf, not the wrapper
+
+Shipped wrong in v1.0.191 and fixed in v1.0.192. Stock Osmo's bubble holds a bare
+`<span>`, so it sets `textContent` on the target directly. On this site the target is
+almost always a Typography Paragraph — `<div class="w-richtext"><p>…</p></div>` — and
+`textContent` on that wrapper destroys the `<p>` the Designer's type styling hangs off.
+It does not look broken; the label simply renders unstyled. Same rule, same reason as
+`setText()` in `oa-brief.js`: write into `p, h1–h6` where there is one.
+
+`querySelector` also silently takes the first of several marked targets, which is easy
+to hit after pasting Osmo's markup and then adding your own text element beside it. It
+now warns when more than one is marked.
+
 ### Every user-visible string in the brief is now a Designer knob
 
 The sent screen said "Sent. Thank you." on every branch, including the just-looking

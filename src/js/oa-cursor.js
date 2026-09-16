@@ -17,6 +17,11 @@
        several elementFromPoint tests — each forcing layout — per paint.
      • Reduced motion places the bubble on the pointer and keeps the label,
        rather than dropping the feature.
+     • The label is written into the text leaf (p / h*) when the target is a
+       Webflow Rich Text, instead of textContent on the wrapper, which would
+       destroy the <p> the Designer's type styling hangs off. Stock assumes a
+       bare span. It also warns when more than one target is marked, because
+       querySelector silently picks the first.
      • Size, colour, radius, padding and type are Designer knobs — see
        oa-cursor.css for what this layer deliberately does not set.
    Page-level embed (/contact). Raw-served (no build).
@@ -34,7 +39,21 @@ function initDynamicTextCursor() {
     return;
   }
 
-  const textTarget = cursor.querySelector('[data-cursor-text-target]');
+  // Webflow renders a Rich Text block as <div class="w-richtext"><p>…</p></div>, and
+  // the Designer's type styling hangs off that <p>. Writing textContent on the wrapper
+  // destroys it, so write into the leaf where there is one — the same rule oa-brief.js
+  // follows. Stock Osmo assumes a bare span, which this site rarely uses.
+  const textTargets = cursor.querySelectorAll('[data-cursor-text-target]');
+  const textTarget = textTargets[0] || null;
+  if (textTargets.length > 1) {
+    console.warn('[oa-cursor] ' + textTargets.length +
+      ' [data-cursor-text-target] elements — only the first is written. Unmark the rest.');
+  }
+  const writeLabel = text => {
+    if (!textTarget) return;
+    const leaf = textTarget.querySelector('p, h1, h2, h3, h4, h5, h6');
+    (leaf || textTarget).textContent = text;
+  };
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Reduced motion keeps the label and the hover states and drops only the trail:
@@ -64,9 +83,9 @@ function initDynamicTextCursor() {
 
     cursor.setAttribute('data-cursor-status', item ? (atEdge ? 'active-edge' : 'active') : '');
 
-    if (item && textTarget) {
+    if (item) {
       const label = item.getAttribute('data-cursor-text');
-      if (label) textTarget.textContent = label;
+      if (label) writeLabel(label);
     }
   }
 
