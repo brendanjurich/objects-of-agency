@@ -1180,3 +1180,95 @@ Homepage behaviour is unchanged — the snap branch fires on the same frame
 Added alongside, default `0`, applied ahead of the per-line stagger. It exists to push
 a block clear of the fade's tail in the Designer without a redeploy. If it ever needs
 a large value to make the reveal visible, the gate is broken — fix the gate.
+
+---
+
+## 2026-09-16 — Brief piece list traps + Osmo text cursor, v1.0.190/191
+
+### Centring a scrolling flex column amputates the head of the list
+
+`.brief_fields_list-wrap` was set to `justify-content: center` in the Designer with
+`overflow: auto` and a fixed height. 28 options at 672px in a 320px box left 352px of
+overflow, and centring split it **evenly above and below**. `scrollTop` cannot go
+negative, so the 176px above the top edge — seven options — could never be scrolled
+to and never be clicked. `scrollHeight` reports 508 rather than 696, because overflow
+above the start edge isn't counted, which is the tell.
+
+It does not read as a cascade bug. It reads as a menu that is mysteriously cut off and
+clicks near the top that silently do nothing. **`justify-content: flex-start` is the
+only safe value on a scrolling column**; `center`, `flex-end` and the `space-*` values
+all put content out of reach. `tools/brief-contract.mjs` now fails on it.
+
+### A following cursor must be `pointer-events: none`, or it hit-tests itself
+
+`oa-cursor.js` resolves its hover target with `document.elementFromPoint` at pointer
+time rather than binding per node — deliberately, because the brief's piece tags are
+destroyed and rebuilt on every change and per-node binding would rot. The cost is that
+the bubble sits under the pointer: without `pointer-events: none` on
+`[data-cursor-init]`, `elementFromPoint` returns the bubble on every frame and the
+cursor can never resolve what it is actually over. The rule lives in `oa-cursor.css`
+with a comment saying it is load-bearing, not cosmetic.
+
+Stock Osmo queues a fresh `requestAnimationFrame` on **every** mousemove, so a fast
+pointer runs several `elementFromPoint` calls — each forcing layout — per paint. Ours
+keeps a `queued` flag so there is at most one hit-test per frame.
+
+### The cursor label must be written into the text leaf, not the wrapper
+
+Shipped wrong in v1.0.191 and fixed in v1.0.192. Stock Osmo's bubble holds a bare
+`<span>`, so it sets `textContent` on the target directly. On this site the target is
+almost always a Typography Paragraph — `<div class="w-richtext"><p>…</p></div>` — and
+`textContent` on that wrapper destroys the `<p>` the Designer's type styling hangs off.
+It does not look broken; the label simply renders unstyled. Same rule, same reason as
+`setText()` in `oa-brief.js`: write into `p, h1–h6` where there is one.
+
+`querySelector` also silently takes the first of several marked targets, which is easy
+to hit after pasting Osmo's markup and then adding your own text element beside it. It
+now warns when more than one is marked.
+
+### Every user-visible string in the brief is now a Designer knob
+
+The sent screen said "Sent. Thank you." on every branch, including the just-looking
+path where **Done submits an interest note, not a brief**. The copy was hardcoded, so
+rewording it meant a re-tag. Each string is now a root attribute falling back to the
+shipped text, and any knob takes a branch suffix that wins over the generic one —
+`data-oa-brief-sent-text-looking`. `{name}` takes the separator in front of it when
+empty, so one template reads correctly on a branch with a name and one without.
+
+Two strings escaped that pass and were caught on the same screen: the tab title
+used the generic `copy()` rather than `copyFor()`, and the `aria-live` status
+announced a hardcoded "Brief sent." Both are `copyFor()` now —
+`data-oa-brief-sent-title-looking`, `data-oa-brief-sent-status-text-looking`.
+The reference line was the last one left, and it turned out not to be a copy
+question at all. `lookingEmail()` in the Edge Function takes no `ref` argument —
+only `ackEmail()` prints one — so on the just-looking branch the reference was
+shown on screen and quoted nowhere else, whether or not the visitor left an
+email. It is now suppressed on that branch outright (`branch() !== 'looking'`),
+and its text is `copyFor('ref-text', …)` like everything else on the screen. The
+ref still exists on the row and in the studio email; that is how a browsing
+enquiry gets found.
+
+### The /contact brief carried a hidden second copy of itself
+
+Fifty elements inside `.new_brief_contain` were the pre-Lumos build of the
+brief, hidden in the Designer rather than deleted when the questions and answers
+were rebuilt on Typography and Form components. Deleted 16-09-2026.
+
+They looked load-bearing in the Navigator — seven carried real engine hooks
+(`-lede`, `-progress`, `-finish`, `-send`, `-sent-body`, `-ref-line`,
+`-sent-heading`) — but a hidden element never reaches published markup, so
+`oa-brief.js` could not see any of them. The tell was stale copy: the hidden
+twins still read "A rough shape is enough." and "Sent. Thank you." while the
+live components had moved on.
+
+The check before deleting, and the one to repeat if this recurs: every legacy
+class (`brief_question_title`, `brief_question_sub`, `brief_group_label`,
+`brief_field`, `brief_privacy`, `brief_progress`) must return zero occurrences
+in the published HTML, and every engine hook must appear exactly once. Do not
+match `brief_field` by substring — `brief_fields-toggle`,
+`brief_fields_list-wrap` and `brief_fields-list` are live parts of the piece
+picker.
+
+A side effect worth keeping: `data-oa-brief-sent-heading` had been stamped on
+both the step wrapper and the hidden `h2`, so `$$()` matched two nodes. It now
+matches one.
