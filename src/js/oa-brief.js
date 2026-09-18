@@ -261,6 +261,10 @@
         setText(o, n); bindTile(o); pieceList.appendChild(o);
       });
       const any = pieceList.children.length > 0;
+      // Safari with always-on scrollbars (a mouse attached) drops the scrollbar from the
+      // list's shrink-to-fit width when an open, scrolling list gets new options, so the
+      // box loses ~15px and names wrap. Flipping overflow makes WebKit measure it again.
+      if (isOpen()) { pieceList.style.overflowY = 'scroll'; void pieceList.offsetWidth; pieceList.style.overflowY = ''; }
       pieceList.scrollTop = top;
       setHidden(pieceList, !any); pieceInput.setAttribute('aria-expanded', String(any));
       setToggleOpen(any);
