@@ -501,7 +501,16 @@
     // Pattern prop is blank, and an empty pattern matches only the empty string, so
     // every real address reports invalid. Validate the shape ourselves — same rule
     // the Edge Function applies server-side.
-    if (!EMAIL_RE.test(addr)) { setHidden(err, false); if (field) field.focus(); if (status && err) status.textContent = err.textContent; return; }
+    // The status line announces the error once; aria-invalid + aria-describedby keep it
+    // tied to the field, so a screen reader returning to it still hears what's wrong.
+    // Link the error only while it shows: a hidden element's text still describes.
+    const bad = !EMAIL_RE.test(addr);
+    if (field) {
+      field.setAttribute('aria-invalid', String(bad));
+      if (bad && err) { err.id = err.id || 'oa-brief-email-error'; field.setAttribute('aria-describedby', err.id); }
+      else field.removeAttribute('aria-describedby');
+    }
+    if (bad) { setHidden(err, false); if (field) field.focus(); if (status && err) status.textContent = err.textContent; return; }
     setHidden(err, true);
     send(sendBtn);
   });
