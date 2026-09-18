@@ -130,9 +130,11 @@
 
   // ---- reveal (GSAP if present, respects reduced motion)
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Clear the transform too: a leftover identity matrix still makes the step a stacking
+  // context, which trapped the piece list's z-index under .brief_nav's Back/Continue.
   function reveal(els) {
     if (reduce || !window.gsap) return;
-    window.gsap.fromTo(els, { opacity: 0, y: 8, filter: 'blur(4px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.45, ease: window.CustomEase && window.gsap.parseEase('oa') ? 'oa' : 'power2.out', clearProps: 'filter' });
+    window.gsap.fromTo(els, { opacity: 0, y: 8, filter: 'blur(4px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.45, ease: window.CustomEase && window.gsap.parseEase('oa') ? 'oa' : 'power2.out', clearProps: 'filter,transform' });
   }
 
   let idx = 0;
@@ -251,6 +253,7 @@
     }
     function openList() {
       const q = pieceInput.value.trim().toLowerCase();
+      const top = pieceList.scrollTop; // a refresh after a pick keeps the visitor's place
       pieceList.innerHTML = ''; active = -1; pieceInput.removeAttribute('aria-activedescendant');
       CATALOGUE.filter(n => n.toLowerCase().indexOf(q) >= 0).forEach((n, i) => {
         const o = tpl.cloneNode(true); o.id = 'oa-brief-piece-' + i; o.dataset.value = n;
@@ -258,6 +261,7 @@
         setText(o, n); bindTile(o); pieceList.appendChild(o);
       });
       const any = pieceList.children.length > 0;
+      pieceList.scrollTop = top;
       setHidden(pieceList, !any); pieceInput.setAttribute('aria-expanded', String(any));
       setToggleOpen(any);
     }
@@ -289,7 +293,9 @@
       if (prev && prev !== os[active] && prev.oaTile) prev.oaTile.leave(down ? 'top' : 'bottom');
       if (os[active].oaTile) os[active].oaTile.enter(down ? 'top' : 'bottom');
     }
-    function pick(n) { pieceInput.value = n; addPiece(); closeList(); }
+    // The list stays open until the arrow toggle (or Escape) shuts it, so a visitor can
+    // add several pieces in a row. Picking refreshes it against the now-empty input.
+    function pick(n) { pieceInput.value = n; addPiece(); openList(); }
     pieceInput.addEventListener('input', () => { picking = false; openList(); });
     pieceInput.addEventListener('keydown', e => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -298,8 +304,8 @@
         highlight(active < 0 ? (down ? 0 : -1) : active + (down ? 1 : -1), down);
       } else if (e.key === 'Enter') {
         e.preventDefault(); const o = opts()[active];
-        if (isOpen() && o) pick(o.dataset.value); else { addPiece(); closeList(); }
-      } else if (e.key === 'Escape' || e.key === 'Tab') closeList();
+        if (isOpen() && o) pick(o.dataset.value); else { addPiece(); if (isOpen()) openList(); }
+      } else if (e.key === 'Escape') closeList(); // the toggle is out of the tab order
     });
     pieceInput.addEventListener('change', () => { if (!picking) addPiece(); });
     [pieceList, toggle].forEach(el => {
@@ -315,23 +321,6 @@
       toggle.setAttribute('aria-label', 'Show pieces'); toggle.setAttribute('tabindex', '-1');
       toggle.addEventListener('click', e => { e.preventDefault(); picking = false; if (isOpen()) closeList(); else openList(); });
     }
-    document.addEventListener('pointerdown', e => {
-      if (!isOpen()) return;
-      if (pieceList.contains(e.target) || e.target === pieceInput || (toggle && toggle.contains(e.target))) return;
-      if (e.pointerType === 'mouse') { closeList(); return; }
-      // Touch: a page scroll also begins with a pointerdown out here, so closing on it
-      // shut the list the moment the visitor tried to scroll. Wait for the gesture to
-      // finish and close only on a tap — a finger that stayed put. A scroll takes over
-      // the gesture and fires pointercancel instead, which leaves the list open.
-      const x = e.clientX, y = e.clientY;
-      const done = ev => {
-        document.removeEventListener('pointerup', done);
-        document.removeEventListener('pointercancel', done);
-        if (ev.type === 'pointerup' && Math.abs(ev.clientX - x) < 10 && Math.abs(ev.clientY - y) < 10) closeList();
-      };
-      document.addEventListener('pointerup', done);
-      document.addEventListener('pointercancel', done);
-    });
   } else if (pieceInput) {
     const dl = document.createElement('datalist'); dl.id = 'oa-brief-catalogue';
     CATALOGUE.forEach(n => { const o = document.createElement('option'); o.value = n; dl.appendChild(o); });

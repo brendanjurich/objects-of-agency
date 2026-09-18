@@ -452,12 +452,23 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
    browser animates from the starting values each time the list becomes rendered.
    A class flipped on the next frame would do the same job but leaves the list
    invisible if the engine ever fails to flip it; this degrades to no animation
-   instead. Opening only — closing is immediate, so a dismissed list never
-   lingers under a tap. Fade plus a short drop, so it reads as coming from the
-   field rather than blinking in; height is deliberately not animated, because it
-   would fight the list's own scroll. Duration and distance are knobs. */
+   instead. Closing runs the same fade and drop in reverse: `display` transitions
+   with allow-discrete, so the engine's display:none lands only once the fade has
+   finished. Each direction uses the transition on the state it goes to, so the
+   open rule sets the opening time (300ms) and [hidden] sets the closing time
+   (400ms). A closing list ignores taps. Browsers without allow-discrete close
+   instantly, as before. Height is deliberately not animated, because it would
+   fight the list's own scroll. Duration and distance are knobs. */
 .brief_fields_list-wrap {
-  transition: opacity 0.3s var(--ease-oa), transform 0.3s var(--ease-oa);
+  transition: opacity 0.3s var(--ease-oa), transform 0.3s var(--ease-oa),
+    display 0.3s allow-discrete;
+}
+
+.brief_fields_list-wrap[hidden] {
+  opacity: 0;
+  transform: translateY(-0.5rem);
+  pointer-events: none;
+  transition-duration: 0.4s;
 }
 
 @starting-style {
