@@ -253,9 +253,18 @@
     }
     function openList() {
       const q = pieceInput.value.trim().toLowerCase();
+      const names = CATALOGUE.filter(n => n.toLowerCase().indexOf(q) >= 0);
+      const lit = opts()[active]; if (lit && lit.oaTile) lit.oaTile.leave('bottom'); // keyboard fill
+      active = -1; pieceInput.removeAttribute('aria-activedescendant');
+      // Picking from the full list leaves the matches unchanged, so keep the options that
+      // are there: a rebuild re-lays out the box, and Safari flashes it wrapped (below).
+      if (isOpen() && names.join('\n') === opts().map(o => o.dataset.value).join('\n')) {
+        opts().forEach(o => { o.classList.remove('is-active'); o.setAttribute('aria-selected', 'false'); });
+        return;
+      }
       const top = pieceList.scrollTop; // a refresh after a pick keeps the visitor's place
-      pieceList.innerHTML = ''; active = -1; pieceInput.removeAttribute('aria-activedescendant');
-      CATALOGUE.filter(n => n.toLowerCase().indexOf(q) >= 0).forEach((n, i) => {
+      pieceList.innerHTML = '';
+      names.forEach((n, i) => {
         const o = tpl.cloneNode(true); o.id = 'oa-brief-piece-' + i; o.dataset.value = n;
         o.setAttribute('role', 'option'); o.setAttribute('aria-selected', 'false');
         setText(o, n); bindTile(o); pieceList.appendChild(o);
