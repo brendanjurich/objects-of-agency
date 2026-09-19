@@ -60,6 +60,28 @@ Ref: <https://spencermortensen.com/articles/email-obfuscation/>
 
 -----
 
+## WhatsApp — `/contact` hero
+
+A WhatsApp button in the `• oa Intro Hero` slot (`oa Whatsapp Modal` component)
+opens a card with a QR and an “or chat via desktop” link. For fast questions and
+photos of a space — the brief stays the way in for a commission. Wired by
+`oa-whatsapp.js`.
+
+**Only ever the Business short link** — `https://wa.me/message/2WUXBRDPHBTLL1`
+(source: `03-marketing/social-platforms/whatsapp/oa-whatsapp-link.txt` in the
+command centre). It carries no number, so the mobile number never appears in the
+HTML, the href or the QR. **Never use a `wa.me/<number>` link** — a QR can't be
+obfuscated, so a number in it is published in plain sight, reversing the e-mail
+decision above.
+
+- The QR is a static inline SVG in a Designer embed (`.whatsapp_qr`), encoding
+  the short link plus `?src=qr`. No runtime QR library. Regenerate it if the
+  short link ever changes.
+- Touch devices never open the card — a phone can't scan its own screen — so
+  the button opens the chat directly.
+
+-----
+
 ## Page Architecture
 
 |Page      |Purpose                              |Schema                          |
