@@ -60,11 +60,12 @@ Ref: <https://spencermortensen.com/articles/email-obfuscation/>
 
 -----
 
-## WhatsApp — `/contact`, below the brief
+## WhatsApp — `/contact` hero
 
-**Decided 18-09-2026.** A `section_whatsapp` block sits under the Project Brief:
-portrait left, copy + QR + “Open WhatsApp” right. It is for fast questions and
-photos of a space — the brief stays the way in for a commission.
+A WhatsApp button in the `• oa Intro Hero` slot (`oa Whatsapp Modal` component)
+opens a card with a QR and an “or chat via desktop” link. For fast questions and
+photos of a space — the brief stays the way in for a commission. Wired by
+`oa-whatsapp.js`.
 
 **Only ever the Business short link** — `https://wa.me/message/2WUXBRDPHBTLL1`
 (source: `03-marketing/social-platforms/whatsapp/oa-whatsapp-link.txt` in the
@@ -74,12 +75,10 @@ obfuscated, so a number in it is published in plain sight, reversing the e-mail
 decision above.
 
 - The QR is a static inline SVG in a Designer embed (`.whatsapp_qr`), encoding
-  the short link plus `?src=qr` — the same string WhatsApp's own QR encodes.
-  No runtime QR library. Regenerate it if the short link ever changes.
-- `oa-styles.css` hides `.whatsapp_qr` under `(hover: none) and (pointer: coarse)`
-  — a phone can't scan its own screen; touch visitors get the button alone.
-- Considered and rejected: Osmo's “WhatsApp Modal (Generate QR Code)” — a
-  floating modal with a CDN QR library and the raw number in an attribute.
+  the short link plus `?src=qr`. No runtime QR library. Regenerate it if the
+  short link ever changes.
+- Touch devices never open the card — a phone can't scan its own screen — so
+  the button opens the chat directly.
 
 -----
 

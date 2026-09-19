@@ -923,16 +923,3 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 html.w-mod-js [data-oa-brief]:not([data-oa-brief-ready]) [data-oa-brief-step]:not([data-oa-brief-step="who"]) {
   display: none !important;
 }
-
-/* ============================================================
-   WHATSAPP (/contact) — hide the QR on touch devices
-   ============================================================
-   A phone can't scan its own screen, so touch visitors get the
-   "Open WhatsApp" button alone. Input is detected by capability,
-   never width — an iPad Pro is touch at any size. Everything else
-   about .whatsapp_qr (width, spacing) is set in the Designer. */
-@media (hover: none) and (pointer: coarse) {
-  .whatsapp_qr {
-    display: none;
-  }
-}

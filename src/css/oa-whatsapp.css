@@ -1,0 +1,40 @@
+/* ============================================================
+   OSMO — WhatsApp Modal (behavioural glue only)
+   ------------------------------------------------------------
+   Adapted for Objects of Agency from osmo.supply's "WhatsApp Modal
+   (Generate QR Code)". This file carries only what the Webflow Designer
+   cannot express: the pointer-events override the JS depends on, the
+   [data-whatsapp-status] closed state, and the reduced-motion branch.
+   Deliberately NOT set here, because they are Designer knobs: card and
+   button size, colour, radius, spacing, type, QR size and positioning.
+   No canvas preview block — the status attribute only exists at runtime,
+   so the canvas shows the open panel as styled.
+   Page-level (/contact). Raw-served (no build).
+   ============================================================ */
+
+/* .oa_intro_container is pointer-events:none so the hero never blocks the
+   page, and the slot inherits it. Load-bearing: without this the trigger
+   is dead. */
+[data-whatsapp-init] {
+  pointer-events: auto;
+}
+
+[data-whatsapp-panel] {
+  transition: opacity 0.6s var(--ease-oa), transform 0.6s var(--ease-oa);
+}
+
+/* Only the JS writes 'closed', so the canvas and a no-JS visit both show the
+   panel. The invisible card sits over the trigger — pointer-events lets the
+   click through to it. */
+[data-whatsapp-status='closed'] [data-whatsapp-panel] {
+  opacity: 0;
+  transform: translateY(25%) rotate(0.001deg);
+  pointer-events: none;
+}
+
+/* Still opens and closes; it just doesn't slide or fade. */
+@media (prefers-reduced-motion: reduce) {
+  [data-whatsapp-panel] {
+    transition-duration: 0.01ms;
+  }
+}
