@@ -60,9 +60,9 @@ Ref: <https://spencermortensen.com/articles/email-obfuscation/>
 
 -----
 
-## WhatsApp — `/contact` hero
+## WhatsApp — `/contact`, below the brief
 
-A WhatsApp button in the `• oa Intro Hero` slot (`oa Whatsapp Modal` component)
+A WhatsApp button in `section_contact_whatsapp` (`oa Whatsapp Modal` component)
 opens a card with a QR and an “or chat via desktop” link. For fast questions and
 photos of a space — the brief stays the way in for a commission. Wired by
 `oa-whatsapp.js`.
