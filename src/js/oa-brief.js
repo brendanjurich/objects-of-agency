@@ -92,7 +92,14 @@
   // ---- values (inner-group scoping only; a step being hidden never hides its answers)
   // Step blocks carry branch attributes too, and a step that isn't current is hidden — that
   // must never switch its answers off, only a scoped inner group (branch/when/unless) may.
+  // An answer on a step the current route skips is off too: going Back and switching
+  // audience leaves the old branch's chips checked (a client never sees `where`, yet its
+  // setting and quantity still counted). Liveness uses the step's own scope, not route():
+  // skipWhat must not void the `after` it pre-fills.
+  const stepOf = {}; steps.forEach(s => { stepOf[s.id] = s; });
   const off = el => {
+    const q = el.closest('[data-oa-brief-step]'); const s = q && stepOf[q.getAttribute('data-oa-brief-step')];
+    if (s && s.id !== 'who' && !(branch() && visible(s))) return true;
     let n = el.parentElement;
     while (n && n !== root) {
       if (n.hidden && !n.hasAttribute('data-oa-brief-step') &&
@@ -398,6 +405,12 @@
     }
     return row;
   }
+  // The month input's value is "2027-02"; the summary reads "February 2027". The payload
+  // keeps the ISO value — the Edge Function stores it as a date.
+  function monthName(v) {
+    const m = /^(\d{4})-(\d{2})$/.exec(v || ''); if (!m) return v;
+    return new Date(+m[1], +m[2] - 1, 1).toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
+  }
   function renderSummary() {
     const dl = $('[data-oa-brief-summary]'); if (!dl) return; dl.innerHTML = '';
     const rows = [];
@@ -408,7 +421,7 @@
     add('bespoke', 'Bespoke', (val('bespoke') || []).map(v => label('bespoke', v)));
     add('where', 'Setting', (val('setting') || []).map(v => label('setting', v)));
     add(branch() === 'client' ? 'when' : 'where', 'How many', val('quantity') && label('quantity', val('quantity')));
-    add('when', 'When', val('timing') && (val('timing') === 'date' ? 'By ' + val('timing_date') : label('timing', val('timing'))));
+    add('when', 'When', val('timing') && (val('timing') === 'date' ? 'By ' + monthName(val('timing_date')) : label('timing', val('timing'))));
     add('when', 'Budget', val('budget') && label('budget', val('budget')));
     add('when', 'Materials', (val('materials') || []).map(v => label('materials', v)));
     add(has('after=bespoke') ? 'bespoke' : 'when', 'Note', val('note'));
