@@ -88,6 +88,12 @@ async function send(to: string, subject: string, html: string, text: string) {
   if (!r.ok) console.error("resend", r.status, await r.text());
 }
 
+// The stored "2027-02-01" → "February 2027", matching the on-page summary.
+function monthName(v: string) {
+  const m = /^(\d{4})-(\d{2})(?:-\d{2})?$/.exec(v);
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, 1)).toLocaleDateString("en-AU", { month: "long", year: "numeric", timeZone: "UTC" }) : v;
+}
+
 function rows(b: Record<string, unknown>) {
   const out: [string, string][] = [];
   const add = (k: string, v: string | null | undefined) => { if (v) out.push([k, v]); };
@@ -98,7 +104,7 @@ function rows(b: Record<string, unknown>) {
   add("Bespoke", lab("bespoke", b.bespoke));
   add("Setting", lab("setting", b.setting));
   add("How many", lab("quantity", b.quantity));
-  add("When", b.timing === "date" && b.timing_date ? `By ${b.timing_date}` : lab("timing", b.timing));
+  add("When", b.timing === "date" && b.timing_date ? `By ${monthName(b.timing_date as string)}` : lab("timing", b.timing));
   add("Budget", lab("budget", b.budget_band));
   add("Materials", lab("materials", b.materials));
   add("Note", b.note as string | null);
