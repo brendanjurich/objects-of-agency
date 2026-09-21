@@ -3,21 +3,14 @@
    ------------------------------------------------------------
    Adapted for Objects of Agency from osmo.supply's "WhatsApp Modal
    (Generate QR Code)". This file carries only what the Webflow Designer
-   cannot express: the pointer-events override the JS depends on, the
-   [data-whatsapp-status] closed state, and the reduced-motion branch.
+   cannot express: the [data-whatsapp-status] closed state and the
+   reduced-motion branch.
    Deliberately NOT set here, because they are Designer knobs: card and
    button size, colour, radius, spacing, type, QR size and positioning.
    No canvas preview block — the status attribute only exists at runtime,
    so the canvas shows the open panel as styled.
    Page-level (/contact). Raw-served (no build).
    ============================================================ */
-
-/* .oa_intro_container is pointer-events:none so the hero never blocks the
-   page, and the slot inherits it. Load-bearing: without this the trigger
-   is dead. */
-[data-whatsapp-init] {
-  pointer-events: auto;
-}
 
 [data-whatsapp-panel] {
   transition: opacity 0.6s var(--ease-oa), transform 0.6s var(--ease-oa);

@@ -27,9 +27,6 @@
        never needs a redeploy.
      • Reduced motion lands the end state with zero tweens and
        pauses the video.
-     • Slotted content marked data-oa_intro_reveal-target is held
-       hidden and fades in on the blur's beat (/contact's WhatsApp
-       button).
    Drives the `• oa Intro Hero` component, so it runs on any page
    that carries one. Page-level embed — adding the component to a
    page means adding this embed there too, or it renders static.
@@ -72,11 +69,6 @@ function initIntroHero() {
   const blur = root.querySelector('[data-oa_intro_video-blur]');
   const vidWrap = root.querySelector('[data-oa_intro_vid-wrap]');
   const video = vidWrap ? vidWrap.querySelector('video') : null;
-  // Slot content that waits for the beat — the /contact WhatsApp button. Mark
-  // the slotted element itself: the slot's wrapper is display:contents and has
-  // no box to fade. Optional, so every use below is guarded — GSAP warns on an
-  // empty target list, and /about has none.
-  const reveals = [...root.querySelectorAll('[data-oa_intro_reveal-target]')];
 
   if (!title || !blur) {
     console.warn('[oa-intro] intro markup incomplete — skipping init.');
@@ -123,16 +115,12 @@ function initIntroHero() {
   // on a page without that attribute and the opening frame flashes unhidden.
   gsap.set(blur, {opacity: 0});
   gsap.set(title, {opacity: 0});
-  // autoAlpha, not opacity: visibility:hidden also keeps a not-yet-shown
-  // button off the pointer and out of the tab order.
-  if (reveals.length) gsap.set(reveals, {autoAlpha: 0});
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     // Branch, not kill: keep the end state, create zero tweens, and stop the
     // looping video — it is auto-playing motion with no pause control.
     gsap.set(blur, {opacity: 1});
     gsap.set(title, {opacity: 1});
-    if (reveals.length) gsap.set(reveals, {autoAlpha: 1});
     title.textContent = finalText;
     if (video) video.pause();
     return;
@@ -172,11 +160,6 @@ function initIntroHero() {
     // Fades quickly and then keeps resolving, so the scramble — not the
     // fade — is what reads as the entrance.
     tl.to(title, {opacity: 1, duration: 0.3, ease: 'power2.out'}, 0);
-
-    // Rides the blur's knob and curve, so it lands as part of the same moment.
-    if (reveals.length) {
-      tl.to(reveals, {autoAlpha: 1, duration: BLUR, ease: 'power4.out'}, 0);
-    }
 
     if (Scramble) {
       tl.to(title, {
