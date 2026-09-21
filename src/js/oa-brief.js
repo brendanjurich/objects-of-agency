@@ -135,42 +135,76 @@
     });
   }
 
-  // ---- reveal (GSAP if present, respects reduced motion)
+  // ---- transition (GSAP if present, respects reduced motion)
+  // The step on screen fades out, the swap happens, then the new step fades in with its
+  // chips staggered, and the root eases from the old height to the new one so Back /
+  // Continue glide rather than jump. Timings are Designer knobs on the root, in seconds:
+  // data-oa-brief-exit (0.2), data-oa-brief-enter (0.45), data-oa-brief-stagger (0.2,
+  // total spread across a step's chips; 0 turns it off).
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const knob = (k, d) => { const v = parseFloat(root.getAttribute('data-oa-brief-' + k)); return isNaN(v) ? d : v; };
+  const EXIT = knob('exit', 0.2), ENTER = knob('enter', 0.45), STAGGER = knob('stagger', 0.2);
+  const ease = () => window.CustomEase && window.gsap.parseEase('oa') ? 'oa' : 'power2.out';
+  const chipsIn = els => els.reduce((a, el) => a.concat($$('label', el)), []);
   // Clear the transform too: a leftover identity matrix still makes the step a stacking
   // context, which trapped the piece list's z-index under .brief_nav's Back/Continue.
   function reveal(els) {
     if (reduce || !window.gsap) return;
-    window.gsap.fromTo(els, { opacity: 0, y: 8, filter: 'blur(4px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.45, ease: window.CustomEase && window.gsap.parseEase('oa') ? 'oa' : 'power2.out', clearProps: 'filter,transform' });
+    window.gsap.fromTo(els, { opacity: 0, y: 8, filter: 'blur(4px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: ENTER, ease: ease(), clearProps: 'filter,transform' });
+    const chips = chipsIn(els).filter(l => l.getClientRects().length);
+    if (chips.length > 1 && STAGGER > 0) window.gsap.fromTo(chips, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: ENTER, ease: ease(), stagger: { amount: STAGGER }, clearProps: 'opacity,transform' });
+  }
+  // `apply` hides the old step, shows the new one and calls reveal(). A second call while
+  // an exit is running (a fast Back, a double Continue) drops the first one's apply —
+  // the newer call sets the whole screen anyway.
+  let leaving = null;
+  function swap(apply, instant) {
+    const g = window.gsap;
+    if (leaving) { leaving.kill(); leaving = null; }
+    const out = steps.reduce((a, s) => a.concat(s.els), []).filter(el => !el.hidden);
+    if (reduce || !g || instant || !out.length) { apply(); return; }
+    const h0 = root.offsetHeight;
+    g.killTweensOf(out); const chips = chipsIn(out); g.killTweensOf(chips); g.set(chips, { clearProps: 'opacity,transform' });
+    leaving = g.to(out, { opacity: 0, y: -8, filter: 'blur(4px)', duration: EXIT, ease: ease(), onComplete: () => {
+      leaving = null;
+      g.set(out, { clearProps: 'opacity,filter,transform' });
+      g.killTweensOf(root); root.style.height = '';
+      apply();
+      const h1 = root.offsetHeight;
+      if (h1 !== h0) g.fromTo(root, { height: h0 }, { height: h1, duration: ENTER, ease: ease(), clearProps: 'height' });
+    } });
   }
 
   let idx = 0;
   let first = true;
   function show(i, push) {
     const r = route(); idx = Math.max(0, Math.min(i, r.length - 1)); const st = r[idx];
-    steps.forEach(s => s.els.forEach(el => setHidden(el, s !== st)));
-    scopeInner(st);
-    if (st.id === 'you') renderSummary();
-    if (st.id === 'you' || st.id === 'looking') mountTurnstile();
-    if (st.id === 'piece') renderPieces();
-    const n = idx + 1, N = branch() ? r.length : '…';
-    if (progress) setText(progress, fill(copy('progress-text', 'Question {n} of {N}'), { n: n, N: N }));
-    document.title = 'Question ' + n + ' of ' + N + ' — New Project Brief';
-    const h = $('.brief_question_title', st.els[0]) || st.els[0].querySelector('h2');
-    if (status && h) status.textContent = h.textContent;
-    setHidden(back, idx === 0);
-    // Auto-advance groups hide Continue only until they hold an answer — a restored draft
-    // re-checks the radio, and a re-click fires no change event, so the visitor would be stuck.
-    const auto = st.els.some(el => el.querySelector('[data-oa-brief-auto]'));
-    const autoAnswered = auto && st.els.some(el => el.querySelector('[data-oa-brief-auto] input:checked'));
-    setHidden(next, (auto && !autoAnswered) || st.id === 'you' || st.id === 'looking');
-    // Focus the heading only when the visitor moves between steps. Doing it on the
-    // first render puts a focus ring on the opening question before anyone has acted.
-    if (h && !first) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
-    reveal(st.els);
+    const moved = !first;
+    swap(() => {
+      steps.forEach(s => s.els.forEach(el => setHidden(el, s !== st)));
+      scopeInner(st);
+      if (st.id === 'you') renderSummary();
+      if (st.id === 'you' || st.id === 'looking') mountTurnstile();
+      if (st.id === 'piece') renderPieces();
+      const n = idx + 1, N = branch() ? r.length : '…';
+      if (progress) setText(progress, fill(copy('progress-text', 'Question {n} of {N}'), { n: n, N: N }));
+      document.title = 'Question ' + n + ' of ' + N + ' — New Project Brief';
+      const h = $('.brief_question_title', st.els[0]) || st.els[0].querySelector('h2');
+      if (status && h) status.textContent = h.textContent;
+      setHidden(back, idx === 0);
+      // Auto-advance groups hide Continue only until they hold an answer — a restored draft
+      // re-checks the radio, and a re-click fires no change event, so the visitor would be stuck.
+      const auto = st.els.some(el => el.querySelector('[data-oa-brief-auto]'));
+      const autoAnswered = auto && st.els.some(el => el.querySelector('[data-oa-brief-auto] input:checked'));
+      setHidden(next, (auto && !autoAnswered) || st.id === 'you' || st.id === 'looking');
+      // Focus the heading only when the visitor moves between steps. Doing it on the
+      // first render puts a focus ring on the opening question before anyone has acted.
+      if (h && moved) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+      reveal(st.els);
+      save();
+    }, !moved);
     if (push) history.pushState({ oaBrief: idx }, '');
     first = false;
-    save();
   }
   const KEYS = ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','note','interest','name','first_name','last_name','practice'];
   // The Designer splits the name into two fields. Compose the single `name` the
@@ -471,22 +505,24 @@
   // ---- finish / send
   function finish(ref) {
     const st = steps.filter(s => s.id === 'sent')[0];
-    steps.forEach(s => s.els.forEach(el => setHidden(el, s !== st)));
-    const name = firstName();
-    $$('[data-oa-brief-sent-heading]').forEach(h =>
-      setText(h, fill(copyFor('sent-text', 'Sent. Thank you, {name}.'), { name: name })));
-    $$('[data-oa-brief-sent-body]').forEach(b =>
-      setText(b, fill(copyFor('sent-body-text', SENT[branch()] || SENT.client), { name: name })));
-    // A reference is only useful to someone we emailed it to, and lookingEmail() never
-    // quotes one — so the just-looking screen shows no ref, email left or not.
-    const showRef = !!ref && branch() !== 'looking';
-    $$('[data-oa-brief-ref-line]').forEach(r => {
-      setText(r, showRef ? fill(copyFor('ref-text', 'Your reference is {ref}.'), { ref: ref }) : '');
-      setHidden(r, !showRef);
+    swap(() => {
+      steps.forEach(s => s.els.forEach(el => setHidden(el, s !== st)));
+      const name = firstName();
+      $$('[data-oa-brief-sent-heading]').forEach(h =>
+        setText(h, fill(copyFor('sent-text', 'Sent. Thank you, {name}.'), { name: name })));
+      $$('[data-oa-brief-sent-body]').forEach(b =>
+        setText(b, fill(copyFor('sent-body-text', SENT[branch()] || SENT.client), { name: name })));
+      // A reference is only useful to someone we emailed it to, and lookingEmail() never
+      // quotes one — so the just-looking screen shows no ref, email left or not.
+      const showRef = !!ref && branch() !== 'looking';
+      $$('[data-oa-brief-ref-line]').forEach(r => {
+        setText(r, showRef ? fill(copyFor('ref-text', 'Your reference is {ref}.'), { ref: ref }) : '');
+        setHidden(r, !showRef);
+      });
+      setHidden(nav, true); if (progress) setText(progress, ''); document.title = copyFor('sent-title', 'Sent — New Project Brief');
+      if (status) status.textContent = copyFor('sent-status-text', 'Brief sent.');
+      reveal(st.els);
     });
-    setHidden(nav, true); if (progress) setText(progress, ''); document.title = copyFor('sent-title', 'Sent — New Project Brief');
-    if (status) status.textContent = copyFor('sent-status-text', 'Brief sent.');
-    reveal(st.els);
     try { sessionStorage.removeItem(STORE); } catch (e) {}
   }
   async function payload() {
