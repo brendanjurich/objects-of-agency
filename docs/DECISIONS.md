@@ -1272,3 +1272,24 @@ picker.
 A side effect worth keeping: `data-oa-brief-sent-heading` had been stamped on
 both the step wrapper and the hidden `h2`, so `$$()` matched two nodes. It now
 matches one.
+
+### An answer on a step the route skips must not count
+
+Found 21-09-2026, fixed at v1.0.203. Pick venue, answer `where` (setting, quantity),
+go Back to `who`, switch to client: the client route never shows `where`, but its
+chips stayed checked and `val()` still read them. They reached the summary as a row
+with no Change link (nothing on the route to jump to) and went into the payload.
+`off()` only checked inner scoped groups, never the step an input lives on.
+
+`off()` now also drops an input whose step is out of scope for the current audience
+and `when`. Liveness is the step's own scope, **not** `route()`: `route()` removes
+`what` when `?piece=` sets `skipWhat`, and the `after=seen` it pre-fills must still
+count, or the piece step disappears. The chips stay checked in the DOM, so switching
+back to venue restores them — that is deliberate.
+
+The rule for any new step or input: a value is only real if the visitor could have
+reached the step that holds it on the path they are on now.
+
+A side note for smoke tests: an empty POST to `brief-intake` returns `200` with a
+ref. That is the min-time gate's silent fake success, not proof the function works
+end to end. Only a real brief through the page proves the insert and the emails.
