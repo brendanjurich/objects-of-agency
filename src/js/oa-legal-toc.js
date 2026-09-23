@@ -109,17 +109,24 @@ const initLegalToc = () => {
         e.preventDefault();
         setOpen(stateEl.getAttribute('data-legal-toc-open') !== 'true');
       });
-      // On document, in the CAPTURE phase. initNavAnchorLinks calls
-      // stopPropagation() there to stop Webflow's own anchor scroll, which
-      // also kills every bubble-phase listener below it — a close handler on
-      // the list never ran, so the index stayed open over the section it had
-      // just scrolled to. stopPropagation does not stop other listeners bound
-      // to the same element, so this one still fires. No preventDefault: the
-      // navigation is the other handler's to perform.
+      // Close BEFORE the click, not on it. Two things forced this:
+      //   1. A close handler on the list never ran at all. initNavAnchorLinks
+      //      calls stopPropagation() in the capture phase to stop Webflow's own
+      //      anchor scroll, and that kills every bubble-phase listener below it.
+      //   2. Closing on the click itself overshot by the height of the open
+      //      index (~88px measured): initNavAnchorLinks is bound earlier, so its
+      //      capture listener computes the target's position first, and the
+      //      collapse then shortened the page under the scroll already in
+      //      flight. pointerdown and keydown both land before the click, so the
+      //      layout has settled by the time anything is measured.
+      const closeBeforeNavigating = (e) => {
+        if (e.target.closest('[data-legal-toc-item]')) setOpen(false);
+      };
+      document.addEventListener('pointerdown', closeBeforeNavigating, true);
       document.addEventListener(
-        'click',
+        'keydown',
         (e) => {
-          if (e.target.closest('[data-legal-toc-item]')) setOpen(false);
+          if (e.key === 'Enter' || e.key === ' ') closeBeforeNavigating(e);
         },
         true
       );
