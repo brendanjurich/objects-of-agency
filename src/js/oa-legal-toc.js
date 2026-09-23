@@ -136,7 +136,11 @@ const initLegalToc = () => {
       const offset = parseFloat(getComputedStyle(heading).scrollMarginTop) || 0;
       ScrollTrigger.create({
         trigger: heading,
-        start: 'top ' + (offset + 1) + 'px',
+        // The first section owns everything above it. Starting it at its own
+        // resting position instead leaves a dead band over the intro where no
+        // trigger is active, so scrolling back to the top of the page kept the
+        // LAST section highlighted — the state simply never got reclaimed.
+        start: i === 0 ? 'top bottom' : 'top ' + (offset + 1) + 'px',
         endTrigger: next || contentEl,
         end: next ? 'top ' + (offset + 1) + 'px' : 'bottom top',
         onToggle: (self) => {
@@ -145,8 +149,8 @@ const initLegalToc = () => {
       });
     });
 
-    // Above the first heading nothing is in range, which would leave the index
-    // blank for the intro paragraph.
+    // Belt and braces for a first heading that loads below the fold: its
+    // trigger has not fired yet, and a blank index reads as broken.
     setActive(0);
   });
 };
