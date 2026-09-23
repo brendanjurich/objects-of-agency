@@ -25,11 +25,17 @@
    Page-level embed (legal pages). Raw-served (no build).
    ============================================================ */
 const initLegalToc = () => {
-  document.querySelectorAll('[data-legal-toc-wrap]').forEach((root) => {
-    const contentEl = root.querySelector('[data-legal-toc-content]');
-    const listEl = root.querySelector('[data-legal-toc-list]');
-    const templateLink = listEl && listEl.querySelector('[data-legal-toc-link]');
-    if (!contentEl || !listEl || !templateLink) return;
+  // Anchored on the list, and the document is found page-wide rather than
+  // inside a shared wrapper. The first build required both to sit under one
+  // [data-legal-toc-wrap]; a Designer rebuild around the `• oa Titles + Text`
+  // component then put the index and the document in sibling branches whose
+  // only common ancestor is inside that component — where an attribute would
+  // ride every instance sitewide. One legal document per page, so page scope
+  // is the honest scope, and there is no wrapper left to break.
+  document.querySelectorAll('[data-legal-toc-list]').forEach((listEl) => {
+    const contentEl = document.querySelector('[data-legal-toc-content]');
+    const templateLink = listEl.querySelector('[data-legal-toc-link]');
+    if (!contentEl || !templateLink) return;
 
     // The shallowest heading level present, not a hardcoded h2. Every document
     // in the legal pack is a flat numbered list of sections, so whichever level
@@ -87,10 +93,13 @@ const initLegalToc = () => {
 
     // Mobile disclosure. Closed on load, closes again after a link is taken so
     // the reader lands on the section rather than back at the index.
-    const toggle = root.querySelector('[data-legal-toc-toggle]');
+    // The state rides the list's own parent — whatever the Designer has made
+    // that, the CSS only tests for the attribute on an ancestor.
+    const toggle = document.querySelector('[data-legal-toc-toggle]');
+    const stateEl = listEl.parentElement || listEl;
     if (toggle) {
       const setOpen = (open) => {
-        root.setAttribute('data-legal-toc-open', open ? 'true' : 'false');
+        stateEl.setAttribute('data-legal-toc-open', open ? 'true' : 'false');
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       };
       setOpen(false);
@@ -98,7 +107,7 @@ const initLegalToc = () => {
       // would otherwise jump the page to the top on every tap.
       toggle.addEventListener('click', (e) => {
         e.preventDefault();
-        setOpen(root.getAttribute('data-legal-toc-open') !== 'true');
+        setOpen(stateEl.getAttribute('data-legal-toc-open') !== 'true');
       });
       // Bubble phase and no stopPropagation: oa-global.js's capture-phase
       // handler has already claimed this click and must still run.

@@ -39,7 +39,7 @@
   display: var(--flex-medium, none);
 }
 
-[data-legal-toc-wrap][data-legal-toc-open='false'] [data-legal-toc-list] {
+[data-legal-toc-open='false'] [data-legal-toc-list] {
   display: var(--none-medium, flex);
 }
 
