@@ -1387,3 +1387,43 @@ on the staging page. Worth reading before building the next legal page.
    the top kept the *last* section highlighted.
 8. **The tag 404'd on jsDelivr** for v1.0.210 while the commit-SHA URL served 200 — the
    negative-cache trap in `CLAUDE.md`, exactly as documented.
+
+### The mobile index becomes an accordion this file owns (23-09-2026, evening)
+
+The disclosure button was replaced by an unlinked Lumos accordion item, restyled
+as `.oa-accordion_*` inside the Lumos **Accordion List** slot. Four faults, all
+found by driving a fixture built from the staging DOM:
+
+1. **The Lumos embed script finds items by the stock class names**
+   (`.accordion_component`, `.accordion_toggle_button`, `.accordion_content_wrap`).
+   Renaming the classes left it with nothing to bind, so the toggle was dead.
+   The item was lifted out of the slot, the Accordion List instance deleted, and
+   `oa-legal-toc.js` now owns the behaviour by attribute
+   (`data-legal-toc-accordion` / `-toggle` / `-panel` / `-label`). A class rename
+   can't break it again.
+2. **`.oa-accordion_content_wrap` carried `display: none` from the stock class.**
+   Lumos's script flipped it inline; nothing else ever would, so the panel
+   animated to `auto` and stayed at 0px. Set to `block` in the Designer; the
+   closed state is now CSS in `oa-legal-toc.css`.
+3. **Closing on `pointerdown` killed the tap.** The link collapsed out from under
+   the finger, `pointerup` landed on whatever moved into its place, and the click
+   never reached the link — no scroll, no navigation. This is the fix from
+   finding 6 above turning against itself once the list sits *inside* the
+   collapsing element. It now closes from a **`window` capture click** listener:
+   the click is already dispatched to the link, and `window` capture runs before
+   `initNavAnchorLinks`' document capture, so the layout is settled when the
+   target is measured. Tap and Enter both land the heading at 130px.
+4. **Open-state styling uses Lumos's state system, not a new class.** With
+   `data-state="expanded"` on the item, the button's `aria-expanded="true"` flips
+   `--_state---true/false` for everything inside. The icon class already rotates
+   on `--_state---false`, so every open-state style stays in the Designer.
+
+Timing is per direction, as Designer attributes on the item: open `0.45s
+power3.out` (an entrance), close `0.3s power2.inOut` (a collapse that stays in
+view), plus a 0.025s link stagger (0 = off). A close still running when the
+scroll is measured is the old overshoot, so navigation closes it instantly.
+
+**Easing rule rewritten.** `--ease-oa` had become the reflex ease for every
+motion. It is the slider curve. `docs/REFERENCE.md` → "Easing — pick by motion"
+now maps each kind of motion to its curve, and the osmo-in skill no longer lists
+`--ease-oa` as a house rule.

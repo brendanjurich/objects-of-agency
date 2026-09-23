@@ -1,6 +1,6 @@
 ---
 name: osmo-in
-description: Use when an osmo.supply resource is being brought into the site — Brendan pastes Osmo's "AI instructions", a CSS + JS block, or Copy-to-Webflow markup, with or without a framing sentence. Also fires on "osmo-in", "here's the osmo code", "adapt this osmo component", or any third-party Webflow component arriving as code to absorb. Audits the stock resource against house rules (no CDN GSAP, rem over em, the Designer owns the design knobs, --ease-oa), adapts it into src/, and hands the styling knobs back to the Webflow Designer.
+description: Use when an osmo.supply resource is being brought into the site — Brendan pastes Osmo's "AI instructions", a CSS + JS block, or Copy-to-Webflow markup, with or without a framing sentence. Also fires on "osmo-in", "here's the osmo code", "adapt this osmo component", or any third-party Webflow component arriving as code to absorb. Audits the stock resource against house rules (no CDN GSAP, rem over em, the Designer owns the design knobs, easing chosen per motion), adapts it into src/, and hands the styling knobs back to the Webflow Designer.
 ---
 
 # Osmo in
@@ -152,9 +152,11 @@ Then:
 - `px` is fine for mechanical values — blur radii, transform offsets, breakpoints.
 - **`svh`, never `dvh`.**
 - **Rename their tokens into the `oa` namespace.** `--ease-osmo` → `--ease-oa` is the
-  precedent; the rename signals the value is ours to retune. Retune it if it doesn't
-  suit — the site curve is `cubic-bezier(0.22, 0.36, 0.1, 1)` because Osmo's pure curve
-  read as lag on touch.
+  precedent; the rename signals the value is ours to retune.
+- **Don't swap their ease for `--ease-oa` by default.** That curve belongs to the
+  sliders; it is not a house ease. Judge each tween by what it does (enters, exits,
+  collapses in view, moves A→B, scrubs) and pick from the table in `docs/REFERENCE.md`
+  → "Easing — pick by motion". Keep their curve when it already fits the motion.
 - Consume Lumos variables (`--_theme---text`, `--focus--width`), never redefine them.
 - **Specificity ladder:** use a Webflow/Designer hook → out-specify with a descendant
   or compound selector → **only then `!important`, with a comment naming the inline

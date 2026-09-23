@@ -54,7 +54,37 @@ Two separate issues, both solved in CSS only — **do not** fix with `setTimeout
 
 ---
 
-## Site easing — `--ease-oa`
+## Easing — pick by motion, never by reflex
+
+There is no site-wide default curve. `--ease-oa` is the **slider** curve, not
+the house ease. Treat it as one entry in the table, not the answer to every
+motion. Pick the curve from what the element is doing. Name the reason in a
+comment beside the tween, so the choice can be argued with later.
+
+| Motion | Curve | Duration | Why |
+|---|---|---|---|
+| **Enters / opens / reveals** (panel expands, card appears) | out: `power2.out`–`power3.out`, CSS `cubic-bezier(0.22, 1, 0.36, 1)` | 0.3–0.5s, longer for more distance | Answers the input at once, settles softly. The eye tracks the arrival, not the departure. |
+| **Exits, leaving the screen** (modal dismiss, toast out) | in: `power2.in` | ~0.7× the entrance | Gets out of the way. Nobody watches something leave. |
+| **Collapses but stays in view** (accordion closing) | in-out: `power2.inOut` | ~0.7× the entrance | Content below reflows with it, so neither end may jolt. |
+| **Moves A→B, both on screen** (icon rotate, tab indicator, slide change) | in-out, or `--ease-oa` for swipeable slides | 0.2–0.6s | Both ends are visible, so both need easing. `--ease-oa` departs early enough to feel attached to a swipe. |
+| **State feedback** (hover colour, opacity, press) | `ease-out` or `power1.out` | 0.15–0.25s | Must feel instant. A dramatic curve on a hover reads as lag. |
+| **Scroll-linked** (scrub) | `none` | — | The scroll is the easing. Adding one doubles it. |
+| **Continuous** (drift, marquee, loop) | `none` | — | Any curve shows as a pulse at each loop. |
+| **Choreographed set pieces** (loader, page transition, slideshow wipe) | registered CustomEases `loader`, `slideshow-wipe` in `oa-global.js` | per piece | Composed once, deliberately. Not for reuse elsewhere. |
+
+Rules that hold across the table:
+
+- **Exits run shorter than entrances.**
+- **Duration scales with distance.** A 500px panel earns more time than a 40px one.
+- **Interrupted motion continues from where it is.** Tween from the current
+  value, never snap back to the start (`oa-legal-toc.js` reads the mid-tween
+  height).
+- **Reduced motion: make it instant.** Don't just slow it down.
+- **Timing knobs are Designer attributes** where Brendan will tune them
+  (`data-legal-toc-ease`, `data-oa-brief-enter`), never constants he has to
+  release a tag to change.
+
+### The slider curve — `--ease-oa`
 
 > Renamed from `--ease-osmo` (2026-06-28) to signal it's ours, not Osmo's. Same
 > curve, new name.
