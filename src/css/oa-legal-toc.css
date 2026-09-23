@@ -1,0 +1,50 @@
+/* ============================================================
+   OSMO — Legal document index (table of contents)
+   ------------------------------------------------------------
+   Behavioural glue ONLY. Per docs/CSS-ARCHITECTURE.md this repo
+   layer loads AFTER Webflow's CSS and wins at equal specificity,
+   so it deliberately OMITS every design knob: the 12-column split
+   (3 / gap / 8), the sidebar's sticky position and top offset, all
+   gaps, padding, type and link colours, and the whole rich-text
+   typography. Those are yours in the Designer — the sidebar's
+   `top` in particular should be Lumos's nav-height expression, not
+   a number from here.
+   What lives here is what the Designer panel cannot express: the
+   anchor landing offset, the JS status state, the disclosure's
+   closed state, and the canvas preview.
+   Paired JS: oa-legal-toc.js. Page-level embed (legal pages).
+   ============================================================ */
+
+/* --- Anchor landing: clearance under the fixed nav. One number,
+   read live by BOTH the scroll in oa-global.js and the highlight
+   triggers in oa-legal-toc.js. Matches oa-all-products.css. --- */
+[data-legal-toc-content] h2 {
+  scroll-margin-top: 130px;
+}
+
+/* --- Active section. The JS writes it as a data attribute, which the
+   Designer cannot target, so the rule belongs here. It reads the brand
+   swatch rather than a hex, so it tracks the variable. --- */
+[data-legal-toc-item][data-legal-toc-status='active'] {
+  color: var(--swatch--brand-500);
+  border-color: var(--swatch--brand-500);
+}
+
+/* --- Mobile disclosure. Lumos responsive keywords, not @media: each
+   var resolves at medium and below and is undefined above, where the
+   fallback applies. So the toggle exists only on small screens, and a
+   closed index only collapses there — on desktop the list is always
+   open and the toggle is never rendered. --- */
+[data-legal-toc-toggle] {
+  display: var(--flex-medium, none);
+}
+
+[data-legal-toc-wrap][data-legal-toc-open='false'] [data-legal-toc-list] {
+  display: var(--none-medium, flex);
+}
+
+/* --- Designer canvas: the JS never runs there, so the index would be a
+   single template link inside a disclosure stuck shut. --- */
+:is(.wf-design-mode, .wf-editor) [data-legal-toc-list] {
+  display: flex !important; /* beats the closed-disclosure rule above */
+}

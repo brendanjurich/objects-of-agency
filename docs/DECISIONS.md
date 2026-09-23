@@ -1293,3 +1293,56 @@ reached the step that holds it on the path they are on now.
 A side note for smoke tests: an empty POST to `brief-intake` returns `200` with a
 ref. That is the min-time gate's silent fake success, not proof the function works
 end to end. Only a real brief through the page proves the insert and the emails.
+
+---
+
+## 2026-09-23 — Legal pages: section index built, three Webflow MCP traps
+
+### The index is generated, so a legal page costs one paste
+
+Osmo's Table of Contents clones a single `[data-legal-toc-link]` template once per
+`<h2>` and deletes the template. The demo markup's hand-written list is a placeholder,
+not the pattern — which is what made a six-document build look like six days of
+element wrangling. Per document the real cost is: duplicate the page, paste the
+document into the Rich Text, done. The pack in the command centre
+(`08-operations/legal/oa-legal-docs/html/public/*.html`) is already clean `h2`/`ol`/
+`li`/`p`/`strong`, all of which Webflow Rich Text accepts. **Its `<table>` does not
+exist in Rich Text** — Warranty's table has to become a headed list.
+
+### Section numbers are stripped from the generated ids
+
+Slugifying "7. Returns — made-to-order pieces" yields `7-returns-…`, a perfectly legal
+id and an **invalid CSS selector**. `initNavAnchorLinks` resolves the target with
+`document.querySelector(url.hash)` inside a try/catch, so the throw is swallowed, the
+handler returns, and Webflow's own anchor scroll takes the click and parks the heading
+under the fixed nav — a silent failure that looks like a CSS offset bug. The id drops
+the number; the heading keeps it. Renumbering after the solicitor's pass then doesn't
+break every anchor either.
+
+### `initNavAnchorLinks` is now opt-in beyond the nav
+
+It was gated on `nav.contains(a)`. The index sits mid-page, so it got no smooth scroll
+at all. Widened to `nav.contains(a) || a.closest('[data-oa-anchor-scroll]')` rather
+than duplicating the Lenis call, the capture-phase stop and the focus move into the
+new file. Any future in-page nav opts in with that attribute.
+
+### Three Webflow MCP traps, all found by writing and reading back
+
+1. **`data_whtml_builder` drops the classes** in the HTML you hand it, and the blocks
+   it creates with custom tags (`aside`, `nav`, a tagged `div`) then **reject
+   `set_attributes`** — every call returns `[Conflict] The operation could not be
+   applied to the component map`, forever, on that element. The Link and Span in the
+   same insert accepted attributes fine. Rebuilt with `data_element_builder` using
+   native types (`DivBlock`, `LinkBlock`, `RichText`) and the writes went through.
+2. **`data_element_builder` ignores `attributes` and `text` in the schema.** It reports
+   success and creates the tree, but `get_attributes` comes back empty and text blocks
+   carry Webflow's placeholder copy. Set both afterwards with `set_attributes` /
+   `set_text` — and read back, don't trust the success.
+3. **Lumos `u-*` utilities are mostly registered as combo classes** bound to a base
+   (`.config_base_price.u-text-style-main`), so `set_style` reports "styles not found"
+   for `u-text-style-small` / `u-rich-text`. One utility in the list fails the whole
+   call. Component classes are applied over MCP; the `u-` classes are added in the
+   Designer.
+
+Page deletion, page duplication and moving a page into a folder have **no API** at all
+— those stay manual in the Pages panel.
