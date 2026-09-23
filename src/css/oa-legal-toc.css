@@ -18,7 +18,7 @@
 /* --- Anchor landing: clearance under the fixed nav. One number,
    read live by BOTH the scroll in oa-global.js and the highlight
    triggers in oa-legal-toc.js. Matches oa-all-products.css. --- */
-[data-legal-toc-content] h2 {
+[data-legal-toc-content] :is(h2, h3, h4, h5, h6) {
   scroll-margin-top: 130px;
 }
 

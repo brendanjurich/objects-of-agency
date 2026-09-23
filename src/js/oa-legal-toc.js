@@ -16,7 +16,8 @@
        fixed nav comes from the heading's own scroll-margin-top, read
        live, so it tracks the breakpoint — the /all-products convention.
      • {skip} marker, data-toc-ignore and the h3 depth rules deleted.
-       The legal pack is H2-only and nothing consumed them.
+       The pack's documents are a flat list of sections, so the index takes
+       the shallowest heading level present and nothing consumed the rest.
      • Attributes namespaced data-legal-toc-*.
      • Mobile adds a disclosure: the index collapses behind a toggle,
        because Terms & Conditions has 14 sections and a stacked list
@@ -30,11 +31,18 @@ const initLegalToc = () => {
     const templateLink = listEl && listEl.querySelector('[data-legal-toc-link]');
     if (!contentEl || !listEl || !templateLink) return;
 
-    // H2 only. Every document in the legal pack is a flat numbered list of
-    // sections; a nested index would be an indent with nothing under it.
-    const headings = Array.from(contentEl.querySelectorAll('h2')).filter(
-      (h) => h.textContent.trim()
-    );
+    // The shallowest heading level present, not a hardcoded h2. Every document
+    // in the legal pack is a flat numbered list of sections, so whichever level
+    // the Rich Text ended up carrying IS the section level — and what a paste
+    // into Webflow produces is not reliably h2 (Delivery & Returns came through
+    // as h5). Deeper levels stay out of the index, which is what a flat index
+    // wants anyway.
+    let headings = [];
+    for (let level = 2; level <= 6 && !headings.length; level += 1) {
+      headings = Array.from(contentEl.querySelectorAll('h' + level)).filter(
+        (h) => h.textContent.trim()
+      );
+    }
     if (!headings.length) return;
 
     const slugCounts = new Map();
