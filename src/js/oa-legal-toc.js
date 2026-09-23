@@ -109,11 +109,20 @@ const initLegalToc = () => {
         e.preventDefault();
         setOpen(stateEl.getAttribute('data-legal-toc-open') !== 'true');
       });
-      // Bubble phase and no stopPropagation: oa-global.js's capture-phase
-      // handler has already claimed this click and must still run.
-      listEl.addEventListener('click', (e) => {
-        if (e.target.closest('[data-legal-toc-item]')) setOpen(false);
-      });
+      // On document, in the CAPTURE phase. initNavAnchorLinks calls
+      // stopPropagation() there to stop Webflow's own anchor scroll, which
+      // also kills every bubble-phase listener below it — a close handler on
+      // the list never ran, so the index stayed open over the section it had
+      // just scrolled to. stopPropagation does not stop other listeners bound
+      // to the same element, so this one still fires. No preventDefault: the
+      // navigation is the other handler's to perform.
+      document.addEventListener(
+        'click',
+        (e) => {
+          if (e.target.closest('[data-legal-toc-item]')) setOpen(false);
+        },
+        true
+      );
     }
 
     const ScrollTrigger = window.ScrollTrigger;
