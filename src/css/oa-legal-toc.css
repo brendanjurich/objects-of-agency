@@ -30,17 +30,25 @@
   border-color: var(--swatch--brand-500);
 }
 
-/* --- Mobile disclosure. Lumos responsive keywords, not @media: each
-   var resolves at medium and below and is undefined above, where the
-   fallback applies. So the toggle exists only on small screens, and a
-   closed index only collapses there — on desktop the list is always
-   open and the toggle is never rendered. --- */
+/* --- Mobile disclosure, written against the same boundary Lumos uses.
+   The variable form only works one way in this build: it defines --flex-*
+   but NO --none-*, so `display: var(--none-medium, flex)` silently stayed
+   flex and the index never collapsed. Lumos itself flips --flex-medium
+   inside `@container (width < 50em)`, and the index sits inside the
+   `u-container` that query resolves against, so this matches it exactly
+   rather than guessing a viewport breakpoint. --- */
 [data-legal-toc-toggle] {
-  display: var(--flex-medium, none);
+  display: none;
 }
 
-[data-legal-toc-open='false'] [data-legal-toc-list] {
-  display: var(--none-medium, flex);
+@container (width < 50em) {
+  [data-legal-toc-toggle] {
+    display: block;
+  }
+
+  [data-legal-toc-open='false'] [data-legal-toc-list] {
+    display: none;
+  }
 }
 
 /* --- Designer canvas: the JS never runs there, so the index would be a
