@@ -1346,3 +1346,44 @@ new file. Any future in-page nav opts in with that attribute.
 
 Page deletion, page duplication and moving a page into a folder have **no API** at all
 — those stay manual in the Pages panel.
+
+### Same-day follow-ups, found by driving the published page (v1.0.205–v1.0.210)
+
+Everything below was invisible in the Designer and only showed up under Playwright
+on the staging page. Worth reading before building the next legal page.
+
+1. **A paste into a Webflow Rich Text does not preserve `h2`.** Delivery & Returns
+   arrived as `h5`, the index queried `h2`, and the result was an empty index with no
+   error anywhere. The script now takes the **shallowest heading level present** rather
+   than a fixed tag — the documents are flat lists of sections, so that level *is* the
+   section level whatever the paste produced.
+2. **The Designer layout moved out from under the script.** Rebuilding the block around
+   the `• oa Titles + Text` component put the index and the document in sibling branches
+   whose only common ancestor sits **inside** that component — where an attribute rides
+   every instance sitewide. Requiring one shared `[data-legal-toc-wrap]` was the wrong
+   contract: the script now resolves `[data-legal-toc-list]` and `[data-legal-toc-content]`
+   page-wide. One legal document per page, so page scope is the honest scope.
+3. **`data-oa-anchor-scroll` has to sit on an ancestor of the LINKS**, not of the
+   document. While it was on the content wrapper, `initNavAnchorLinks` never claimed the
+   click, Webflow's own anchor scroll did, and every heading landed at `top: 0` — under
+   an 81px nav. With it on `.legal_index_wrap`, headings land at 130px and focus moves.
+4. **This Lumos build defines `--flex-*` but no `--none-*`.** `display: var(--none-medium, flex)`
+   therefore always resolved to the fallback and the mobile index never collapsed — a
+   silent no-op, since an undefined variable is not an error. Lumos flips `--flex-medium`
+   inside `@container (width < 50em)` and the index sits in the `u-container` that query
+   resolves against, so the disclosure now uses that same boundary. **Check a Lumos
+   keyword variable exists before relying on it**; the documented set is larger than what
+   v2.2.1 ships here.
+5. **`stopPropagation()` in `initNavAnchorLinks` eats bubble-phase handlers below it.**
+   The close-on-tap handler bound to the list never fired. A listener bound to `document`
+   in the capture phase still does, because `stopPropagation` does not stop other
+   listeners on the same element.
+6. **Closing the index on the click overshot the target by ~88px.** `initNavAnchorLinks`
+   is bound first, so it measures the heading while the index is still expanded, and the
+   collapse then shortens the page under a scroll already in flight. Closing on
+   `pointerdown`/`keydown` — both of which precede the click — lands it exactly.
+7. **The first section has to own the scroll above it.** With every trigger starting at
+   its heading's resting position, the intro belonged to no trigger, so scrolling back to
+   the top kept the *last* section highlighted.
+8. **The tag 404'd on jsDelivr** for v1.0.210 while the commit-SHA URL served 200 — the
+   negative-cache trap in `CLAUDE.md`, exactly as documented.
