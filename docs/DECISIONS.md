@@ -1272,3 +1272,158 @@ picker.
 A side effect worth keeping: `data-oa-brief-sent-heading` had been stamped on
 both the step wrapper and the hidden `h2`, so `$$()` matched two nodes. It now
 matches one.
+
+### An answer on a step the route skips must not count
+
+Found 21-09-2026, fixed at v1.0.203. Pick venue, answer `where` (setting, quantity),
+go Back to `who`, switch to client: the client route never shows `where`, but its
+chips stayed checked and `val()` still read them. They reached the summary as a row
+with no Change link (nothing on the route to jump to) and went into the payload.
+`off()` only checked inner scoped groups, never the step an input lives on.
+
+`off()` now also drops an input whose step is out of scope for the current audience
+and `when`. Liveness is the step's own scope, **not** `route()`: `route()` removes
+`what` when `?piece=` sets `skipWhat`, and the `after=seen` it pre-fills must still
+count, or the piece step disappears. The chips stay checked in the DOM, so switching
+back to venue restores them — that is deliberate.
+
+The rule for any new step or input: a value is only real if the visitor could have
+reached the step that holds it on the path they are on now.
+
+A side note for smoke tests: an empty POST to `brief-intake` returns `200` with a
+ref. That is the min-time gate's silent fake success, not proof the function works
+end to end. Only a real brief through the page proves the insert and the emails.
+
+---
+
+## 2026-09-23 — Legal pages: section index built, three Webflow MCP traps
+
+### The index is generated, so a legal page costs one paste
+
+Osmo's Table of Contents clones a single `[data-legal-toc-link]` template once per
+`<h2>` and deletes the template. The demo markup's hand-written list is a placeholder,
+not the pattern — which is what made a six-document build look like six days of
+element wrangling. Per document the real cost is: duplicate the page, paste the
+document into the Rich Text, done. The pack in the command centre
+(`08-operations/legal/oa-legal-docs/html/public/*.html`) is already clean `h2`/`ol`/
+`li`/`p`/`strong`, all of which Webflow Rich Text accepts. **Its `<table>` does not
+exist in Rich Text** — Warranty's table has to become a headed list.
+
+### Section numbers are stripped from the generated ids
+
+Slugifying "7. Returns — made-to-order pieces" yields `7-returns-…`, a perfectly legal
+id and an **invalid CSS selector**. `initNavAnchorLinks` resolves the target with
+`document.querySelector(url.hash)` inside a try/catch, so the throw is swallowed, the
+handler returns, and Webflow's own anchor scroll takes the click and parks the heading
+under the fixed nav — a silent failure that looks like a CSS offset bug. The id drops
+the number; the heading keeps it. Renumbering after the solicitor's pass then doesn't
+break every anchor either.
+
+### `initNavAnchorLinks` is now opt-in beyond the nav
+
+It was gated on `nav.contains(a)`. The index sits mid-page, so it got no smooth scroll
+at all. Widened to `nav.contains(a) || a.closest('[data-oa-anchor-scroll]')` rather
+than duplicating the Lenis call, the capture-phase stop and the focus move into the
+new file. Any future in-page nav opts in with that attribute.
+
+### Three Webflow MCP traps, all found by writing and reading back
+
+1. **`data_whtml_builder` drops the classes** in the HTML you hand it, and the blocks
+   it creates with custom tags (`aside`, `nav`, a tagged `div`) then **reject
+   `set_attributes`** — every call returns `[Conflict] The operation could not be
+   applied to the component map`, forever, on that element. The Link and Span in the
+   same insert accepted attributes fine. Rebuilt with `data_element_builder` using
+   native types (`DivBlock`, `LinkBlock`, `RichText`) and the writes went through.
+2. **`data_element_builder` ignores `attributes` and `text` in the schema.** It reports
+   success and creates the tree, but `get_attributes` comes back empty and text blocks
+   carry Webflow's placeholder copy. Set both afterwards with `set_attributes` /
+   `set_text` — and read back, don't trust the success.
+3. **Lumos `u-*` utilities are mostly registered as combo classes** bound to a base
+   (`.config_base_price.u-text-style-main`), so `set_style` reports "styles not found"
+   for `u-text-style-small` / `u-rich-text`. One utility in the list fails the whole
+   call. Component classes are applied over MCP; the `u-` classes are added in the
+   Designer.
+
+Page deletion, page duplication and moving a page into a folder have **no API** at all
+— those stay manual in the Pages panel.
+
+### Same-day follow-ups, found by driving the published page (v1.0.205–v1.0.210)
+
+Everything below was invisible in the Designer and only showed up under Playwright
+on the staging page. Worth reading before building the next legal page.
+
+1. **A paste into a Webflow Rich Text does not preserve `h2`.** Delivery & Returns
+   arrived as `h5`, the index queried `h2`, and the result was an empty index with no
+   error anywhere. The script now takes the **shallowest heading level present** rather
+   than a fixed tag — the documents are flat lists of sections, so that level *is* the
+   section level whatever the paste produced.
+2. **The Designer layout moved out from under the script.** Rebuilding the block around
+   the `• oa Titles + Text` component put the index and the document in sibling branches
+   whose only common ancestor sits **inside** that component — where an attribute rides
+   every instance sitewide. Requiring one shared `[data-legal-toc-wrap]` was the wrong
+   contract: the script now resolves `[data-legal-toc-list]` and `[data-legal-toc-content]`
+   page-wide. One legal document per page, so page scope is the honest scope.
+3. **`data-oa-anchor-scroll` has to sit on an ancestor of the LINKS**, not of the
+   document. While it was on the content wrapper, `initNavAnchorLinks` never claimed the
+   click, Webflow's own anchor scroll did, and every heading landed at `top: 0` — under
+   an 81px nav. With it on `.legal_index_wrap`, headings land at 130px and focus moves.
+4. **This Lumos build defines `--flex-*` but no `--none-*`.** `display: var(--none-medium, flex)`
+   therefore always resolved to the fallback and the mobile index never collapsed — a
+   silent no-op, since an undefined variable is not an error. Lumos flips `--flex-medium`
+   inside `@container (width < 50em)` and the index sits in the `u-container` that query
+   resolves against, so the disclosure now uses that same boundary. **Check a Lumos
+   keyword variable exists before relying on it**; the documented set is larger than what
+   v2.2.1 ships here.
+5. **`stopPropagation()` in `initNavAnchorLinks` eats bubble-phase handlers below it.**
+   The close-on-tap handler bound to the list never fired. A listener bound to `document`
+   in the capture phase still does, because `stopPropagation` does not stop other
+   listeners on the same element.
+6. **Closing the index on the click overshot the target by ~88px.** `initNavAnchorLinks`
+   is bound first, so it measures the heading while the index is still expanded, and the
+   collapse then shortens the page under a scroll already in flight. Closing on
+   `pointerdown`/`keydown` — both of which precede the click — lands it exactly.
+7. **The first section has to own the scroll above it.** With every trigger starting at
+   its heading's resting position, the intro belonged to no trigger, so scrolling back to
+   the top kept the *last* section highlighted.
+8. **The tag 404'd on jsDelivr** for v1.0.210 while the commit-SHA URL served 200 — the
+   negative-cache trap in `CLAUDE.md`, exactly as documented.
+
+### The mobile index becomes an accordion this file owns (23-09-2026, evening)
+
+The disclosure button was replaced by an unlinked Lumos accordion item, restyled
+as `.oa-accordion_*` inside the Lumos **Accordion List** slot. Four faults, all
+found by driving a fixture built from the staging DOM:
+
+1. **The Lumos embed script finds items by the stock class names**
+   (`.accordion_component`, `.accordion_toggle_button`, `.accordion_content_wrap`).
+   Renaming the classes left it with nothing to bind, so the toggle was dead.
+   The item was lifted out of the slot, the Accordion List instance deleted, and
+   `oa-legal-toc.js` now owns the behaviour by attribute
+   (`data-legal-toc-accordion` / `-toggle` / `-panel` / `-label`). A class rename
+   can't break it again.
+2. **`.oa-accordion_content_wrap` carried `display: none` from the stock class.**
+   Lumos's script flipped it inline; nothing else ever would, so the panel
+   animated to `auto` and stayed at 0px. Set to `block` in the Designer; the
+   closed state is now CSS in `oa-legal-toc.css`.
+3. **Closing on `pointerdown` killed the tap.** The link collapsed out from under
+   the finger, `pointerup` landed on whatever moved into its place, and the click
+   never reached the link — no scroll, no navigation. This is the fix from
+   finding 6 above turning against itself once the list sits *inside* the
+   collapsing element. It now closes from a **`window` capture click** listener:
+   the click is already dispatched to the link, and `window` capture runs before
+   `initNavAnchorLinks`' document capture, so the layout is settled when the
+   target is measured. Tap and Enter both land the heading at 130px.
+4. **Open-state styling uses Lumos's state system, not a new class.** With
+   `data-state="expanded"` on the item, the button's `aria-expanded="true"` flips
+   `--_state---true/false` for everything inside. The icon class already rotates
+   on `--_state---false`, so every open-state style stays in the Designer.
+
+Timing is per direction, as Designer attributes on the item: open `0.45s
+power3.out` (an entrance), close `0.3s power2.inOut` (a collapse that stays in
+view), plus a 0.025s link stagger (0 = off). A close still running when the
+scroll is measured is the old overshoot, so navigation closes it instantly.
+
+**Easing rule rewritten.** `--ease-oa` had become the reflex ease for every
+motion. It is the slider curve. `docs/REFERENCE.md` → "Easing — pick by motion"
+now maps each kind of motion to its curve, and the osmo-in skill no longer lists
+`--ease-oa` as a house rule.

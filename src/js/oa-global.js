@@ -434,7 +434,12 @@ function initNavAnchorLinks() {
     // claimed this click, and it is still a legitimate user click.
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = e.target.closest('a[href]');
-    if (!a || !nav.contains(a)) return;
+    // Nav links, plus any container that opts in with data-oa-anchor-scroll —
+    // the legal pages' section index is the first. Everything below (Lenis,
+    // the capture-phase stop of Webflow's own anchor scroll, scroll-margin-top,
+    // the focus move) applies identically, so opting in beats a second copy.
+    if (!a) return;
+    if (!nav.contains(a) && !a.closest('[data-oa-anchor-scroll]')) return;
     if (a.target === '_blank' || a.hasAttribute('download')) return;
     let url;
     try { url = new URL(a.href, location.href); } catch (_) { return; }

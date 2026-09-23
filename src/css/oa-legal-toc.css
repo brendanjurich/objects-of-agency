@@ -1,0 +1,73 @@
+/* ============================================================
+   OSMO — Legal document index (table of contents)
+   ------------------------------------------------------------
+   Behavioural glue ONLY. Per docs/CSS-ARCHITECTURE.md this repo
+   layer loads AFTER Webflow's CSS and wins at equal specificity,
+   so it deliberately OMITS every design knob: the 12-column split
+   (3 / gap / 8), the sidebar's sticky position and top offset, all
+   gaps, padding, type and link colours, and the whole rich-text
+   typography. Those are yours in the Designer — the sidebar's
+   `top` in particular should be Lumos's nav-height expression, not
+   a number from here.
+   What lives here is what the Designer panel cannot express: the
+   anchor landing offset, the JS status state, the mobile
+   accordion's closed state, and the canvas preview.
+   Paired JS: oa-legal-toc.js. Page-level embed (legal pages).
+   ============================================================ */
+
+/* --- Anchor landing: clearance under the fixed nav. One number,
+   read live by BOTH the scroll in oa-global.js and the highlight
+   triggers in oa-legal-toc.js. Matches oa-all-products.css. --- */
+[data-legal-toc-content] :is(h2, h3, h4, h5, h6) {
+  scroll-margin-top: 130px;
+}
+
+/* --- Active section. The JS writes it as a data attribute, which the
+   Designer cannot target, so the rule belongs here. It reads the brand
+   swatch rather than a hex, so it tracks the variable. --- */
+[data-legal-toc-item][data-legal-toc-status='active'] {
+  color: var(--swatch--brand-500);
+  border-color: var(--swatch--brand-500);
+}
+
+/* --- Mobile accordion, written against the same boundary Lumos uses.
+   Lumos flips --flex-medium inside `@container (width < 50em)`, and the
+   index sits inside the `u-container` that query resolves against, so this
+   matches it exactly rather than guessing a viewport breakpoint. (The
+   variable route is a dead end in this build: it defines --flex-* but no
+   --none-*, so `var(--none-medium, …)` silently falls back.)
+   Only the states live here. How the toggle, panel and links look, open or
+   closed, is Designer work, through Lumos's --_state---true/false variables
+   (data-state="expanded" on the item). The panel's clip for the height
+   animation is the Designer's too: overflow-y clip on the panel class. --- */
+@container (width >= 50em) {
+  /* Desktop: no toggle, the index always shows. :has so the heading that
+     wraps the button goes too, rather than staying as an empty h3. */
+  [data-legal-toc-accordion] :has(> [data-legal-toc-toggle]),
+  [data-legal-toc-toggle] {
+    display: none;
+  }
+}
+
+@container (width < 50em) {
+  /* The toggle carries its own label on mobile. */
+  [data-legal-toc-label] {
+    display: none;
+  }
+
+  /* Closed. visibility as well as height, so collapsed links drop out of the
+     tab order. The JS writes inline height and visibility while it animates,
+     which beat these until it clears them. */
+  [data-legal-toc-accordion]:not(:has([data-legal-toc-toggle][aria-expanded='true']))
+    [data-legal-toc-panel] {
+    height: 0;
+    visibility: hidden;
+  }
+}
+
+/* --- Designer canvas: the JS never runs there, so the panel would sit
+   collapsed with a single template link hidden inside it. --- */
+:is(.wf-design-mode, .wf-editor) [data-legal-toc-panel] {
+  height: auto !important; /* beats the closed-state rule above */
+  visibility: visible !important;
+}
