@@ -36,9 +36,7 @@ keys, tokens, or `.env` files.**
 | `src/css/oa-legal-toc.css` | Behavioural glue for `oa-legal-toc.js`: the heading `scroll-margin-top` (nav clearance, same 130px as `oa-all-products.css`), the active-state rule on `--swatch--brand-500`, the accordion's show/hide states inside `@container (width < 50em)` (Lumos's medium boundary), and the `wf-design-mode` preview. Grid split, sticky offset, gaps, type and colours are Designer knobs. | Raw file → CDN |
 | `src/js/oa-text-reveal.js` | Text reveal: section headings and lead paragraphs blur in line by line on scroll, with a short scramble on the front of each line. Opt in with `data-oa-reveal` in the Designer; timings are Designer knobs (`data-oa_reveal_*`). The attribute may sit on a wrapper — the split targets the text leaves (`h1`-`h6`, `p`) inside it, never the wrapper itself, or every line carries markup and the scramble guard drops the gesture. A Webflow **Rich Text** counts as a leaf (Webflow renders `<p>`/`<h*>` inside the `w-richtext` div) but a **Text Block** does not — it is a bare `div`, so it never splits and pops at full opacity while its siblings blur in. That is the difference between the `oa Page Headline` component, whose eyebrow and heading are both Rich Text, and a hand-built block: give any non-semantic text element the `p` tag or make it Rich Text. Uses **SplitText** (`type:'lines'`, `autoSplit`, `aria:'auto'`) + **ScrambleTextPlugin**, both from Webflow's GSAP integration. Gated on `oa:page-revealed` (the end of the page transition's enter fade, dispatched by `oa-global.js`) + fonts ready — the loader gate it used before fires at `DOMContentLoaded` on no-loader pages, so an above-the-fold block played out behind a page still at `opacity:0`. A `data-oa_reveal_delay` knob adds a lead-in on top of that gate. Paired pre-hide in `oa-styles.css`. | Raw file → CDN |
 
-**There is no build step.** Every file is served raw via jsDelivr. (The old
-Rollup → `dist/oa-homepage.js` bundle was removed at v1.0.131 — the homepage
-reuses the sitewide Swiper via `window.oaLoadSwiper` instead of bundling its own.)
+**There is no build step.** Every file is served raw via jsDelivr.
 
 ---
 
@@ -87,11 +85,11 @@ never requires a republish.
 
 `oa-global.js` **must** load before `oa-configurator.js` (both read `window.gsap`). GSAP and its plugins are injected by Webflow ahead of the footer code, so `window.gsap` is available when these run.
 
-`oa-text-reveal.js` is the **first real ScrollTrigger consumer sitewide**. The Lenis↔ScrollTrigger glue in `oa-global.js` (`lenis.on('scroll', ScrollTrigger.update)`) was written as a documented no-op and now actually does work — verify scroll-triggered starts against Lenis, not native scroll. It must load after `oa-global.js` so Lenis exists when its triggers are created.
+ScrollTrigger consumers (e.g. `oa-text-reveal.js`, `oa-legal-toc.js`) run through the Lenis↔ScrollTrigger glue in `oa-global.js` (`lenis.on('scroll', ScrollTrigger.update)`) — verify scroll-triggered starts against Lenis, not native scroll. Each must load after `oa-global.js` so Lenis exists when its triggers are created.
 
 `oa-slider.js` **must** load before any page-level embed that calls `window.oaLoadSwiper` (currently `oa-homepage.js`). Webflow appends page-level footer code after sitewide footer code, so this holds automatically — just never move `oa-slider.js` out of the sitewide footer.
 
-**There is no `hls.js` anywhere.** Removed as a footer script at v1.0.131 (on-demand inject), then deleted outright when the hero moved to direct MP4 — see DECISIONS.md 2026-08-15. No page streams HLS; the old "oa-global.js before hls.js" ordering constraint is gone with it. Don't reintroduce it without re-reading that entry.
+**There is no `hls.js` anywhere** — hero video is direct MP4 (see Background video). Don't reintroduce HLS without re-reading DECISIONS.md 2026-08-15.
 
 **Page-level embeds** (load after the sitewide footer):
 - `oa-homepage.js` — homepage (needs `window.oaLoadSwiper` from `oa-slider.js`)
@@ -101,7 +99,7 @@ never requires a republish.
 - `oa-cursor.js` + `oa-cursor.css` — /contact (the piece tags). Page-level embed, no ordering constraint beyond the sitewide footer; it reads `window.gsap`, which Webflow injects ahead of footer code. No-ops on any page without `[data-cursor-init]`, so promoting it sitewide later is moving the markup and the embed, not a rewrite.
 - `oa-whatsapp.js` + `oa-whatsapp.css` — /contact. Page-level embed, no ordering constraint beyond the sitewide footer.
 - `oa-legal-toc.js` + `oa-legal-toc.css` — the legal pages (`/legal/*`). Page-level embed, after the sitewide footer so `oa-global.js` has created Lenis and the anchor handler before the index's triggers exist.
-- `oa-intro.js` — every page carrying the `• oa Intro Hero` component (/about only — /contact no longer carries it and doesn't load it); page-level embed, no ordering constraint beyond the sitewide footer. Its readiness gate is its own, not `oa-global.js`'s loader gate — those pages carry no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
+- `oa-intro.js` — every page carrying the `• oa Intro Hero` component (/about only); page-level embed, no ordering constraint beyond the sitewide footer. Its readiness gate is its own, not `oa-global.js`'s loader gate — those pages carry no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
 
 > Note: `oa-configurator.js` currently loads sitewide but is only needed on
 > product pages. Scoping it to product pages would drop one script request on
@@ -150,7 +148,7 @@ GSAP is provided by Webflow's **native GSAP integration** (Site Settings → GSA
 
 Version: **v2.2.1** — a **build-time clone**, baked into the Webflow project at the version downloaded. **There is no Lumos runtime**: nothing loads from a Lumos CDN, and its CSS/classes are frozen in the published file. Unlike GSAP above (which Webflow genuinely auto-updates on publish), Lumos does **not** auto-update — Timothy Ricks cannot change anything already in your project. The *only* way Lumos changes the live site is if **you** re-clone / re-import its components in the Designer yourself.
 
-**`oa-slider.js` owns the slider init outright** (since v1.0.135). Lumos's inline init embeds were deleted in the Designer and the two old `oa-global.js` `window.load` patches removed with them — `oa-global.js` no longer touches sliders. Per-slider config is read from Designer data-attributes (`data-speed`, `data-speed-touch`, `data-loop`, `data-parallax`, `data-slides-per-view`); `oa-slider.js` is the source of truth for the defaults. Re-test slider behaviour only if **you** re-import the Lumos sliders and their DOM or class names change — *not* on every publish.
+**`oa-slider.js` owns the slider init outright.** There are no Lumos inline init embeds in the Designer, and `oa-global.js` does not touch sliders. Per-slider config is read from Designer data-attributes (`data-speed`, `data-speed-touch`, `data-loop`, `data-parallax`, `data-slides-per-view`); `oa-slider.js` is the source of truth for the defaults. Re-test slider behaviour only if **you** re-import the Lumos sliders and their DOM or class names change — *not* on every publish.
 
 **Lumos ≠ Osmo — never conflate.**
 
@@ -251,4 +249,4 @@ this section carries only what is specific to this repo.
 
 - **Surgical changes, especially here:** jsDelivr serves these files by path and
   Webflow pins exact tags, so an unrequested edit can ship straight to the live site.
-- **Verify before "done."** Turn the task into a success criterion and confirm it's met before declaring completion. Verification on this project is visual/behavioural on staging or the published site, plus the deploy checklist for shipped changes — there is no test suite to lean on.
+- **Verification here is visual/behavioural** on staging or the published site, plus the deploy checklist for shipped changes — there is no test suite.
