@@ -15,9 +15,10 @@
    Paired JS: oa-legal-toc.js. Page-level embed (legal pages).
    ============================================================ */
 
-/* --- Anchor landing: clearance under the fixed nav. One number,
-   read live by BOTH the scroll in oa-global.js and the highlight
-   triggers in oa-legal-toc.js. Matches oa-all-products.css. --- */
+/* --- Anchor landing: clearance under the fixed nav. Read live by
+   the scroll in oa-global.js. Matches oa-all-products.css. The
+   desktop index's sticky top should equal it (8.125rem), so the
+   index and a landed heading read level. --- */
 [data-legal-toc-content] :is(h2, h3, h4, h5, h6) {
   scroll-margin-top: 130px;
 }
@@ -65,9 +66,22 @@
   }
 }
 
+/* --- Back to top. Hidden until the JS says visible, so it never
+   flashes on load; the JS also sets inert, which keeps a hidden button
+   out of the tab order. Position, size, colour, z-index and the fade's
+   transition (on opacity) are Designer knobs. --- */
+[data-legal-toc-top]:not([data-legal-toc-top-state='visible']) {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* --- Designer canvas: the JS never runs there, so the panel would sit
-   collapsed with a single template link hidden inside it. --- */
+   collapsed with a single template link hidden inside it, and the
+   back-to-top button would stay invisible. --- */
 :is(.wf-design-mode, .wf-editor) [data-legal-toc-panel] {
   height: auto !important; /* beats the closed-state rule above */
   visibility: visible !important;
+}
+:is(.wf-design-mode, .wf-editor) [data-legal-toc-top] {
+  opacity: 1 !important; /* beats the hidden-state rule above */
 }

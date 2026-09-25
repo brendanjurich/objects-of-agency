@@ -3,9 +3,14 @@
    ------------------------------------------------------------
    Adapted for Objects of Agency from osmo.supply's "Table of
    Contents for Article". Differences from the stock resource:
-     • No CDN GSAP. Uses Webflow-native window.gsap + ScrollTrigger,
-       and fails open — the index still builds and navigates when
-       GSAP is absent, it just loses the scroll-following highlight.
+     • No CDN GSAP. Uses Webflow-native window.gsap for the mobile
+       accordion's motion only, and fails open — without it the
+       accordion opens and closes without animation.
+     • No scroll-following highlight. The selected section is the
+       link last taken, and it holds until another is taken.
+     • The section number is split into its own prefix element.
+     • A back-to-top button for touch, shown while the folded index
+       is out of view.
      • Their click handler is gone. Same-page anchor scrolling already
        belongs to initNavAnchorLinks in oa-global.js, which owns the
        Lenis call, the capture-phase stop of Webflow's own anchor
@@ -87,7 +92,15 @@ const initLegalToc = () => {
     const links = headings.map((heading) => {
       const link = templateLink.cloneNode(true);
       const textTarget = link.querySelector('[data-legal-toc-text]') || link;
-      textTarget.textContent = heading.textContent.trim();
+      // The section number goes to its own element so the Designer can style
+      // and space it apart from the title. Without a prefix element the whole
+      // heading stays in the text, number and all. An unnumbered heading
+      // leaves the prefix empty.
+      const prefixTarget = link.querySelector('[data-legal-toc-prefix]');
+      const full = heading.textContent.trim();
+      const match = prefixTarget && full.match(/^(\d+[.)]?)\s*(.*)$/);
+      if (prefixTarget) prefixTarget.textContent = match ? match[1] : '';
+      textTarget.textContent = match ? match[2] : full;
       link.href = '#' + heading.id;
       link.removeAttribute('data-legal-toc-link');
       link.setAttribute('data-legal-toc-item', '');
@@ -215,42 +228,63 @@ const initLegalToc = () => {
       );
     }
 
-    const ScrollTrigger = window.ScrollTrigger;
-    if (!window.gsap || !ScrollTrigger) {
-      console.warn('[oa-legal-toc] gsap/ScrollTrigger unavailable — index built, highlight skipped.');
-      return;
-    }
-
-    const setActive = (index) => {
-      links.forEach((link, i) => {
-        if (i === index) link.setAttribute('data-legal-toc-status', 'active');
+    // The selected section: the link last taken, held until another is taken.
+    // Not scroll-following — that version stalled on the last section a short
+    // page can scroll its heading to, and read as broken. Bound on window
+    // capture for the same reason as the close above: initNavAnchorLinks stops
+    // the click before it reaches anything on the list.
+    const setActive = (active) => {
+      links.forEach((link) => {
+        if (link === active) link.setAttribute('data-legal-toc-status', 'active');
         else link.removeAttribute('data-legal-toc-status');
       });
     };
+    window.addEventListener(
+      'click',
+      (e) => {
+        const link = e.target.closest && e.target.closest('[data-legal-toc-item]');
+        if (link) setActive(link);
+      },
+      true
+    );
+    // A shared link to a section arrives selected.
+    const arrived = links.find((link) => link.getAttribute('href') === location.hash);
+    if (arrived) setActive(arrived);
 
-    headings.forEach((heading, i) => {
-      const next = headings[i + 1];
-      // Same number the scroll lands on, so a section highlights exactly when
-      // its heading reaches its resting position under the nav.
-      const offset = parseFloat(getComputedStyle(heading).scrollMarginTop) || 0;
-      ScrollTrigger.create({
-        trigger: heading,
-        // The first section owns everything above it. Starting it at its own
-        // resting position instead leaves a dead band over the intro where no
-        // trigger is active, so scrolling back to the top of the page kept the
-        // LAST section highlighted — the state simply never got reclaimed.
-        start: i === 0 ? 'top bottom' : 'top ' + (offset + 1) + 'px',
-        endTrigger: next || contentEl,
-        end: next ? 'top ' + (offset + 1) + 'px' : 'bottom top',
-        onToggle: (self) => {
-          if (self.isActive) setActive(i);
-        }
+    // Back to top: a fixed button for touch, shown only while the index is
+    // folded into its accordion (the sticky desktop index already does this
+    // job) and scrolled out of view above. A Link Block to "#" in the
+    // Designer, so it still reaches the top without this script.
+    //   [data-legal-toc-top]         the button; how it looks and where it
+    //                                sits are Designer knobs
+    //   data-legal-toc-top-state     written here, "visible" or "hidden"
+    const topButton = document.querySelector('[data-legal-toc-top]');
+    const indexEl = accordion || listEl;
+    if (topButton) {
+      let indexAbove = false;
+      const update = () => {
+        const show = indexAbove && !!toggle && toggle.getClientRects().length > 0;
+        topButton.setAttribute('data-legal-toc-top-state', show ? 'visible' : 'hidden');
+        // inert takes a hidden button out of the tab order and the
+        // accessibility tree, so the CSS can fade it without visibility.
+        topButton.inert = !show;
+      };
+      new IntersectionObserver(([entry]) => {
+        indexAbove = !entry.isIntersecting && entry.boundingClientRect.bottom < 0;
+        update();
+      }).observe(indexEl);
+      window.addEventListener('resize', update, { passive: true });
+      update();
+
+      topButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (window.lenis) window.lenis.scrollTo(0);
+        else window.scrollTo({ top: 0, behavior: 'smooth' }); // reduced motion / Lenis CDN down
+        // The button hides once the index is back in view, which would drop
+        // keyboard focus to the body. Hand it to the index toggle instead.
+        if (toggle) toggle.focus({ preventScroll: true });
       });
-    });
-
-    // Belt and braces for a first heading that loads below the fold: its
-    // trigger has not fired yet, and a blank index reads as broken.
-    setActive(0);
+    }
   });
 };
 
