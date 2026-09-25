@@ -80,10 +80,9 @@ never requires a republish.
 1. `oa-global.js`
 2. `oa-slider.js`
 3. `lenis` (npm, exact-pinned `@1.3.23` — JS + `lenis.css`)
-4. `oa-configurator.js`
-5. `oa-text-reveal.js`
+4. `oa-text-reveal.js`
 
-`oa-global.js` **must** load before `oa-configurator.js` (both read `window.gsap`). GSAP and its plugins are injected by Webflow ahead of the footer code, so `window.gsap` is available when these run.
+`oa-global.js` **must** load before `oa-configurator.js` (both read `window.gsap`); the page-level placement guarantees it. GSAP and its plugins are injected by Webflow ahead of the footer code, so `window.gsap` is available when these run.
 
 ScrollTrigger consumers (e.g. `oa-text-reveal.js`, `oa-legal-toc.js`) run through the Lenis↔ScrollTrigger glue in `oa-global.js` (`lenis.on('scroll', ScrollTrigger.update)`) — verify scroll-triggered starts against Lenis, not native scroll. Each must load after `oa-global.js` so Lenis exists when its triggers are created.
 
@@ -94,16 +93,13 @@ ScrollTrigger consumers (e.g. `oa-text-reveal.js`, `oa-legal-toc.js`) run throug
 **Page-level embeds** (load after the sitewide footer):
 - `oa-homepage.js` — homepage (needs `window.oaLoadSwiper` from `oa-slider.js`)
 - `oa-all-products.js` + `oa-all-products.css` — /all-products
+- `oa-configurator.js` — product template (the configurator markup is on every product page; every step no-ops when its markup is absent, so any other page that renders it needs its own embed)
 - `oa-infinite-grid.js` + `oa-infinite-grid.css` — product template (the grid section ships per-product via a CMS toggle; the script no-ops when it's absent)
 - `oa-brief.js` — /contact only; page-level embed after the sitewide footer. Needs `window.gsap` for the step reveal (fails open without it).
 - `oa-cursor.js` + `oa-cursor.css` — /contact (the piece tags). Page-level embed, no ordering constraint beyond the sitewide footer; it reads `window.gsap`, which Webflow injects ahead of footer code. No-ops on any page without `[data-cursor-init]`, so promoting it sitewide later is moving the markup and the embed, not a rewrite.
 - `oa-whatsapp.js` + `oa-whatsapp.css` — /contact. Page-level embed, no ordering constraint beyond the sitewide footer.
 - `oa-legal-toc.js` + `oa-legal-toc.css` — the legal pages (`/legal/*`). Page-level embed, after the sitewide footer so `oa-global.js` has created Lenis and the anchor handler before the index's triggers exist.
 - `oa-intro.js` — every page carrying the `• oa Intro Hero` component (/about only); page-level embed, no ordering constraint beyond the sitewide footer. Its readiness gate is its own, not `oa-global.js`'s loader gate — those pages carry no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
-
-> Note: `oa-configurator.js` currently loads sitewide but is only needed on
-> product pages. Scoping it to product pages would drop one script request on
-> every other page (perf optimisation, not a blocker).
 
 ---
 
