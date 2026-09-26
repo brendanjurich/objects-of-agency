@@ -60,6 +60,10 @@ const initLegalToc = () => {
         bestCount = count;
       }
     });
+    // Put the hook back, because oa-legal-toc.css hangs the heading
+    // scroll-margin-top on it. Without it the landing loses its nav clearance
+    // and the heading parks under the nav.
+    if (best) best.setAttribute('data-legal-toc-content', '');
     return best;
   };
 

@@ -31,6 +31,14 @@
   border-color: var(--swatch--brand-500);
 }
 
+/* --- Unnumbered section (Preamble). The JS leaves its prefix empty. Its
+   wrapper is still a flex item, so the row gap would push the title off the
+   number column. Drop it, so the title starts where the numbers do. --- */
+[data-legal-toc-item] [data-legal-toc-prefix]:empty,
+[data-legal-toc-item] :has(> [data-legal-toc-prefix]:empty) {
+  display: none;
+}
+
 /* --- Mobile accordion, written against the same boundary Lumos uses.
    Lumos flips --flex-medium inside `@container (width < 50em)`, and the
    index sits inside the `u-container` that query resolves against, so this
