@@ -42,8 +42,29 @@ const initLegalToc = () => {
   // only common ancestor is inside that component — where an attribute would
   // ride every instance sitewide. One legal document per page, so page scope
   // is the honest scope, and there is no wrapper left to break.
+  // The document is the attributed element, or failing that the Rich Text on
+  // the page carrying the most headings. Pasting a new document into the Rich
+  // Text of a duplicated page dropped its custom attribute (Maintenance & Care
+  // kept the class, lost the attribute), which left the index unbuilt. The
+  // fallback means a paste can never break it again; the attribute stays as
+  // the explicit override.
+  const findContent = () => {
+    const tagged = document.querySelector('[data-legal-toc-content]');
+    if (tagged) return tagged;
+    let best = null;
+    let bestCount = 0;
+    document.querySelectorAll('.w-richtext').forEach((el) => {
+      const count = el.querySelectorAll('h2, h3, h4, h5, h6').length;
+      if (count > bestCount) {
+        best = el;
+        bestCount = count;
+      }
+    });
+    return best;
+  };
+
   document.querySelectorAll('[data-legal-toc-list]').forEach((listEl) => {
-    const contentEl = document.querySelector('[data-legal-toc-content]');
+    const contentEl = findContent();
     const templateLink = listEl.querySelector('[data-legal-toc-link]');
     if (!contentEl || !templateLink) return;
 
