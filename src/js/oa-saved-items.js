@@ -9,8 +9,8 @@
 //                             Gets data-oa-save-state="saved|idle" and its label swapped.
 //   [data-option]             option slug, on each configurator option list item
 //                             (the element that also carries data-price)
-//   [data-oa-saved-count]     nav badge; gets the number as text, empty at zero so
-//                             Lumos u-hide-if-empty hides it
+//   [data-oa-saved-count]     nav badge. The number goes into its text element (so the
+//                             Designer's text style survives); the badge is hidden at zero
 //
 // The product slug is read from the URL (/product/{slug}), not from the page.
 // Price is a snapshot of the configured indicative price and never leaves the browser.
@@ -105,7 +105,11 @@
   function paintCount() {
     const n = load().items.length;
     document.querySelectorAll('[data-oa-saved-count]').forEach(function (el) {
-      el.textContent = n || '';
+      (el.firstElementChild || el).textContent = n || '';
+      // Inline, not [hidden]: the UA rule loses to any Designer display value.
+      // Clearing it hands display back to the badge's class.
+      if (n) el.style.removeProperty('display');
+      else el.style.setProperty('display', 'none', 'important');
     });
   }
 
