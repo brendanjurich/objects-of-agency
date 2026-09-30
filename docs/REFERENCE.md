@@ -208,6 +208,13 @@ JS-controlled · `config_base_price` hidden CMS number), then
   `#summary-anodising` (default em-dash). Summary sources the material *name* from
   the active cascading slide, not the radio (swatch labels are image-only) — keep
   exactly one `[data-cascading-slide][data-status="active"]` at all times.
+- **Option slugs:** each option list item (`config_size_item`, `config_variant_item` —
+  the element carrying `data-price`) carries `data-option` bound to the option's CMS
+  Slug. Radios stay `value="Radio"`; code reads `input.closest('[data-option]')`.
+  Slugs are stored in saved selections and share links — renaming one breaks them.
+- **`?cfg=` restore:** `?cfg=Sizes:700mm-diameter,Timber:oak` (radio name : option
+  slug) checks those radios before the slider starts; the slider starts on the
+  checked radio. Written by `oa-selection.js`.
 - **CMS-list-in-grid fix:** make the collection list/items transparent to grid via
   `display: contents` on the `_collection` (w-dyn-list) and `_list` (w-dyn-items)
   wrappers, so `.w-dyn-item` becomes a direct grid child.

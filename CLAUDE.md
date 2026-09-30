@@ -20,7 +20,8 @@ keys, tokens, or `.env` files.**
 | `src/js/oa-homepage.js` | Homepage hero carousels (hero_feed_top, hero_feed_right) + Bunny background video. Swiper via `window.oaLoadSwiper` (oa-slider.js); picks the HEVC or H.264 encode via `canPlayType` (`HEVC_CODEC` constant, pinned to the encode). Dispatches `oa:hero-media-ready` for the loader gate. | Raw file → CDN |
 | `src/js/oa-global.js` | GSAP fail-open guard, loader, page transitions, slideshow (data-slideshow), nav animations, custom eases, Lenis smooth scroll, Email Direct mailto assembly (`data-oa-email`). | Raw file → CDN |
 | `src/js/oa-slider.js` | Lumos slider init (product + homepage menu). Loads the Swiper 12.2.0 bundle from jsDelivr when a slider exists and exposes the loader as `window.oaLoadSwiper` — the **single Swiper source sitewide**. | Raw file → CDN |
-| `src/js/oa-configurator.js` | Cascading slider (product carousels with GSAP, touch/click), pricing engine, summary. | Raw file → CDN |
+| `src/js/oa-configurator.js` | Cascading slider (product carousels with GSAP, touch/click), pricing engine, summary, `?cfg=` restore (sets radios by `[data-option]` slug before the slider starts). | Raw file → CDN |
+| `src/js/oa-selection.js` | Selection (saved configurations). Store in `localStorage` key `oa-selection:v1` (in-memory fallback when storage throws), cap 12, one entry per distinct configuration — saving the same one again removes it. Save buttons `[data-oa-save]` (on the Button Main instance) get `data-oa-save-state` + label swap; nav count `[data-oa-selection-count]` gets the number + `data-oa-selection-state`. Reads the product slug from `/product/{slug}` and option slugs from `[data-option]` on the option list items; skips `w-condition-invisible` sections. Click handler is capture-phase so `oa-global.js`'s page-leave handler sees `defaultPrevented`. Price is a snapshot and never sent anywhere. | Raw file → CDN |
 | `src/js/oa-all-products.js` | Osmo multi-match filter for /all-products. Reads `?filter=` URL param via `paint()` on init. | Raw file → CDN |
 | `src/css/oa-styles.css` | Global styles, FOUC prevention, nav, hero carousel. | Raw file → CDN |
 | `src/css/oa-all-products.css` | /all-products page styles. | Raw file → CDN |
@@ -81,6 +82,7 @@ never requires a republish.
 2. `oa-slider.js`
 3. `lenis` (npm, exact-pinned `@1.3.23` — JS + `lenis.css`)
 4. `oa-text-reveal.js`
+5. `oa-selection.js` (every page shows the nav count; Save lives on the product template)
 
 `oa-global.js` **must** load before `oa-configurator.js` (both read `window.gsap`); the page-level placement guarantees it. GSAP and its plugins are injected by Webflow ahead of the footer code, so `window.gsap` is available when these run.
 
