@@ -1,5 +1,5 @@
 // ============================================================
-// OA SELECTION — saved configurations (sitewide)
+// OA SAVED ITEMS — saved configurations (sitewide)
 // ============================================================
 // A trade designer's shortlist, kept in localStorage with no login. One entry per
 // distinct configuration of a piece; saving the same configuration again removes it.
@@ -9,14 +9,14 @@
 //                             Gets data-oa-save-state="saved|idle" and its label swapped.
 //   [data-option]             option slug, on each configurator option list item
 //                             (the element that also carries data-price)
-//   [data-oa-selection-count] nav count; gets the number as text and
-//                             data-oa-selection-state="empty|filled"
+//   [data-oa-saved-count]     nav badge; gets the number as text, empty at zero so
+//                             Lumos u-hide-if-empty hides it
 //
 // The product slug is read from the URL (/product/{slug}), not from the page.
 // Price is a snapshot of the configured indicative price and never leaves the browser.
 
 (function () {
-  const KEY = 'oa-selection:v1';
+  const KEY = 'oa-saved-items:v1';
   const CAP = 12;
   // Radio name → the configurator's summary element, which already holds the
   // human label (swatch radios carry no text of their own). Same list as
@@ -27,7 +27,7 @@
     'Timber': 'summary-timber',
     'Anodised-Finish': 'summary-anodising',
   };
-  const TEXT = { idle: 'Save', saved: 'Saved', full: 'Selection full' };
+  const TEXT = { idle: 'Save', saved: 'Saved', full: 'List full' };
 
   // ---- store. Storage can throw (private mode, blocked site data): fall back to
   // memory so the page keeps working for this visit.
@@ -104,9 +104,8 @@
 
   function paintCount() {
     const n = load().items.length;
-    document.querySelectorAll('[data-oa-selection-count]').forEach(function (el) {
-      el.textContent = n;
-      el.setAttribute('data-oa-selection-state', n ? 'filled' : 'empty');
+    document.querySelectorAll('[data-oa-saved-count]').forEach(function (el) {
+      el.textContent = n || '';
     });
   }
 
@@ -124,12 +123,12 @@
     if (i > -1) {
       list.items.splice(i, 1);
       store(list);
-      announce('Removed from your selection.');
+      announce('Removed from your saved items.');
       return;
     }
     if (list.items.length >= CAP) {
       setLabel(btn, TEXT.full);
-      announce('Your selection is full — ' + CAP + ' pieces. Remove one to add another.');
+      announce('Your saved items are full — ' + CAP + ' pieces. Remove one to add another.');
       clearTimeout(fullTimer);
       fullTimer = setTimeout(paintButtons, 2500);
       return;
@@ -138,7 +137,7 @@
     entry.savedAt = Date.now();
     list.items.push(entry);
     store(list);
-    announce('Saved to your selection. ' + list.items.length + ' of ' + CAP + '.');
+    announce('Added to your saved items. ' + list.items.length + ' of ' + CAP + '.');
   }
 
   // Capture phase: oa-global.js's page-leave handler is a bubbling document listener

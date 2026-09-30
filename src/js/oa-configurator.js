@@ -413,8 +413,8 @@ function initSummaryUpdater() {
 // ============================================================
 // 5. RESTORE A SAVED CONFIGURATION
 // ============================================================
-// ?cfg=Sizes:700mm-diameter,Timber:oak — the Selection page's "edit" link
-// (oa-selection.js). Option slugs come from [data-option] on each option list item.
+// ?cfg=Sizes:700mm-diameter,Timber:oak — the Saved Items page's "edit" link
+// (oa-saved-items.js). Option slugs come from [data-option] on each option list item.
 // Runs before the slider init so the slider starts on the restored radio.
 function restoreConfig() {
   const cfg = new URLSearchParams(location.search).get('cfg');
