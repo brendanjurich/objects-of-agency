@@ -24,6 +24,7 @@
 //   [data-oa-saved-edit]       gets /product/{slug}?cfg=…; hidden for static pieces
 //   [data-oa-saved-remove]
 //   [data-oa-saved-empty]      empty state
+//   [data-oa-saved-missing]    notice, shown after dropping saved pieces that left the CMS
 //   [data-oa-saved-project]    project name input
 //   [data-oa-saved-brief|email|share]  hidden while the list is empty (wired in later phases)
 //
@@ -148,6 +149,9 @@
     setHidden(row, true);
   });
   const project = document.querySelector('[data-oa-saved-project]');
+  const missing = document.querySelector('[data-oa-saved-missing]');
+  setHidden(missing, true);
+  let dropped = 0;
   const formatter = new Intl.NumberFormat('en-AU', { maximumFractionDigits: 0 });
 
   function fillRow(row, entry) {
@@ -173,6 +177,21 @@
     if (!templates.length) return;
     document.querySelectorAll('[data-oa-saved-rendered]').forEach(function (el) { el.remove(); });
     const list = load();
+    // A saved piece whose product left the CMS (deleted, unpublished, slug changed) has no
+    // row. Drop it so the badge matches the page, and keep the notice up for this visit.
+    // Not at 100+ rows: a Collection List shows at most 100 items, so a row could just be
+    // past the limit.
+    if (templates.length < 100) {
+      const known = templates.map(function (t) { return t.slug; });
+      const kept = list.items.filter(function (e) { return known.indexOf(e.slug) > -1; });
+      if (kept.length < list.items.length) {
+        dropped += list.items.length - kept.length;
+        list.items = kept;
+        write(list);
+        paintCount();
+      }
+    }
+    setHidden(missing, !dropped);
     let shown = 0;
     templates.forEach(function (t) {
       list.items.forEach(function (entry) {

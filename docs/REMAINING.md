@@ -140,6 +140,9 @@ without ever knowing it arrived.
 
 - [ ] **Contact page — `/contact` returns 404** while the nav and footer link to it
       on every page. Build it, or point those links elsewhere until it exists.
+- [ ] **Footer links broken.** Instagram and LinkedIn hrefs start with `#`
+      (`#https://www.instagram.com/objects.agency/?hl=en`), so they open nothing;
+      footer Contact is `#`. Found 03-10-2026 on `/saved-items` (sitewide footer).
 - [ ] T&C page — write and publish
 - [ ] Q&A page — write and publish
 - [ ] Nyoongar acknowledgement — copy and placement confirmed
