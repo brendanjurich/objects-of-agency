@@ -12,6 +12,21 @@
 //   [data-oa-saved-count]     nav badge. The number goes into its text element (so the
 //                             Designer's text style survives); the badge is hidden at zero
 //
+// Saved Items page (/saved-items) — one Products Collection List; each item is a row
+// template. The slug comes from the row's link to its product page (/product/{slug}):
+// Slug can't be bound as an attribute there, and a component Link prop can't point at
+// the current item, so the View piece link is an unlinked Clickable bound to it.
+//   [data-oa-saved-row]        the Collection item (row template)
+//   [data-oa-saved-price]      price number;  [data-oa-saved-price-wrap] hidden with no price
+//   [data-oa-saved-line="Sizes|Top-Material|Timber|Anodised-Finish"]
+//                              config line; its parent (bullet + text) hides when empty
+//   [data-oa-saved-qty="minus|plus"], [data-oa-saved-qty-value]
+//   [data-oa-saved-edit]       gets /product/{slug}?cfg=…; hidden for static pieces
+//   [data-oa-saved-remove]
+//   [data-oa-saved-empty]      empty state
+//   [data-oa-saved-project]    project name input
+//   [data-oa-saved-brief|email|share]  hidden while the list is empty (wired in later phases)
+//
 // The product slug is read from the URL (/product/{slug}), not from the page.
 // Price is a snapshot of the configured indicative price and never leaves the browser.
 
@@ -39,10 +54,21 @@
     } catch (e) {}
     return memory;
   }
-  function store(list) {
+  function write(list) {
     memory = list;
     try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function store(list) {
+    write(list);
     paint();
+  }
+
+  // `el.hidden` alone loses to any Designer display value; drive display inline.
+  // Clearing it hands display back to the class.
+  function setHidden(el, on) {
+    if (!el) return;
+    if (on) el.style.setProperty('display', 'none', 'important');
+    else el.style.removeProperty('display');
   }
 
   // ---- the piece on this page
@@ -106,17 +132,69 @@
     const n = load().items.length;
     document.querySelectorAll('[data-oa-saved-count]').forEach(function (el) {
       (el.firstElementChild || el).textContent = n || '';
-      // Inline, not [hidden]: the UA rule loses to any Designer display value.
-      // Clearing it hands display back to the badge's class.
-      if (n) el.style.removeProperty('display');
-      else el.style.setProperty('display', 'none', 'important');
+      setHidden(el, !n);
     });
+  }
+
+  // ---- Saved Items page. Every template stays hidden in place; each saved entry renders
+  // as a copy inserted before its template, so the Collection List's own sort (series,
+  // then name) is the page order and a second configuration sits beside the first.
+  // Hidden now, at parse, so unsaved rows never paint.
+  const templates = [];
+  document.querySelectorAll('[data-oa-saved-row]').forEach(function (row) {
+    const link = row.querySelector('a[href^="/product/"]');
+    if (!link) return;
+    templates.push({ row: row, slug: link.getAttribute('href').split('/')[2], copy: row.cloneNode(true) });
+    setHidden(row, true);
+  });
+  const project = document.querySelector('[data-oa-saved-project]');
+  const formatter = new Intl.NumberFormat('en-AU', { maximumFractionDigits: 0 });
+
+  function fillRow(row, entry) {
+    const price = row.querySelector('[data-oa-saved-price]');
+    if (price) price.textContent = entry.price ? formatter.format(entry.price) : '';
+    setHidden(row.querySelector('[data-oa-saved-price-wrap]'), !entry.price);
+    row.querySelectorAll('[data-oa-saved-line]').forEach(function (el) {
+      const label = (entry.labels || {})[el.getAttribute('data-oa-saved-line')] || '';
+      el.textContent = label;
+      setHidden(el.parentElement, !label);
+    });
+    const qty = row.querySelector('[data-oa-saved-qty-value]');
+    if (qty) qty.textContent = entry.qty || 1;
+    const keys = Object.keys(entry.options);
+    const edit = row.querySelector('[data-oa-saved-edit]');
+    setHidden(edit, !keys.length);
+    const editLink = edit && edit.querySelector('a');
+    if (editLink) editLink.setAttribute('href', '/product/' + entry.slug + '?cfg=' +
+      keys.map(function (k) { return k + ':' + entry.options[k]; }).join(','));
+  }
+
+  function renderPage() {
+    if (!templates.length) return;
+    document.querySelectorAll('[data-oa-saved-rendered]').forEach(function (el) { el.remove(); });
+    const list = load();
+    let shown = 0;
+    templates.forEach(function (t) {
+      list.items.forEach(function (entry) {
+        if (entry.slug !== t.slug) return;
+        const row = t.copy.cloneNode(true);
+        row.setAttribute('data-oa-saved-rendered', idOf(entry));
+        fillRow(row, entry);
+        t.row.parentNode.insertBefore(row, t.row);
+        shown++;
+      });
+    });
+    setHidden(document.querySelector('[data-oa-saved-empty]'), shown > 0);
+    document.querySelectorAll('[data-oa-saved-brief], [data-oa-saved-email], [data-oa-saved-share]')
+      .forEach(function (el) { setHidden(el, !shown); });
+    if (project && document.activeElement !== project) project.value = list.project || '';
   }
 
   function paint() {
     clearTimeout(fullTimer);
     paintButtons();
     paintCount();
+    renderPage();
   }
 
   function toggle(btn) {
@@ -153,6 +231,50 @@
     e.preventDefault();
     toggle(btn);
   }, true);
+
+  // Row controls. Capture phase for the same reason as Save: their links are href="#".
+  // Qty updates in place so keyboard focus stays on the button; Remove re-renders and
+  // moves focus to the row that took its place.
+  document.addEventListener('click', function (e) {
+    const row = e.target.closest('[data-oa-saved-rendered]');
+    const remove = row && e.target.closest('[data-oa-saved-remove]');
+    const step = row && e.target.closest('[data-oa-saved-qty]');
+    if (!remove && !step) return;
+    e.preventDefault();
+    const list = load();
+    const id = row.getAttribute('data-oa-saved-rendered');
+    const i = list.items.findIndex(function (x) { return idOf(x) === id; });
+    if (i < 0) return;
+    if (step) {
+      const entry = list.items[i];
+      const delta = step.getAttribute('data-oa-saved-qty') === 'plus' ? 1 : -1;
+      entry.qty = Math.max(1, Math.min(99, (entry.qty || 1) + delta));
+      write(list);
+      const value = row.querySelector('[data-oa-saved-qty-value]');
+      if (value) value.textContent = entry.qty;
+      announce('Quantity ' + entry.qty + '.');
+      return;
+    }
+    const rows = Array.prototype.slice.call(document.querySelectorAll('[data-oa-saved-rendered]'));
+    const at = rows.indexOf(row);
+    list.items.splice(i, 1);
+    store(list);
+    const left = document.querySelectorAll('[data-oa-saved-rendered]');
+    const next = left[Math.min(at, left.length - 1)];
+    // Lumos Clickable renders a link and a button and shows one (a[href="#"] is hidden),
+    // so focus whichever is rendered.
+    const scope = next ? next.querySelector('[data-oa-saved-remove]') : document.querySelector('[data-oa-saved-empty]');
+    const focus = scope && Array.prototype.slice.call(scope.querySelectorAll('a, button'))
+      .filter(function (el) { return el.getClientRects().length; })[0];
+    if (focus) focus.focus();
+    announce('Removed from your saved items.');
+  }, true);
+
+  if (project) project.addEventListener('input', function () {
+    const list = load();
+    list.project = project.value.slice(0, 120);
+    write(list);
+  });
 
   // A new configuration may or may not be saved already
   document.addEventListener('change', function (e) {
