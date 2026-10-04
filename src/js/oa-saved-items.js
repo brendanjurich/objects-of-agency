@@ -24,12 +24,23 @@
 //   [data-oa-saved-edit]       gets /product/{slug}?cfg=…; hidden for static pieces
 //   [data-oa-saved-remove]
 //   [data-oa-saved-empty]      empty state
+//   [data-oa-saved-wrap]       the list section (project field, rows, CTAs): hidden when empty
 //   [data-oa-saved-missing]    notice, shown after dropping saved pieces that left the CMS
 //   [data-oa-saved-project]    project name input
 //   [data-oa-saved-brief|email|share]  hidden while the list is empty (wired in later phases)
+//   [data-oa-saved-share-price]  checkbox (or a wrapper holding one): put prices in the link
+//
+// Share link: [data-oa-saved-share] copies (touch: share sheet) this page's URL with
+// ?s=<base64url JSON> — project, and per item slug, qty, option slugs + labels, and the
+// price only when [data-oa-saved-share-price] is ticked. Opening it shows that list
+// read-only: storage is never touched, row controls, CTAs and the checkbox are hidden,
+// the project field is read-only.
+//   [data-oa-saved-shared]     shown only on a shared link (e.g. a banner)
+//   [data-oa-saved-import]     "Add to my saved items": merges the shared list into the
+//                              visitor's own (dedupe, cap) and drops ?s= in place
 //
 // The product slug is read from the URL (/product/{slug}), not from the page.
-// Price is a snapshot of the configured indicative price and never leaves the browser.
+// Price is a snapshot of the configured indicative price and never reaches a server.
 
 (function () {
   const KEY = 'oa-saved-items:v1';
@@ -43,7 +54,8 @@
     'Timber': 'summary-timber',
     'Anodised-Finish': 'summary-anodising',
   };
-  const TEXT = { idle: 'Save', saved: 'Saved', full: 'List full' };
+  const TEXT = { idle: 'Save', saved: 'Saved', full: 'List full', copied: 'Link copied' };
+  const GROUPS = Object.keys(SUMMARY);
 
   // ---- store. Storage can throw (private mode, blocked site data): fall back to
   // memory so the page keeps working for this visit.
@@ -100,6 +112,58 @@
       .map(function (k) { return k + ':' + entry.options[k]; }).join(',');
   }
 
+  // ---- share link. Item = [slug, qty, [[group index, option slug, label], …], price?].
+  // Anything malformed rejects the whole link, and the visitor sees their own list.
+  function toBase64url(text) {
+    let bin = '';
+    new TextEncoder().encode(text).forEach(function (b) { bin += String.fromCharCode(b); });
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function fromBase64url(text) {
+    const bin = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
+    return new TextDecoder().decode(Uint8Array.from(bin, function (c) { return c.charCodeAt(0); }));
+  }
+  function encodeShare(list) {
+    return toBase64url(JSON.stringify({
+      v: 1,
+      p: list.project || '',
+      $: list.sharePrice ? 1 : 0,
+      i: list.items.map(function (e) {
+        const item = [e.slug, e.qty || 1, Object.keys(e.options).map(function (k) {
+          return [GROUPS.indexOf(k), e.options[k], (e.labels || {})[k] || ''];
+        })];
+        if (list.sharePrice && e.price) item.push(e.price);
+        return item;
+      }),
+    }));
+  }
+  const SLUG = /^[a-z0-9-]{1,100}$/;
+  function decodeShare(param) {
+    try {
+      const d = JSON.parse(fromBase64url(param));
+      if (d.v !== 1 || !Array.isArray(d.i) || d.i.length > CAP || typeof d.p !== 'string') return null;
+      const items = d.i.map(function (it) {
+        if (!SLUG.test(it[0]) || !Array.isArray(it[2])) throw 0;
+        const options = {};
+        const labels = {};
+        it[2].forEach(function (o) {
+          const group = GROUPS[o[0]];
+          if (!group || !SLUG.test(o[1]) || typeof o[2] !== 'string') throw 0;
+          options[group] = o[1];
+          labels[group] = o[2].slice(0, 80);
+        });
+        const price = d.$ && typeof it[3] === 'number' && it[3] > 0 && it[3] < 1e7 ? it[3] : null;
+        const qty = Math.max(1, Math.min(99, parseInt(it[1], 10) || 1));
+        return { slug: it[0], options: options, labels: labels, price: price, qty: qty };
+      });
+      return { v: 1, project: d.p.slice(0, 120), items: items };
+    } catch (e) {
+      return null;
+    }
+  }
+  const shareParam = new URLSearchParams(location.search).get('s');
+  let shared = shareParam ? decodeShare(shareParam) : null;
+
   // ---- announce (screen readers) — one polite live region, created on demand
   let live = null;
   function announce(msg) {
@@ -154,10 +218,17 @@
   let dropped = 0;
   const formatter = new Intl.NumberFormat('en-AU', { maximumFractionDigits: 0 });
 
+  const sharePrice = document.querySelector('[data-oa-saved-share-price]');
+  const sharePriceInput = sharePrice && (sharePrice.matches('input') ? sharePrice : sharePrice.querySelector('input'));
+
   function fillRow(row, entry) {
     const price = row.querySelector('[data-oa-saved-price]');
     if (price) price.textContent = entry.price ? formatter.format(entry.price) : '';
     setHidden(row.querySelector('[data-oa-saved-price-wrap]'), !entry.price);
+    if (shared) {
+      row.querySelectorAll('[data-oa-saved-qty], [data-oa-saved-remove], [data-oa-saved-edit]')
+        .forEach(function (el) { setHidden(el, true); });
+    }
     row.querySelectorAll('[data-oa-saved-line]').forEach(function (el) {
       const label = (entry.labels || {})[el.getAttribute('data-oa-saved-line')] || '';
       el.textContent = label;
@@ -167,7 +238,7 @@
     if (qty) qty.textContent = entry.qty || 1;
     const keys = Object.keys(entry.options);
     const edit = row.querySelector('[data-oa-saved-edit]');
-    setHidden(edit, !keys.length);
+    if (!shared) setHidden(edit, !keys.length);
     const editLink = edit && edit.querySelector('a');
     if (editLink) editLink.setAttribute('href', '/product/' + entry.slug + '?cfg=' +
       keys.map(function (k) { return k + ':' + entry.options[k]; }).join(','));
@@ -176,19 +247,21 @@
   function renderPage() {
     if (!templates.length) return;
     document.querySelectorAll('[data-oa-saved-rendered]').forEach(function (el) { el.remove(); });
-    const list = load();
+    const list = shared || load();
     // A saved piece whose product left the CMS (deleted, unpublished, slug changed) has no
     // row. Drop it so the badge matches the page, and keep the notice up for this visit.
     // Not at 100+ rows: a Collection List shows at most 100 items, so a row could just be
-    // past the limit.
+    // past the limit. A shared list is only filtered, never written.
     if (templates.length < 100) {
       const known = templates.map(function (t) { return t.slug; });
       const kept = list.items.filter(function (e) { return known.indexOf(e.slug) > -1; });
       if (kept.length < list.items.length) {
         dropped += list.items.length - kept.length;
         list.items = kept;
-        write(list);
-        paintCount();
+        if (!shared) {
+          write(list);
+          paintCount();
+        }
       }
     }
     setHidden(missing, !dropped);
@@ -204,8 +277,13 @@
       });
     });
     setHidden(document.querySelector('[data-oa-saved-empty]'), shown > 0);
+    setHidden(document.querySelector('[data-oa-saved-wrap]'), !shown);
     document.querySelectorAll('[data-oa-saved-brief], [data-oa-saved-email], [data-oa-saved-share]')
-      .forEach(function (el) { setHidden(el, !shown); });
+      .forEach(function (el) { setHidden(el, !shown || shared); });
+    setHidden(sharePrice, !shown || shared);
+    if (sharePriceInput) sharePriceInput.checked = !!list.sharePrice;
+    document.querySelectorAll('[data-oa-saved-shared]').forEach(function (el) { setHidden(el, !shared); });
+    if (project) project.readOnly = !!shared;
     if (project && document.activeElement !== project) project.value = list.project || '';
   }
 
@@ -290,10 +368,67 @@
   }, true);
 
   if (project) project.addEventListener('input', function () {
+    if (shared) return;
     const list = load();
     list.project = project.value.slice(0, 120);
     write(list);
   });
+
+  if (sharePriceInput) sharePriceInput.addEventListener('change', function () {
+    const list = load();
+    list.sharePrice = sharePriceInput.checked;
+    write(list);
+  });
+
+  // Share: the share sheet on touch, the clipboard elsewhere (with the label swapped to
+  // say so). If the clipboard is refused, a prompt holds the link to copy by hand.
+  let copiedTimer = null;
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-oa-saved-share]');
+    if (!btn || shared) return;
+    e.preventDefault();
+    const url = location.origin + location.pathname + '?s=' + encodeShare(load());
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      navigator.share({ url: url }).catch(function () {});
+      return;
+    }
+    const label = btn.querySelector('.button_main_text');
+    if (!btn.hasAttribute('data-oa-saved-share-text') && label) btn.setAttribute('data-oa-saved-share-text', label.textContent);
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () {
+      setLabel(btn, TEXT.copied);
+      announce('Share link copied.');
+      clearTimeout(copiedTimer);
+      copiedTimer = setTimeout(function () { setLabel(btn, btn.getAttribute('data-oa-saved-share-text') || ''); }, 2500);
+    }, function () {
+      window.prompt('Copy this link to share your saved items:', url);
+    });
+  }, true);
+
+  // Add a shared list to the visitor's own: skip configurations they already have, stop at
+  // the cap, keep their project name if they have one. Then show their list, in place.
+  document.addEventListener('click', function (e) {
+    if (!shared || !e.target.closest('[data-oa-saved-import]')) return;
+    e.preventDefault();
+    const list = load();
+    const have = list.items.map(idOf);
+    let added = 0;
+    let full = 0;
+    shared.items.forEach(function (entry) {
+      if (have.indexOf(idOf(entry)) > -1) return;
+      if (list.items.length >= CAP) { full++; return; }
+      list.items.push({ slug: entry.slug, options: entry.options, labels: entry.labels,
+        price: entry.price, qty: entry.qty, savedAt: Date.now() });
+      added++;
+    });
+    if (!list.project) list.project = shared.project;
+    shared = null;
+    dropped = 0;
+    history.replaceState(history.state, '', location.pathname + location.hash);
+    store(list);
+    if (project) project.focus();
+    announce('Added ' + added + (added === 1 ? ' piece' : ' pieces') + ' to your saved items.' +
+      (full ? ' ' + full + ' didn’t fit — your list holds ' + CAP + '.' : ''));
+  }, true);
 
   // A new configuration may or may not be saved already
   document.addEventListener('change', function (e) {
