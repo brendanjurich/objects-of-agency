@@ -31,13 +31,17 @@
 //   [data-oa-saved-brief|email|share]  hidden while the list is empty. Brief: the Designer's
 //                              link gets ?from=saved-items, and oa-brief.js reads this store
 //
-// Email me this list: [data-oa-saved-email] opens the panel; the selection-intake Edge
-// Function stores the list and emails it with a share link it builds itself (no price).
-//   [data-oa-saved-email-form]    panel (a plain div, not a Webflow Form). Knobs on it:
-//                                 data-oa-saved-email-endpoint, data-oa-saved-turnstile-key,
+// Email me this list: the selection-intake Edge Function stores the list and emails it with
+// a share link it builds itself (no price). The panel is a Lumos Modal: its own script opens
+// and closes it ([data-modal-trigger] on the Email button), so nothing here touches its
+// display — an inline display:none would break showModal(). On its modal-open event the
+// email field takes focus and Turnstile mounts.
+//   [data-oa-saved-email-input]   email input; its dialog (or [data-oa-saved-email-form]) is
+//                                 the panel. Knobs on the panel: data-oa-saved-email-endpoint,
+//                                 data-oa-saved-turnstile-key,
 //                                 data-oa-saved-email-{sending|sent|invalid|error}-text
-//   [data-oa-saved-email-input], [data-oa-saved-email-send], [data-oa-saved-email-status]
-//   [data-oa-saved-honeypot]      hidden input; a name autofill doesn't know (not "website")
+//   [data-oa-saved-email-send], [data-oa-saved-email-status] (Rich Text: written into its <p>)
+//   [data-oa-saved-honeypot]      hidden <input>; a name autofill doesn't know (not "website")
 //   [data-oa-saved-share-price]  on the checkbox, its label, or inside the label: put prices
 //                              in the link
 //
@@ -309,7 +313,6 @@
     document.querySelectorAll('[data-oa-saved-brief], [data-oa-saved-email], [data-oa-saved-share]')
       .forEach(function (el) { setHidden(el, !shown || shared); });
     setHidden(sharePrice, !shown || shared);
-    if (!shown || shared) setHidden(emailForm, true);
     if (sharePriceInput) sharePriceInput.checked = !!list.sharePrice;
     document.querySelectorAll('[data-oa-saved-shared]').forEach(function (el) { setHidden(el, !shared); });
     if (project) project.readOnly = !!shared;
@@ -411,18 +414,22 @@
 
   // ---- Email me this list. Turnstile (invisible) mounts the first time the panel opens;
   // tokens are single-use, so it resets after every send.
-  const emailForm = document.querySelector('[data-oa-saved-email-form]');
+  const emailInput = document.querySelector('[data-oa-saved-email-input]');
+  const emailField = emailInput && (emailInput.matches('input') ? emailInput : emailInput.querySelector('input'));
+  const emailForm = emailInput && (emailInput.closest('[data-oa-saved-email-form], dialog') || emailInput.parentElement);
   const emailKnob = function (k, d) { return (emailForm && emailForm.getAttribute('data-oa-saved-' + k)) || d; };
   const EMAIL_ENDPOINT = emailKnob('email-endpoint', 'https://nleekoypvxoagnwiqtzz.supabase.co/functions/v1/selection-intake');
   const TURNSTILE_KEY = emailKnob('turnstile-key', '0x4AAAAAAEtu2l3zZyHggUVm');
-  const emailInput = emailForm && emailForm.querySelector('[data-oa-saved-email-input]');
-  const emailField = emailInput && (emailInput.matches('input') ? emailInput : emailInput.querySelector('input'));
   const emailStatus = emailForm && emailForm.querySelector('[data-oa-saved-email-status]');
   const hpHook = emailForm && emailForm.querySelector('[data-oa-saved-honeypot]');
   const honeypot = hpHook && (hpHook.matches('input') ? hpHook : hpHook.querySelector('input'));
-  setHidden(emailForm, true);
   if (emailStatus) emailStatus.setAttribute('aria-live', 'polite');
-  function emailSay(key, fallback) { if (emailStatus) emailStatus.textContent = emailKnob('email-' + key + '-text', fallback); }
+  // A Rich Text status keeps its <p> (and the styling on it); write into the leaf
+  function emailSay(key, fallback) {
+    if (!emailStatus) return;
+    const text = key ? emailKnob('email-' + key + '-text', fallback) : '';
+    (emailStatus.querySelector('p') || emailStatus).textContent = text;
+  }
 
   let widget = null;
   let token = '';
@@ -457,21 +464,14 @@
     ]);
   }
 
-  // The visible half of a Lumos Clickable (it renders a link and a button, and shows one)
-  function control(el) {
-    return el && Array.prototype.slice.call(el.querySelectorAll('a, button'))
-      .filter(function (c) { return c.getClientRects().length; })[0];
-  }
-  document.addEventListener('click', function (e) {
-    const btn = e.target.closest('[data-oa-saved-email]');
-    if (!btn || !emailForm || shared) return;
-    e.preventDefault();
-    const open = emailForm.style.display === 'none';
-    setHidden(emailForm, !open);
-    const c = control(btn);
-    if (c) c.setAttribute('aria-expanded', String(open));
-    if (open) { mountTurnstile(); if (emailField) emailField.focus(); }
-  }, true);
+  // Lumos dispatches modal-open on window after showModal(), so this focus lands after the
+  // modal's own autofocus (its Close button)
+  window.addEventListener('modal-open', function (e) {
+    if (!emailForm || !e.detail || e.detail.modal !== emailForm) return;
+    emailSay('', '');
+    mountTurnstile();
+    if (emailField) emailField.focus();
+  });
 
   let sending = false;
   function sendList() {
