@@ -1,11 +1,12 @@
 // selection-intake — "Email me this list" on /saved-items.
 // Browser → fetch → here → insert selections row → two Resend emails → { ref }.
-// Same guard chain as brief-intake: CORS → min-time (honeypot logged only) → Turnstile → validate → insert → mail.
+// Same guard chain as brief-intake: CORS → min-time (honeypot logged only) → Turnstile → validate → links → rate limit → insert → mail.
 // The emailed link is rebuilt here from the validated items, never taken from the browser,
 // and carries no price (W07). Secrets: RESEND_API_KEY, TURNSTILE_SECRET (shared with brief-intake).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { describe, type Item, parseItems, shareParam } from "../_shared/items.ts";
+import { clientIp, hasLink, turnstile, underLimit } from "../_shared/guard.ts";
 
 const ORIGINS = new Set([
   "https://objects.agency",
@@ -29,18 +30,6 @@ const json = (status: number, body: unknown, origin: string) =>
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 254;
 const mkRef = () => "SL-" + crypto.getRandomValues(new Uint8Array(3)).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "").toUpperCase();
-
-async function turnstile(token: string, ip: string | null) {
-  const secret = Deno.env.get("TURNSTILE_SECRET");
-  if (!secret) return true;
-  const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ secret, response: token, remoteip: ip ?? undefined }),
-  });
-  const j = await r.json();
-  return j.success === true;
-}
 
 async function send(to: string, subject: string, html: string, text: string) {
   const key = Deno.env.get("RESEND_API_KEY");
@@ -89,8 +78,10 @@ Deno.serve(async (req) => {
   if (typeof body.website === "string" && body.website) console.log("honeypot filled (autofill or bot); continuing to Turnstile");
   const started = Number(body.started_at);
   if (!started || Date.now() - started < MIN_SECONDS * 1000) { console.log("dropped: min-time", Date.now() - started); return json(200, { ref: mkRef() }, origin); }
-  const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for");
-  if (!(await turnstile(String(body.turnstile ?? ""), ip))) return json(403, { error: "verification" }, origin);
+  const ip = clientIp(req);
+  const ts = await turnstile(String(body.turnstile ?? ""), ip);
+  if (ts === "unset") { console.error("TURNSTILE_SECRET unset; refusing"); return json(503, { error: "config" }, origin); }
+  if (ts === "fail") return json(403, { error: "verification" }, origin);
 
   let email: string, project: string, items: Item[], path: string;
   try {
@@ -106,8 +97,14 @@ Deno.serve(async (req) => {
     path = url.pathname;
   } catch { return json(400, { error: "fields" }, origin); }
 
+  // Project and item text are echoed into the visitor's email: no links.
+  if ([project, ...items.flatMap((i) => [i.name, ...Object.values(i.labels)])].some(hasLink)) {
+    console.log("rejected: link in project or items"); return json(400, { error: "link" }, origin);
+  }
+
   const link = `${origin}${path}?s=${shareParam(project, items)}`;
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  if (!(await underLimit(sb, "selection", email, ip))) { console.log("rejected: rate limit"); return json(429, { error: "limit" }, origin); }
   const { data, error } = await sb.from("selections")
     .insert({ ref: mkRef(), email, project: project || null, items, origin_url: `${origin}${path}` })
     .select("id, ref").single();
