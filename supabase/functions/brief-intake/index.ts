@@ -5,7 +5,7 @@
 // SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { describe, type Item, parseItems } from "./items.ts";
+import { describe, type Item, parseItems } from "../_shared/items.ts";
 
 const ORIGINS = new Set([
   "https://objects.agency",

@@ -1,5 +1,5 @@
-// Saved configurations on a brief: the Saved Items page (oa-saved-items.js) hands them to
-// oa-brief.js, which sends them as items[] beside pieces[]. Strict on purpose: an unknown
+// Saved configurations from the Saved Items page (oa-saved-items.js), posted as items[] by
+// oa-brief.js (brief-intake) and by "Email me this list" (selection-intake). Strict on purpose: an unknown
 // key anywhere — a price above all (W07) — rejects the whole brief. No Deno APIs here, so
 // Node can test it — import a .mts copy (the repo isn't "type": "module").
 
@@ -45,4 +45,19 @@ export function parseItems(v: unknown): Item[] {
 export function describe(i: Item): string {
   const config = GROUPS.filter((g) => i.labels[g]).map((g) => i.labels[g]).join(" · ");
   return (config ? `${i.name} — ${config}` : i.name) + (i.qty > 1 ? ` ×${i.qty}` : "");
+}
+
+// The /saved-items share parameter (?s=), built server-side from validated items so an
+// emailed link can never carry anything the browser chose, and never a price (W07).
+// Mirrors encodeShare() in oa-saved-items.js: {v, p, $, i: [[slug, qty, [[group, option, label]]]]}.
+export function shareParam(project: string, items: Item[]): string {
+  const json = JSON.stringify({
+    v: 1,
+    p: project,
+    $: 0,
+    i: items.map((i) => [i.slug, i.qty, Object.keys(i.options).map((k) => [GROUPS.indexOf(k), i.options[k], i.labels[k] ?? ""])]),
+  });
+  let bin = "";
+  new TextEncoder().encode(json).forEach((b) => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

@@ -30,6 +30,14 @@
 //   [data-oa-saved-project]    project name input
 //   [data-oa-saved-brief|email|share]  hidden while the list is empty. Brief: the Designer's
 //                              link gets ?from=saved-items, and oa-brief.js reads this store
+//
+// Email me this list: [data-oa-saved-email] opens the panel; the selection-intake Edge
+// Function stores the list and emails it with a share link it builds itself (no price).
+//   [data-oa-saved-email-form]    panel (a plain div, not a Webflow Form). Knobs on it:
+//                                 data-oa-saved-email-endpoint, data-oa-saved-turnstile-key,
+//                                 data-oa-saved-email-{sending|sent|invalid|error}-text
+//   [data-oa-saved-email-input], [data-oa-saved-email-send], [data-oa-saved-email-status]
+//   [data-oa-saved-honeypot]      hidden input; a name autofill doesn't know (not "website")
 //   [data-oa-saved-share-price]  on the checkbox, its label, or inside the label: put prices
 //                              in the link
 //
@@ -59,6 +67,7 @@
   };
   const TEXT = { idle: 'Save', saved: 'Saved', full: 'List full', copied: 'Link copied' };
   const GROUPS = Object.keys(SUMMARY);
+  const startedAt = Date.now();
 
   // ---- store. Storage can throw (private mode, blocked site data): fall back to
   // memory so the page keeps working for this visit.
@@ -300,6 +309,7 @@
     document.querySelectorAll('[data-oa-saved-brief], [data-oa-saved-email], [data-oa-saved-share]')
       .forEach(function (el) { setHidden(el, !shown || shared); });
     setHidden(sharePrice, !shown || shared);
+    if (!shown || shared) setHidden(emailForm, true);
     if (sharePriceInput) sharePriceInput.checked = !!list.sharePrice;
     document.querySelectorAll('[data-oa-saved-shared]').forEach(function (el) { setHidden(el, !shared); });
     if (project) project.readOnly = !!shared;
@@ -397,6 +407,120 @@
     const list = load();
     list.sharePrice = sharePriceInput.checked;
     write(list);
+  });
+
+  // ---- Email me this list. Turnstile (invisible) mounts the first time the panel opens;
+  // tokens are single-use, so it resets after every send.
+  const emailForm = document.querySelector('[data-oa-saved-email-form]');
+  const emailKnob = function (k, d) { return (emailForm && emailForm.getAttribute('data-oa-saved-' + k)) || d; };
+  const EMAIL_ENDPOINT = emailKnob('email-endpoint', 'https://nleekoypvxoagnwiqtzz.supabase.co/functions/v1/selection-intake');
+  const TURNSTILE_KEY = emailKnob('turnstile-key', '0x4AAAAAAEtu2l3zZyHggUVm');
+  const emailInput = emailForm && emailForm.querySelector('[data-oa-saved-email-input]');
+  const emailField = emailInput && (emailInput.matches('input') ? emailInput : emailInput.querySelector('input'));
+  const emailStatus = emailForm && emailForm.querySelector('[data-oa-saved-email-status]');
+  const hpHook = emailForm && emailForm.querySelector('[data-oa-saved-honeypot]');
+  const honeypot = hpHook && (hpHook.matches('input') ? hpHook : hpHook.querySelector('input'));
+  setHidden(emailForm, true);
+  if (emailStatus) emailStatus.setAttribute('aria-live', 'polite');
+  function emailSay(key, fallback) { if (emailStatus) emailStatus.textContent = emailKnob('email-' + key + '-text', fallback); }
+
+  let widget = null;
+  let token = '';
+  let tokenWait = null;
+  function mountTurnstile() {
+    if (!TURNSTILE_KEY || widget !== null || !emailForm) return;
+    widget = 'loading';
+    const host = document.createElement('div');
+    emailForm.appendChild(host);
+    const render = function () {
+      widget = window.turnstile.render(host, {
+        sitekey: TURNSTILE_KEY, size: 'invisible',
+        callback: function (t) { token = t; if (tokenWait) { tokenWait(t); tokenWait = null; } },
+        'error-callback': function () { token = ''; if (tokenWait) { tokenWait(''); tokenWait = null; } },
+        'expired-callback': function () { token = ''; },
+      });
+    };
+    if (window.turnstile) return render();
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.onload = render;
+    document.head.appendChild(script);
+  }
+  function turnstileToken() {
+    if (!TURNSTILE_KEY) return Promise.resolve('');
+    mountTurnstile();
+    if (token) return Promise.resolve(token);
+    return Promise.race([
+      new Promise(function (res) { tokenWait = res; }),
+      new Promise(function (res) { setTimeout(function () { res(token); }, 10000); }),
+    ]);
+  }
+
+  // The visible half of a Lumos Clickable (it renders a link and a button, and shows one)
+  function control(el) {
+    return el && Array.prototype.slice.call(el.querySelectorAll('a, button'))
+      .filter(function (c) { return c.getClientRects().length; })[0];
+  }
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-oa-saved-email]');
+    if (!btn || !emailForm || shared) return;
+    e.preventDefault();
+    const open = emailForm.style.display === 'none';
+    setHidden(emailForm, !open);
+    const c = control(btn);
+    if (c) c.setAttribute('aria-expanded', String(open));
+    if (open) { mountTurnstile(); if (emailField) emailField.focus(); }
+  }, true);
+
+  let sending = false;
+  function sendList() {
+    if (sending || !emailField) return;
+    const email = emailField.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      emailField.setAttribute('aria-invalid', 'true');
+      emailSay('invalid', 'Please check your email address.');
+      emailField.focus();
+      return;
+    }
+    emailField.removeAttribute('aria-invalid');
+    const list = load();
+    const items = list.items.filter(function (e) { return e.name; }).map(function (e) {
+      const labels = {};
+      Object.keys(e.labels || {}).forEach(function (k) { if (e.labels[k]) labels[k] = e.labels[k]; });
+      return { slug: e.slug, name: e.name, options: e.options || {}, labels: labels, qty: e.qty || 1 };
+    });
+    sending = true;
+    emailSay('sending', 'Sending…');
+    turnstileToken().then(function (t) {
+      return fetch(EMAIL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: email, project: list.project || '', items: items, website: honeypot ? honeypot.value : '',
+          started_at: startedAt, origin_url: location.origin + location.pathname, turnstile: t }),
+      });
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (r.ok) return emailSay('sent', 'Sent — check your inbox.');
+        if (j.error === 'email') return emailSay('invalid', 'Please check your email address.');
+        throw new Error(j.error || r.status);
+      });
+    }).catch(function (err) {
+      emailSay('error', "That didn't send. Please try again, or email us directly.");
+      console.error('oa-saved-items', err);
+    }).then(function () {
+      sending = false;
+      token = '';
+      if (window.turnstile && widget && widget !== 'loading') { try { window.turnstile.reset(widget); } catch (e) {} }
+    });
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('[data-oa-saved-email-send]')) return;
+    e.preventDefault();
+    sendList();
+  }, true);
+  if (emailField) emailField.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); sendList(); }
   });
 
   // Share: the share sheet on touch, the clipboard elsewhere (with the label swapped to
