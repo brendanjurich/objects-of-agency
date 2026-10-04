@@ -17,6 +17,7 @@
 // Slug can't be bound as an attribute there, and a component Link prop can't point at
 // the current item, so the View piece link is an unlinked Clickable bound to it.
 //   [data-oa-saved-row]        the Collection item (row template)
+//   [data-oa-saved-name]       piece name; copied into the saved entry for the brief
 //   [data-oa-saved-price]      price number;  [data-oa-saved-price-wrap] hidden with no price
 //   [data-oa-saved-line="Sizes|Top-Material|Timber|Anodised-Finish"]
 //                              config line; its parent (bullet + text) hides when empty
@@ -27,7 +28,8 @@
 //   [data-oa-saved-wrap]       the list section (project field, rows, CTAs): hidden when empty
 //   [data-oa-saved-missing]    notice, shown after dropping saved pieces that left the CMS
 //   [data-oa-saved-project]    project name input
-//   [data-oa-saved-brief|email|share]  hidden while the list is empty (wired in later phases)
+//   [data-oa-saved-brief|email|share]  hidden while the list is empty. Brief: the Designer's
+//                              link gets ?from=saved-items, and oa-brief.js reads this store
 //   [data-oa-saved-share-price]  on the checkbox, its label, or inside the label: put prices
 //                              in the link
 //
@@ -210,13 +212,22 @@
   document.querySelectorAll('[data-oa-saved-row]').forEach(function (row) {
     const link = row.querySelector('a[href^="/product/"]');
     if (!link) return;
-    templates.push({ row: row, slug: link.getAttribute('href').split('/')[2], copy: row.cloneNode(true) });
+    const name = row.querySelector('[data-oa-saved-name]');
+    templates.push({ row: row, slug: link.getAttribute('href').split('/')[2], copy: row.cloneNode(true),
+      name: name ? name.textContent.trim() : '' });
     setHidden(row, true);
   });
   const project = document.querySelector('[data-oa-saved-project]');
   const missing = document.querySelector('[data-oa-saved-missing]');
   setHidden(missing, true);
   let dropped = 0;
+  // The brief (/contact) reads this store, so tell it where the visitor came from
+  document.querySelectorAll('[data-oa-saved-brief] a[href]').forEach(function (a) {
+    if (a.getAttribute('href').charAt(0) !== '/') return;
+    const url = new URL(a.getAttribute('href'), location.origin);
+    url.searchParams.set('from', 'saved-items');
+    a.setAttribute('href', url.pathname + url.search + url.hash);
+  });
   const formatter = new Intl.NumberFormat('en-AU', { maximumFractionDigits: 0 });
 
   // The hook may sit on the input, the label or the label's text (Lumos Form Checkbox
@@ -269,10 +280,13 @@
       }
     }
     setHidden(missing, !dropped);
+    // Saved entries hold slugs; the brief needs the CMS name, which only this page has
+    let named = false;
     let shown = 0;
     templates.forEach(function (t) {
       list.items.forEach(function (entry) {
         if (entry.slug !== t.slug) return;
+        if (!shared && t.name && entry.name !== t.name) { entry.name = t.name; named = true; }
         const row = t.copy.cloneNode(true);
         row.setAttribute('data-oa-saved-rendered', idOf(entry));
         fillRow(row, entry);
@@ -280,6 +294,7 @@
         shown++;
       });
     });
+    if (named) write(list);
     setHidden(document.querySelector('[data-oa-saved-empty]'), shown > 0);
     setHidden(document.querySelector('[data-oa-saved-wrap]'), !shown);
     document.querySelectorAll('[data-oa-saved-brief], [data-oa-saved-email], [data-oa-saved-share]')

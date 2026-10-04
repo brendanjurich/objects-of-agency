@@ -5,6 +5,7 @@
 // SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { describe, type Item, parseItems } from "./items.ts";
 
 const ORIGINS = new Set([
   "https://objects.agency",
@@ -101,6 +102,7 @@ function rows(b: Record<string, unknown>) {
   add("For", lab("audience", b.audience));
   add("After", lab("after", b.after));
   add("Pieces", (b.pieces as string[]).join(", "));
+  (b.items as Item[]).forEach((i) => add("Configuration", describe(i)));
   add("Bespoke", lab("bespoke", b.bespoke));
   add("Setting", lab("setting", b.setting));
   add("How many", lab("quantity", b.quantity));
@@ -173,6 +175,7 @@ Deno.serve(async (req) => {
       audience,
       after: many("after", body.after),
       pieces: Array.isArray(body.pieces) ? body.pieces.map((p) => short(p, 120)).filter(Boolean).slice(0, 12) : [],
+      items: parseItems(body.items),
       bespoke: many("bespoke", body.bespoke),
       setting: many("setting", body.setting),
       quantity: one("quantity", body.quantity),
