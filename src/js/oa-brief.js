@@ -13,6 +13,11 @@
 //   data-oa-brief-turnstile-key  Cloudflare Turnstile site key (optional)
 //   data-oa-brief-response       response promise text, default "two working days"
 //
+// Honeypot: [data-oa-brief-honeypot] (the input, or a wrapper holding it), falling back to
+// name="website". Give it a name autofill doesn't know — autofill ignores autocomplete="off",
+// and a field named "website" got filled from the visitor's contact card, so brief-intake
+// silently dropped a real person as a bot. Still posted under the key `website`.
+//
 // ?from=saved-items (the Saved Items page's brief link): the visitor's saved pieces arrive
 // as piece tags, the quantity question is pre-set from their total, and each saved
 // configuration still tagged at send goes out as items[] — read from oa-saved-items.js's
@@ -559,7 +564,7 @@
   async function payload() {
     const p = {}; KEYS.forEach(k => { p[k] = val(k); });
     p.name = fullName(); delete p.first_name; delete p.last_name;
-    p.email = val('email'); p.pieces = state.pieces; p.items = items(); p.website = val('website') || '';
+    p.email = val('email'); p.pieces = state.pieces; p.items = items(); p.website = honeypot ? honeypot.value : '';
     p.referrer = document.referrer || ''; p.origin_url = location.href; p.started_at = startedAt; p.turnstile = await turnstileToken();
     return p;
   }
@@ -578,6 +583,8 @@
       console.error('oa-brief', e);
     }
   }
+  const hpHook = document.querySelector('[data-oa-brief-honeypot]') || document.querySelector('input[name="website"]');
+  const honeypot = hpHook && (hpHook.matches('input') ? hpHook : hpHook.querySelector('input'));
   const finishBtn = $('[data-oa-brief-finish]');
   if (finishBtn) finishBtn.addEventListener('click', e => { e.preventDefault(); send(finishBtn); });
   const sendBtn = $('[data-oa-brief-send]');

@@ -157,9 +157,11 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json(400, { error: "json" }, origin); }
 
   // S3: honeypot + minimum time on page
-  if (typeof body.website === "string" && body.website) return json(200, { ref: mkRef() }, origin); // silent
+  // Silent drops are logged with their reason, so a real person caught here shows up in the
+  // function logs instead of vanishing (autofill once filled the honeypot).
+  if (typeof body.website === "string" && body.website) { console.log("dropped: honeypot"); return json(200, { ref: mkRef() }, origin); }
   const started = Number(body.started_at);
-  if (!started || Date.now() - started < MIN_SECONDS * 1000) return json(200, { ref: mkRef() }, origin);
+  if (!started || Date.now() - started < MIN_SECONDS * 1000) { console.log("dropped: min-time", Date.now() - started); return json(200, { ref: mkRef() }, origin); }
   const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for");
   if (!(await turnstile(String(body.turnstile ?? ""), ip))) return json(403, { error: "verification" }, origin);
 
