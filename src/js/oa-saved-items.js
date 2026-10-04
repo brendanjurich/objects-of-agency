@@ -303,6 +303,12 @@
   window.addEventListener('storage', function (e) { if (e.key === KEY) paint(); });
   window.addEventListener('pageshow', function (e) { if (e.persisted) paint(); });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint);
-  else paint();
+  // Count and page render now: this is footer code, so the markup above it exists. Then
+  // release the pre-hide in oa-styles.css. Save buttons wait for DOMContentLoaded — the
+  // configurator (a later embed) restores ?cfg= radios first.
+  paintCount();
+  renderPage();
+  document.documentElement.classList.add('oa-saved-ready');
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paintButtons);
+  else paintButtons();
 })();

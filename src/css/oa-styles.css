@@ -49,6 +49,16 @@ html.w-mod-js:not(.wf-design-mode):not(.oa-reveal-ready) [data-oa-reveal] {
   opacity: 0;
 }
 
+/* Pre-hide everything oa-saved-items.js shows or hides, so the Designer's state
+   (nav badge dot, every row template, the empty state, the CTAs) never paints
+   before the script decides. It's the last sitewide footer script, so on a cold
+   load the page fades in well before it runs. Released by the script adding
+   .oa-saved-ready to <html> after its first render; from then on it owns display
+   inline. Off with JS off and in the Designer canvas. */
+html.w-mod-js:not(.wf-design-mode):not(.oa-saved-ready) :is([data-oa-saved-count], [data-oa-saved-row], [data-oa-saved-empty], [data-oa-saved-missing], [data-oa-saved-brief], [data-oa-saved-email], [data-oa-saved-share]) {
+  display: none !important;
+}
+
 /* Loader — hidden in Designer & no-JS fallback */
 html.wf-design-mode .loader,
 .no-js .loader {
