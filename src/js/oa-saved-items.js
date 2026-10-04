@@ -28,7 +28,8 @@
 //   [data-oa-saved-missing]    notice, shown after dropping saved pieces that left the CMS
 //   [data-oa-saved-project]    project name input
 //   [data-oa-saved-brief|email|share]  hidden while the list is empty (wired in later phases)
-//   [data-oa-saved-share-price]  checkbox (or a wrapper holding one): put prices in the link
+//   [data-oa-saved-share-price]  on the checkbox, its label, or inside the label: put prices
+//                              in the link
 //
 // Share link: [data-oa-saved-share] copies (touch: share sheet) this page's URL with
 // ?s=<base64url JSON> — project, and per item slug, qty, option slugs + labels, and the
@@ -218,7 +219,10 @@
   let dropped = 0;
   const formatter = new Intl.NumberFormat('en-AU', { maximumFractionDigits: 0 });
 
-  const sharePrice = document.querySelector('[data-oa-saved-share-price]');
+  // The hook may sit on the input, the label or the label's text (Lumos Form Checkbox
+  // props reach the input and the text span); show/hide the whole label either way.
+  const sharePriceHook = document.querySelector('[data-oa-saved-share-price]');
+  const sharePrice = sharePriceHook && (sharePriceHook.closest('label') || sharePriceHook);
   const sharePriceInput = sharePrice && (sharePrice.matches('input') ? sharePrice : sharePrice.querySelector('input'));
 
   function fillRow(row, entry) {
