@@ -45,7 +45,8 @@ for (const n of ['audience','after','bespoke','setting','quantity','timing','tim
 // named "website" was filled from the visitor's contact card and real briefs were dropped
 // as spam (04-10-2026). autocomplete="off" does not stop autofill.
 const hp = (html.match(/<input[^>]*data-oa-brief-honeypot[^>]*>/) || html.match(/<input[^>]*class="brief_honeypot"[^>]*>/) || [''])[0];
-check('honeypot input [data-oa-brief-honeypot]', /data-oa-brief-honeypot/.test(hp), hp ? 'found by class only — add the attribute' : 'ABSENT');
+const hpOk = /data-oa-brief-honeypot/.test(hp);
+check('honeypot input [data-oa-brief-honeypot]', hpOk, hpOk ? '' : hp ? 'found by class only — add the attribute' : 'ABSENT');
 const hpName = (hp.match(/\bname="([^"]*)"/) || [])[1] || '';
 check('honeypot name autofill ignores', !/^(website|url|homepage|name|email|phone|tel|company|organi[sz]ation|address|fax)$/i.test(hpName), 'name="' + hpName + '"');
 
