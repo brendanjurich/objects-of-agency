@@ -47,17 +47,14 @@ export function describe(i: Item): string {
   return (config ? `${i.name} — ${config}` : i.name) + (i.qty > 1 ? ` ×${i.qty}` : "");
 }
 
-// The /saved-items share parameter (?s=), built server-side from validated items so an
-// emailed link can never carry anything the browser chose, and never a price (W07).
-// Mirrors encodeShare() in oa-saved-items.js: {v, p, $, i: [[slug, qty, [[group, option, label]]]]}.
-export function shareParam(project: string, items: Item[]): string {
-  const json = JSON.stringify({
+// A stored list as the /saved-items page reads it — the same shape as the old ?s= link, so
+// parseShare() in oa-saved-items.js reads both. Never a price (W07).
+// {v, p, $, i: [[slug, qty, [[group, option, label]]]]}.
+export function compact(project: string, items: Item[]) {
+  return {
     v: 1,
     p: project,
     $: 0,
     i: items.map((i) => [i.slug, i.qty, Object.keys(i.options).map((k) => [GROUPS.indexOf(k), i.options[k], i.labels[k] ?? ""])]),
-  });
-  let bin = "";
-  new TextEncoder().encode(json).forEach((b) => { bin += String.fromCharCode(b); });
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  };
 }

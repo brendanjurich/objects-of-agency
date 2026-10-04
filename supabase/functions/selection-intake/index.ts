@@ -1,12 +1,13 @@
 // selection-intake — "Email me this list" on /saved-items.
 // Browser → fetch → here → insert selections row → two Resend emails → { ref }.
 // Same guard chain as brief-intake: CORS → min-time (honeypot logged only) → Turnstile → validate → links → rate limit → insert → mail.
-// The emailed link is rebuilt here from the validated items, never taken from the browser,
-// and carries no price (W07). Secrets: RESEND_API_KEY, TURNSTILE_SECRET (shared with brief-intake).
+// The emailed link is a short ?l= link to the validated items, stored here (shares), never taken
+// from the browser, and carries no price (W07). Secrets: RESEND_API_KEY, TURNSTILE_SECRET (shared with brief-intake).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { describe, type Item, parseItems, shareParam } from "../_shared/items.ts";
+import { describe, type Item, parseItems } from "../_shared/items.ts";
 import { clientIp, hasLink, turnstile, underLimit } from "../_shared/guard.ts";
+import { createShare } from "../_shared/share.ts";
 
 const ORIGINS = new Set([
   "https://objects.agency",
@@ -102,9 +103,11 @@ Deno.serve(async (req) => {
     console.log("rejected: link in project or items"); return json(400, { error: "link" }, origin);
   }
 
-  const link = `${origin}${path}?s=${shareParam(project, items)}`;
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   if (!(await underLimit(sb, "selection", email, ip))) { console.log("rejected: rate limit"); return json(429, { error: "limit" }, origin); }
+  let link: string;
+  try { link = `${origin}${path}?l=${await createShare(sb, project, items)}`; }
+  catch (e) { console.error(e); return json(500, { error: "store" }, origin); }
   const { data, error } = await sb.from("selections")
     .insert({ ref: mkRef(), email, project: project || null, items, origin_url: `${origin}${path}` })
     .select("id, ref").single();

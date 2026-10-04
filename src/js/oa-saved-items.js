@@ -45,11 +45,17 @@
 //   [data-oa-saved-share-price]  on the checkbox, its label, or inside the label: put prices
 //                              in the link
 //
-// Share link: [data-oa-saved-share] copies (touch: share sheet) this page's URL with
-// ?s=<base64url JSON> — project, and per item slug, qty, option slugs + labels, and the
-// price only when [data-oa-saved-share-price] is ticked. Opening it shows that list
-// read-only: storage is never touched, row controls, CTAs and the checkbox are hidden,
-// the project field is read-only.
+// Share link: [data-oa-saved-share] posts the list to the share-list Edge Function, which
+// stores it and returns a short id, then copies (touch: share sheet) this page's URL with
+// ?l=<id> — "smith-residence-k3f9x2". A pasted ?s= link ran to ~600 characters and mail
+// clients cut it. The clipboard gets a named link ("Smith Residence — Saved Items · Objects
+// of Agency") for mail and docs, and the bare URL for plain-text apps. Prices never reach a
+// server (W07): ticked [data-oa-saved-share-price], they ride in the fragment, #p=12500.9800.
+// Knobs on the Share button: data-oa-saved-share-endpoint, data-oa-saved-share-title.
+// Opening ?l= (or an old ?s=<base64url JSON> link, still read) shows that list read-only:
+// storage is never touched, row controls, CTAs and the checkbox are hidden, the project
+// field is read-only. A ?l= list loads before the page is released; a dead link shows
+// the visitor's own list.
 //   [data-oa-saved-shared]     shown only on a shared link (e.g. a banner)
 //   [data-oa-saved-import]     "Add to my saved items": merges the shared list into the
 //                              visitor's own (dedupe, cap) and drops ?s= in place
@@ -69,7 +75,8 @@
     'Timber': 'summary-timber',
     'Anodised-Finish': 'summary-anodising',
   };
-  const TEXT = { idle: 'Save', saved: 'Saved', full: 'List full', copied: 'Link copied' };
+  const TEXT = { idle: 'Save', saved: 'Saved', full: 'List full', copied: 'Link copied',
+    tap: 'Tap to share', failed: 'Try again' };
   const GROUPS = Object.keys(SUMMARY);
   const startedAt = Date.now();
 
@@ -128,35 +135,16 @@
       .map(function (k) { return k + ':' + entry.options[k]; }).join(',');
   }
 
-  // ---- share link. Item = [slug, qty, [[group index, option slug, label], …], price?].
-  // Anything malformed rejects the whole link, and the visitor sees their own list.
-  function toBase64url(text) {
-    let bin = '';
-    new TextEncoder().encode(text).forEach(function (b) { bin += String.fromCharCode(b); });
-    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  }
+  // ---- shared list. Item = [slug, qty, [[group index, option slug, label], …], price?] —
+  // the share-list read and the old ?s= link both use it. Anything malformed rejects the
+  // whole list, and the visitor sees their own.
   function fromBase64url(text) {
     const bin = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
     return new TextDecoder().decode(Uint8Array.from(bin, function (c) { return c.charCodeAt(0); }));
   }
-  function encodeShare(list) {
-    return toBase64url(JSON.stringify({
-      v: 1,
-      p: list.project || '',
-      $: list.sharePrice ? 1 : 0,
-      i: list.items.map(function (e) {
-        const item = [e.slug, e.qty || 1, Object.keys(e.options).map(function (k) {
-          return [GROUPS.indexOf(k), e.options[k], (e.labels || {})[k] || ''];
-        })];
-        if (list.sharePrice && e.price) item.push(e.price);
-        return item;
-      }),
-    }));
-  }
   const SLUG = /^[a-z0-9-]{1,100}$/;
-  function decodeShare(param) {
+  function parseShare(d) {
     try {
-      const d = JSON.parse(fromBase64url(param));
       if (d.v !== 1 || !Array.isArray(d.i) || d.i.length > CAP || typeof d.p !== 'string') return null;
       const items = d.i.map(function (it) {
         if (!SLUG.test(it[0]) || !Array.isArray(it[2])) throw 0;
@@ -177,8 +165,34 @@
       return null;
     }
   }
-  const shareParam = new URLSearchParams(location.search).get('s');
-  let shared = shareParam ? decodeShare(shareParam) : null;
+  function decodeShare(param) {
+    try { return parseShare(JSON.parse(fromBase64url(param))); } catch (e) { return null; }
+  }
+  const shareBtn = document.querySelector('[data-oa-saved-share]');
+  const SHARE_ENDPOINT = (shareBtn && shareBtn.getAttribute('data-oa-saved-share-endpoint')) ||
+    'https://nleekoypvxoagnwiqtzz.supabase.co/functions/v1/share-list';
+  const SHARE_ID = /^[a-z0-9-]{6,60}$/;
+  const params = new URLSearchParams(location.search);
+  const shareId = SHARE_ID.test(params.get('l') || '') ? params.get('l') : '';
+  const shareParam = params.get('s');
+  let shared = shareParam && !shareId ? decodeShare(shareParam) : null;
+
+  // A short link's list, with any #p= prices put back in item order. null when it is
+  // gone, malformed, or slow — the visitor then sees their own list.
+  function loadShared(id) {
+    const prices = (location.hash.match(/^#p=([0-9.]{1,200})$/) || [])[1];
+    return Promise.race([
+      fetch(SHARE_ENDPOINT + '?id=' + id).then(function (r) { return r.ok ? r.json() : null; }),
+      new Promise(function (res) { setTimeout(res, 8000, null); }),
+    ]).then(function (d) {
+      const list = d && parseShare(d);
+      if (list && prices) prices.split('.').forEach(function (p, i) {
+        const n = parseInt(p, 10);
+        if (list.items[i] && n > 0 && n < 1e7) list.items[i].price = n;
+      });
+      return list;
+    }, function () { return null; });
+  }
 
   // ---- announce (screen readers) — one polite live region, created on demand
   let live = null;
@@ -431,6 +445,20 @@
     (emailStatus.querySelector('p') || emailStatus).textContent = text;
   }
 
+  // What both server calls send: named entries only (the server needs the CMS name), no
+  // price. The share link's #p= prices follow the same order.
+  function payload(list) {
+    const entries = list.items.filter(function (e) { return e.name; });
+    const items = entries.map(function (e) {
+      const labels = {};
+      Object.keys(e.labels || {}).forEach(function (k) { if (e.labels[k]) labels[k] = e.labels[k]; });
+      return { slug: e.slug, name: e.name, options: e.options || {}, labels: labels, qty: e.qty || 1 };
+    });
+    const priced = list.sharePrice && entries.some(function (e) { return e.price; });
+    return { project: list.project || '', items: items,
+      hash: priced ? '#p=' + entries.map(function (e) { return e.price ? Math.round(e.price) : ''; }).join('.') : '' };
+  }
+
   let widget = null;
   let token = '';
   let tokenWait = null;
@@ -485,11 +513,7 @@
     }
     emailField.removeAttribute('aria-invalid');
     const list = load();
-    const items = list.items.filter(function (e) { return e.name; }).map(function (e) {
-      const labels = {};
-      Object.keys(e.labels || {}).forEach(function (k) { if (e.labels[k]) labels[k] = e.labels[k]; });
-      return { slug: e.slug, name: e.name, options: e.options || {}, labels: labels, qty: e.qty || 1 };
-    });
+    const items = payload(list).items;
     sending = true;
     emailSay('sending', 'Sending…');
     turnstileToken().then(function (t) {
@@ -524,26 +548,88 @@
   });
 
   // Share: the share sheet on touch, the clipboard elsewhere (with the label swapped to
-  // say so). If the clipboard is refused, a prompt holds the link to copy by hand.
+  // say so). The link is made on the server, so the click waits on a fetch: the clipboard
+  // takes promised content (Safari refuses a write once the click is spent), and a share
+  // sheet the browser refuses after the wait leaves the link ready for one more tap. The
+  // same list keeps its link, so a second tap sends nothing. If the clipboard is refused,
+  // a prompt holds the link to copy by hand.
   let copiedTimer = null;
+  let made = { key: '', url: '' };
+  function shareLink(list) {
+    const p = payload(list);
+    const key = JSON.stringify([p.project, p.items]);
+    const base = location.origin + location.pathname + '?l=';
+    if (key === made.key) return Promise.resolve(made.url + p.hash);
+    return fetch(SHARE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ project: p.project, items: p.items }),
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok || !SHARE_ID.test(j.id || '')) throw new Error(j.error || r.status);
+        made = { key: key, url: base + j.id };
+        return made.url + p.hash;
+      });
+    });
+  }
+  function linkTitle(list) {
+    const title = (shareBtn && shareBtn.getAttribute('data-oa-saved-share-title')) || 'Saved Items · Objects of Agency';
+    return list.project ? list.project + ' — ' + title : title;
+  }
+  function escHtml(t) {
+    return t.replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
+  }
+  function copyLink(urlP, title) {
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      return navigator.clipboard.write([new ClipboardItem({
+        'text/html': urlP.then(function (u) {
+          return new Blob(['<a href="' + escHtml(u) + '">' + escHtml(title) + '</a>'], { type: 'text/html' });
+        }),
+        'text/plain': urlP.then(function (u) { return new Blob([u], { type: 'text/plain' }); }),
+      })]);
+    }
+    return urlP.then(function (u) {
+      return navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject();
+    });
+  }
   document.addEventListener('click', function (e) {
     const btn = e.target.closest('[data-oa-saved-share]');
     if (!btn || shared) return;
     e.preventDefault();
-    const url = location.origin + location.pathname + '?s=' + encodeShare(load());
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-      navigator.share({ url: url }).catch(function () {});
-      return;
-    }
     const label = btn.querySelector('.button_main_text');
     if (!btn.hasAttribute('data-oa-saved-share-text') && label) btn.setAttribute('data-oa-saved-share-text', label.textContent);
-    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () {
-      setLabel(btn, TEXT.copied);
-      announce('Share link copied.');
+    const restore = function () { setLabel(btn, btn.getAttribute('data-oa-saved-share-text') || ''); };
+    const flash = function (text) {
+      setLabel(btn, text);
       clearTimeout(copiedTimer);
-      copiedTimer = setTimeout(function () { setLabel(btn, btn.getAttribute('data-oa-saved-share-text') || ''); }, 2500);
+      copiedTimer = setTimeout(restore, 2500);
+    };
+    const failed = function (err) {
+      flash(TEXT.failed);
+      announce('The share link couldn’t be made. Check your connection and try again.');
+      console.error('oa-saved-items', err);
+    };
+    const list = load();
+    const title = linkTitle(list);
+    const urlP = shareLink(list);
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      clearTimeout(copiedTimer);
+      restore();
+      urlP.then(function (url) {
+        return navigator.share({ url: url, title: title }).catch(function (err) {
+          if (err && err.name === 'NotAllowedError') {
+            setLabel(btn, TEXT.tap);
+            announce('Share link ready. Tap again to share it.');
+          }
+        });
+      }, failed);
+      return;
+    }
+    copyLink(urlP, title).then(function () {
+      flash(TEXT.copied);
+      announce('Share link copied.');
     }, function () {
-      window.prompt('Copy this link to share your saved items:', url);
+      urlP.then(function (url) { window.prompt('Copy this link to share your saved items:', url); }, failed);
     });
   }, true);
 
@@ -566,7 +652,7 @@
     if (!list.project) list.project = shared.project;
     shared = null;
     dropped = 0;
-    history.replaceState(history.state, '', location.pathname + location.hash);
+    history.replaceState(history.state, '', location.pathname);
     store(list);
     if (project) project.focus();
     announce('Added ' + added + (added === 1 ? ' piece' : ' pieces') + ' to your saved items.' +
@@ -582,11 +668,16 @@
   window.addEventListener('pageshow', function (e) { if (e.persisted) paint(); });
 
   // Count and page render now: this is footer code, so the markup above it exists. Then
-  // release the pre-hide in oa-styles.css. Save buttons wait for DOMContentLoaded — the
+  // release the pre-hide in oa-styles.css — after a ?l= list has loaded, so the visitor's
+  // own list never flashes first. Save buttons wait for DOMContentLoaded — the
   // configurator (a later embed) restores ?cfg= radios first.
+  function release() {
+    renderPage();
+    document.documentElement.classList.add('oa-saved-ready');
+  }
   paintCount();
-  renderPage();
-  document.documentElement.classList.add('oa-saved-ready');
+  if (shareId && templates.length) loadShared(shareId).then(function (list) { shared = list; release(); });
+  else release();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paintButtons);
   else paintButtons();
 })();
