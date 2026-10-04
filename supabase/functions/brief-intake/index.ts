@@ -1,10 +1,12 @@
 // brief-intake — wayfinder B06.
 // Browser → fetch → here → insert briefs row → two Resend emails → { ref }.
-// Order matters: CORS → honeypot/min-time → Turnstile → validate → insert → mail.
+// Order matters: CORS → min-time (honeypot logged only) → Turnstile → validate → links → rate limit → insert → mail.
 // Secrets (supabase secrets set): RESEND_API_KEY, TURNSTILE_SECRET. SUPABASE_URL and
 // SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { describe, type Item, parseItems } from "../_shared/items.ts";
+import { clientIp, hasLink, turnstile, underLimit } from "../_shared/guard.ts";
 
 const ORIGINS = new Set([
   "https://objects.agency",
@@ -65,18 +67,6 @@ const many = <K extends keyof typeof ENUM>(k: K, v: unknown) => (Array.isArray(v
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 254;
 const mkRef = () => "OA-" + crypto.getRandomValues(new Uint8Array(3)).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "").toUpperCase();
 
-async function turnstile(token: string, ip: string | null) {
-  const secret = Deno.env.get("TURNSTILE_SECRET");
-  if (!secret) return true; // not configured yet — allow, so staging can run before B04 finishes
-  const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ secret, response: token, remoteip: ip ?? undefined }),
-  });
-  const j = await r.json();
-  return j.success === true;
-}
-
 async function send(to: string, subject: string, html: string, text: string) {
   const key = Deno.env.get("RESEND_API_KEY");
   if (!key) { console.warn("RESEND_API_KEY unset; skipping mail to", to); return; }
@@ -101,6 +91,7 @@ function rows(b: Record<string, unknown>) {
   add("For", lab("audience", b.audience));
   add("After", lab("after", b.after));
   add("Pieces", (b.pieces as string[]).join(", "));
+  (b.items as Item[]).forEach((i) => add("Configuration", describe(i)));
   add("Bespoke", lab("bespoke", b.bespoke));
   add("Setting", lab("setting", b.setting));
   add("How many", lab("quantity", b.quantity));
@@ -119,7 +110,8 @@ function ackEmail(b: Record<string, unknown>, ref: string) {
     home: `We'll come back within ${RESPONSE}. Commissions with us run in three short stages — a conversation about the piece, a drawing and a price, then making. There's no obligation at any stage before the second.`,
     venue: `We'll come back within ${RESPONSE} with first thoughts and a time to talk. For quantities, we'll ask about the programme early so the making fits it.`,
   };
-  const r = rows(b);
+  // A note with a link reaches the studio in full but is never echoed to the visitor's inbox.
+  const r = rows(hasLink(b.note as string | null) ? { ...b, note: "Received. Links aren't repeated in this email." } : b);
   const html = `<p>${esc(first)},</p>
 <p>Thanks for this. Here's your brief as you gave it to us, written up so it's useful to you whether or not we go further together.</p>
 <h3>Project brief · ${esc(ref)}</h3>
@@ -154,12 +146,17 @@ Deno.serve(async (req) => {
   let body: Body;
   try { body = await req.json(); } catch { return json(400, { error: "json" }, origin); }
 
-  // S3: honeypot + minimum time on page
-  if (typeof body.website === "string" && body.website) return json(200, { ref: mkRef() }, origin); // silent
+  // S3: minimum time on page; honeypot logged
+  // The honeypot is a signal, never a drop: browser autofill fills an off-screen field
+  // whatever its name, and two real people vanished that way (04-10-2026). Turnstile is the
+  // gate. Silent drops below are logged with their reason.
+  if (typeof body.website === "string" && body.website) console.log("honeypot filled (autofill or bot); continuing to Turnstile");
   const started = Number(body.started_at);
-  if (!started || Date.now() - started < MIN_SECONDS * 1000) return json(200, { ref: mkRef() }, origin);
-  const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for");
-  if (!(await turnstile(String(body.turnstile ?? ""), ip))) return json(403, { error: "verification" }, origin);
+  if (!started || Date.now() - started < MIN_SECONDS * 1000) { console.log("dropped: min-time", Date.now() - started); return json(200, { ref: mkRef() }, origin); }
+  const ip = clientIp(req);
+  const ts = await turnstile(String(body.turnstile ?? ""), ip);
+  if (ts === "unset") { console.error("TURNSTILE_SECRET unset; refusing"); return json(503, { error: "config" }, origin); }
+  if (ts === "fail") return json(403, { error: "verification" }, origin);
 
   let row: Record<string, unknown>;
   try {
@@ -173,6 +170,7 @@ Deno.serve(async (req) => {
       audience,
       after: many("after", body.after),
       pieces: Array.isArray(body.pieces) ? body.pieces.map((p) => short(p, 120)).filter(Boolean).slice(0, 12) : [],
+      items: parseItems(body.items),
       bespoke: many("bespoke", body.bespoke),
       setting: many("setting", body.setting),
       quantity: one("quantity", body.quantity),
@@ -190,7 +188,12 @@ Deno.serve(async (req) => {
     };
   } catch { return json(400, { error: "fields" }, origin); }
 
+  // Short fields echoed into the visitor's email never carry a link; the note is handled in ackEmail.
+  const echoed = [row.name as string | null, ...(row.pieces as string[]), ...(row.items as Item[]).flatMap((i) => [i.name, ...Object.values(i.labels)])];
+  if (echoed.some(hasLink)) { console.log("rejected: link in a short field"); return json(400, { error: "link" }, origin); }
+
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  if (!(await underLimit(sb, "brief", row.email as string | null, ip))) { console.log("rejected: rate limit"); return json(429, { error: "limit" }, origin); }
   const { data, error } = await sb.from("briefs").insert(row).select("id, ref").single();
   if (error) { console.error(error); return json(500, { error: "store" }, origin); }
 

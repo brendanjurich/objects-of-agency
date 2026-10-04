@@ -12,6 +12,16 @@
 //   data-oa-brief-endpoint       Edge Function URL (required to send)
 //   data-oa-brief-turnstile-key  Cloudflare Turnstile site key (optional)
 //   data-oa-brief-response       response promise text, default "two working days"
+//
+// Honeypot: [data-oa-brief-honeypot] (the input, or a wrapper holding it), falling back to
+// name="website". Give it a name autofill doesn't know — autofill ignores autocomplete="off",
+// and a field named "website" got filled from the visitor's contact card, so brief-intake
+// silently dropped a real person as a bot. Still posted under the key `website`.
+//
+// ?from=saved-items (the Saved Items page's brief link): the visitor's saved pieces arrive
+// as piece tags, the quantity question is pre-set from their total, and each saved
+// configuration still tagged at send goes out as items[] — read from oa-saved-items.js's
+// localStorage store. Price is never read.
 
 (function () {
   const root = document.querySelector('[data-oa-brief]');
@@ -87,6 +97,28 @@
   state.pieces = state.pieces || [];
   const params = new URLSearchParams(location.search);
   if (params.get('piece')) { state.after = ['seen']; state.skipWhat = true; const p = params.get('piece'); if (state.pieces.indexOf(p) < 0) state.pieces.push(p); }
+  function savedItems() {
+    try {
+      const list = JSON.parse(localStorage.getItem('oa-saved-items:v1') || 'null');
+      return list && Array.isArray(list.items) ? list.items.filter(e => e && e.slug && e.name) : [];
+    } catch (e) { return []; }
+  }
+  if (params.get('from') === 'saved-items') {
+    const saved = savedItems();
+    if (saved.length) {
+      state.fromSaved = true; state.after = ['seen']; state.skipWhat = true;
+      saved.forEach(e => { if (state.pieces.indexOf(e.name) < 0) state.pieces.push(e.name); });
+      const n = saved.reduce((sum, e) => sum + (e.qty || 1), 0);
+      if (!state.quantity) state.quantity = n >= 10 ? 'ten-plus' : n > 1 ? 'few' : 'one';
+    }
+  }
+  // Removing a piece's tag drops its configurations too
+  const items = () => !state.fromSaved ? [] : savedItems()
+    .filter(e => state.pieces.indexOf(e.name) >= 0).slice(0, 12)
+    .map(e => {
+      const labels = {}; Object.keys(e.labels || {}).forEach(k => { if (e.labels[k]) labels[k] = e.labels[k]; });
+      return { slug: e.slug, name: e.name, options: e.options || {}, labels: labels, qty: e.qty || 1 };
+    });
   const startedAt = Date.now();
 
   // ---- values (inner-group scoping only; a step being hidden never hides its answers)
@@ -216,12 +248,12 @@
   }
   const firstName = () => (val('first_name') || val('name') || '').trim().split(' ')[0];
   function save() {
-    const s = {}; KEYS.forEach(k => { s[k] = val(k); }); s.pieces = state.pieces; s.skipWhat = state.skipWhat;
+    const s = {}; KEYS.forEach(k => { s[k] = val(k); }); s.pieces = state.pieces; s.skipWhat = state.skipWhat; s.fromSaved = state.fromSaved;
     try { sessionStorage.setItem(STORE, JSON.stringify(s)); } catch (e) {}
   }
   function restore() {
     Object.keys(state).forEach(k => {
-      if (k === 'pieces' || k === 'skipWhat') return; const v = state[k];
+      if (k === 'pieces' || k === 'skipWhat' || k === 'fromSaved') return; const v = state[k];
       inputs(k).forEach(e => { if (e.type === 'checkbox') e.checked = Array.isArray(v) && v.indexOf(e.value) >= 0; else if (e.type === 'radio') e.checked = e.value === v; else if (typeof v === 'string') e.value = v; });
     });
   }
@@ -452,6 +484,10 @@
     add('who', 'For', label('audience', val('audience')));
     add('what', 'After', (val('after') || []).map(v => label('after', v)));
     add('piece', 'Pieces', state.pieces);
+    add('piece', 'Configurations', items().map(i => {
+      const config = Object.keys(i.labels).map(k => i.labels[k]).join(' · ');
+      return (config ? i.name + ' — ' + config : i.name) + (i.qty > 1 ? ' ×' + i.qty : '');
+    }).join('; '));
     add('bespoke', 'Bespoke', (val('bespoke') || []).map(v => label('bespoke', v)));
     add('where', 'Setting', (val('setting') || []).map(v => label('setting', v)));
     add(branch() === 'client' ? 'when' : 'where', 'How many', val('quantity') && label('quantity', val('quantity')));
@@ -528,7 +564,7 @@
   async function payload() {
     const p = {}; KEYS.forEach(k => { p[k] = val(k); });
     p.name = fullName(); delete p.first_name; delete p.last_name;
-    p.email = val('email'); p.pieces = state.pieces; p.website = val('website') || '';
+    p.email = val('email'); p.pieces = state.pieces; p.items = items(); p.website = honeypot ? honeypot.value : '';
     p.referrer = document.referrer || ''; p.origin_url = location.href; p.started_at = startedAt; p.turnstile = await turnstileToken();
     return p;
   }
@@ -547,6 +583,8 @@
       console.error('oa-brief', e);
     }
   }
+  const hpHook = document.querySelector('[data-oa-brief-honeypot]') || document.querySelector('input[name="website"]');
+  const honeypot = hpHook && (hpHook.matches('input') ? hpHook : hpHook.querySelector('input'));
   const finishBtn = $('[data-oa-brief-finish]');
   if (finishBtn) finishBtn.addEventListener('click', e => { e.preventDefault(); send(finishBtn); });
   const sendBtn = $('[data-oa-brief-send]');

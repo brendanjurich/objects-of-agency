@@ -38,8 +38,17 @@ for (const id of ['who','looking','what','piece','bespoke','where','when','you',
   check('step pair: ' + id, byStep[id] === 2, (byStep[id] || 0) + ' block(s)');
 
 // 3. named inputs the engine reads
-for (const n of ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','interest','note','email','practice','piece_input','website'])
+for (const n of ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','interest','note','email','practice','piece_input'])
   check('input name="' + n + '"', names.has(n), names.has(n) ? '' : 'ABSENT from served DOM');
+
+// Honeypot: must exist, and must not carry a name browser autofill recognises — a field
+// named "website" was filled from the visitor's contact card and real briefs were dropped
+// as spam (04-10-2026). autocomplete="off" does not stop autofill.
+const hp = (html.match(/<input[^>]*data-oa-brief-honeypot[^>]*>/) || html.match(/<input[^>]*class="brief_honeypot"[^>]*>/) || [''])[0];
+const hpOk = /data-oa-brief-honeypot/.test(hp);
+check('honeypot input [data-oa-brief-honeypot]', hpOk, hpOk ? '' : hp ? 'found by class only — add the attribute' : 'ABSENT');
+const hpName = (hp.match(/\bname="([^"]*)"/) || [])[1] || '';
+check('honeypot name autofill ignores', !/^(website|url|homepage|name|email|phone|tel|company|organi[sz]ation|address|fax)$/i.test(hpName), 'name="' + hpName + '"');
 
 // Name is one field or a first/last pair; the engine composes either into `name`.
 check('name field (name, or first_name + last_name)', names.has('name') || (names.has('first_name') && names.has('last_name')));

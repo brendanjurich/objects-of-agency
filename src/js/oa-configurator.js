@@ -55,7 +55,9 @@ function initCascadingSlider() {
     const radioInputs = Array.from(wrapper.querySelectorAll('input[type="radio"]'));
     const originalCount = radioInputs.length;
 
-    let activeIndex = 0;
+    // Start on a radio that is already checked (a ?cfg= restore, or the browser's
+    // own form restore on back/forward); otherwise the first slide.
+    let activeIndex = Math.max(0, radioInputs.findIndex(function (input) { return input.checked; }));
     let isAnimating = false;
     let pendingTarget = null;
     let slideWidth = 0;
@@ -409,9 +411,29 @@ function initSummaryUpdater() {
 }
 
 // ============================================================
-// 5. INIT ON DOM READY
+// 5. RESTORE A SAVED CONFIGURATION
+// ============================================================
+// ?cfg=Sizes:700mm-diameter,Timber:oak — the Saved Items page's "edit" link
+// (oa-saved-items.js). Option slugs come from [data-option] on each option list item.
+// Runs before the slider init so the slider starts on the restored radio.
+function restoreConfig() {
+  const cfg = new URLSearchParams(location.search).get('cfg');
+  if (!cfg) return;
+  cfg.split(',').forEach(function (pair) {
+    const parts = pair.split(':');
+    document.querySelectorAll('input[type="radio"]').forEach(function (input) {
+      if (input.name !== parts[0]) return;
+      const item = input.closest('[data-option]');
+      if (item && item.getAttribute('data-option') === parts[1]) input.checked = true;
+    });
+  });
+}
+
+// ============================================================
+// 6. INIT ON DOM READY
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
+  restoreConfig();
   fixRadioIds();
   initCascadingSlider();
   initPricingEngine();
