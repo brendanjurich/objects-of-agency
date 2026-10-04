@@ -1,6 +1,6 @@
 // selection-intake — "Email me this list" on /saved-items.
 // Browser → fetch → here → insert selections row → two Resend emails → { ref }.
-// Same guard chain as brief-intake: CORS → honeypot/min-time → Turnstile → validate → insert → mail.
+// Same guard chain as brief-intake: CORS → min-time (honeypot logged only) → Turnstile → validate → insert → mail.
 // The emailed link is rebuilt here from the validated items, never taken from the browser,
 // and carries no price (W07). Secrets: RESEND_API_KEY, TURNSTILE_SECRET (shared with brief-intake).
 
@@ -83,8 +83,10 @@ Deno.serve(async (req) => {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json(400, { error: "json" }, origin); }
 
-  // Silent drops are logged with their reason (see brief-intake: autofill once tripped the honeypot)
-  if (typeof body.website === "string" && body.website) { console.log("dropped: honeypot"); return json(200, { ref: mkRef() }, origin); }
+  // The honeypot is a signal, never a drop: browser autofill fills an off-screen field
+  // whatever its name, and two real people vanished that way (04-10-2026). Turnstile is the
+  // gate. Silent drops below are logged with their reason.
+  if (typeof body.website === "string" && body.website) console.log("honeypot filled (autofill or bot); continuing to Turnstile");
   const started = Number(body.started_at);
   if (!started || Date.now() - started < MIN_SECONDS * 1000) { console.log("dropped: min-time", Date.now() - started); return json(200, { ref: mkRef() }, origin); }
   const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for");

@@ -1,6 +1,6 @@
 // brief-intake — wayfinder B06.
 // Browser → fetch → here → insert briefs row → two Resend emails → { ref }.
-// Order matters: CORS → honeypot/min-time → Turnstile → validate → insert → mail.
+// Order matters: CORS → min-time (honeypot logged only) → Turnstile → validate → insert → mail.
 // Secrets (supabase secrets set): RESEND_API_KEY, TURNSTILE_SECRET. SUPABASE_URL and
 // SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 
@@ -156,10 +156,11 @@ Deno.serve(async (req) => {
   let body: Body;
   try { body = await req.json(); } catch { return json(400, { error: "json" }, origin); }
 
-  // S3: honeypot + minimum time on page
-  // Silent drops are logged with their reason, so a real person caught here shows up in the
-  // function logs instead of vanishing (autofill once filled the honeypot).
-  if (typeof body.website === "string" && body.website) { console.log("dropped: honeypot"); return json(200, { ref: mkRef() }, origin); }
+  // S3: minimum time on page; honeypot logged
+  // The honeypot is a signal, never a drop: browser autofill fills an off-screen field
+  // whatever its name, and two real people vanished that way (04-10-2026). Turnstile is the
+  // gate. Silent drops below are logged with their reason.
+  if (typeof body.website === "string" && body.website) console.log("honeypot filled (autofill or bot); continuing to Turnstile");
   const started = Number(body.started_at);
   if (!started || Date.now() - started < MIN_SECONDS * 1000) { console.log("dropped: min-time", Date.now() - started); return json(200, { ref: mkRef() }, origin); }
   const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for");
