@@ -126,7 +126,7 @@ function ackEmail(b: Record<string, unknown>, ref: string) {
 
 function lookingEmail(b: Record<string, unknown>) {
   const list = (b.interest as string[]).filter((x) => x !== "none").map((x) => LABEL.interest[x]).join(", ");
-  const text = `Hello,\n\nThanks for looking. We'll send a note when something new leaves the workshop — rarely${list ? `, and about ${list}` : ""}. Nothing else.\n\nBrendan`;
+  const text = `Hello,\n\nThanks for looking. We'll send a note when something new leaves the workshop — rarely${list ? `, and about ${list}` : ""}. Nothing else.\n\nKind regards,\nBrendan Jurich\nObjects of Agency · Perth`;
   return { subject: "Noted — Objects of Agency", html: `<p>${esc(text).replace(/\n/g, "<br>")}</p>`, text };
 }
 
