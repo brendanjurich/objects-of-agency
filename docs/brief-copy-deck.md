@@ -264,8 +264,9 @@ useful to you whether or not we go further together.
   questions if we have them, and a time to talk. If a piece you've named is
   in the catalogue, the spec sheet is linked below.
 - `home`: We'll come back within {RESPONSE}. Commissions with us run in three
-  short stages — a conversation about the piece, a drawing and a price, then
-  making. There's no obligation at any stage before the second.
+  short stages: 1. A conversation about the piece and a site measure if
+  required. 2. Design and construction drawings with pricing. 3. Manufacture.
+  Nothing is binding until you've seen the price and chosen to go ahead.
 - `venue`: We'll come back within {RESPONSE} with first thoughts and a time to
   talk. For quantities, we'll ask about the programme early so the making
   fits it.
