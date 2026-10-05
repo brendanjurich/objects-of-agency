@@ -11,6 +11,7 @@
 //                             Its /contact link gets ?from=product; a click hands this
 //                             configuration to oa-brief.js (key oa-brief-piece:v1, a saved
 //                             entry's shape plus the piece name from the page's .config_title)
+//   [data-oa-save-price]     a static piece's price text (no configurator), e.g. "A$19,000"
 //   [data-option]            option slug, on each configurator option list item
 //                             (the element that also carries data-price)
 //   [data-oa-saved-count]     nav badge. The number goes into its text element (so the
@@ -22,7 +23,8 @@
 // the current item, so the View piece link is an unlinked Clickable bound to it.
 //   [data-oa-saved-row]        the Collection item (row template)
 //   [data-oa-saved-name]       piece name; copied into the saved entry for the brief
-//   [data-oa-saved-price]      price number;  [data-oa-saved-price-wrap] hidden with no price
+//   [data-oa-saved-price]      price number;  [data-oa-saved-price-wrap] invisible with no price
+//                              (keeps its space, so priced and unpriced rows line up)
 //   [data-oa-saved-line="Sizes|Top-Material|Timber|Anodised-Finish"]
 //                              config line; its parent (bullet + text) hides when empty
 //   [data-oa-saved-qty="minus|plus"], [data-oa-saved-qty-value]
@@ -127,10 +129,10 @@
       const summary = document.getElementById(SUMMARY[input.name]);
       if (summary) labels[input.name] = summary.textContent.trim();
     });
-    const priceEl = document.querySelector('.configure_price');
-    const price = priceEl && !priceEl.closest('.w-condition-invisible')
-      ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) || null
-      : null;
+    // The configurator's live price, or a static piece's listed one
+    const priceEl = Array.prototype.slice.call(document.querySelectorAll('.configure_price, [data-oa-save-price]'))
+      .filter(function (el) { return !el.closest('.w-condition-invisible'); })[0];
+    const price = priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) || null : null;
     return { slug: slug, options: options, labels: labels, price: price };
   }
 
@@ -277,7 +279,8 @@
   function fillRow(row, entry) {
     const price = row.querySelector('[data-oa-saved-price]');
     if (price) price.textContent = entry.price ? formatter.format(entry.price) : '';
-    setHidden(row.querySelector('[data-oa-saved-price-wrap]'), !entry.price);
+    const priceWrap = row.querySelector('[data-oa-saved-price-wrap]');
+    if (priceWrap) priceWrap.style.visibility = entry.price ? '' : 'hidden';
     if (shared) {
       row.querySelectorAll('[data-oa-saved-qty], [data-oa-saved-remove], [data-oa-saved-edit]')
         .forEach(function (el) { setHidden(el, true); });
