@@ -467,10 +467,12 @@
   const hpHook = emailForm && emailForm.querySelector('[data-oa-saved-honeypot]');
   const honeypot = hpHook && (hpHook.matches('input') ? hpHook : hpHook.querySelector('input'));
   if (emailStatus) emailStatus.setAttribute('aria-live', 'polite');
-  // A Rich Text status keeps its <p> (and the styling on it); write into the leaf
+  // A Rich Text status keeps its <p> (and the styling on it); write into the leaf. Cleared
+  // to a zero-width joiner, as the Designer leaves it, so the empty line keeps its height
+  // and the modal doesn't grow when a message lands.
   function emailSay(key, fallback) {
     if (!emailStatus) return;
-    const text = key ? emailKnob('email-' + key + '-text', fallback) : '';
+    const text = key ? emailKnob('email-' + key + '-text', fallback) : '‍';
     (emailStatus.querySelector('p') || emailStatus).textContent = text;
   }
 
