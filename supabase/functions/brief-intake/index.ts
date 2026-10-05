@@ -108,7 +108,7 @@ function ackEmail(b: Record<string, unknown>, ref: string) {
   const first = ((b.name as string | null) ?? "").split(" ")[0] || "Hello";
   const next: Record<string, string> = {
     client: `We'll come back within ${RESPONSE} with first thoughts, a couple of questions if we have them, and a time to talk.`,
-    home: `We'll come back within ${RESPONSE}. Commissions with us run in three short stages — a conversation about the piece, a drawing and a price, then making. There's no obligation at any stage before the second.`,
+    home: `We'll come back within ${RESPONSE}. Commissions with us run in three short stages: 1. A conversation about the piece and a site measure if required. 2. Design and construction drawings with pricing. 3. Manufacture. Nothing is binding until you've seen the price and chosen to go ahead.`,
     venue: `We'll come back within ${RESPONSE} with first thoughts and a time to talk. For quantities, we'll ask about the programme early so the making fits it.`,
   };
   // A note with a link reaches the studio in full but is never echoed to the visitor's inbox.
