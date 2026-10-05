@@ -12,6 +12,8 @@
 //   data-oa-brief-endpoint       Edge Function URL (required to send)
 //   data-oa-brief-turnstile-key  Cloudflare Turnstile site key (optional)
 //   data-oa-brief-response       response promise text, default "two working days"
+//   data-oa-brief-{error|limit|link}-text  send failure: generic, rate limit (429), link in a
+//                                short field (400)
 //
 // Honeypot: [data-oa-brief-honeypot] (the input, or a wrapper holding it), falling back to
 // name="website". Give it a name autofill doesn't know — autofill ignores autocomplete="off",
@@ -583,7 +585,11 @@
       finish(j.ref || '');
     } catch (e) {
       btn.disabled = false; turnstileReset();
-      if (status) status.textContent = copy('error-text', "That didn't send. Please try again, or email us directly.");
+      if (status) status.textContent = e.message === 'limit'
+        ? copy('limit-text', "You've sent a few of these already. Please try again later, or email us directly.")
+        : e.message === 'link'
+          ? copy('link-text', "Please take the web link out of your name or pieces and try again. Links are fine in the note.")
+          : copy('error-text', "That didn't send. Please try again, or email us directly.");
       console.error('oa-brief', e);
     }
   }

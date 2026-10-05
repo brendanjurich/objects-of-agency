@@ -39,7 +39,7 @@
 //   [data-oa-saved-email-input]   email input; its dialog (or [data-oa-saved-email-form]) is
 //                                 the panel. Knobs on the panel: data-oa-saved-email-endpoint,
 //                                 data-oa-saved-turnstile-key,
-//                                 data-oa-saved-email-{sending|sent|invalid|error}-text
+//                                 data-oa-saved-email-{sending|sent|invalid|limit|link|error}-text
 //   [data-oa-saved-email-send], [data-oa-saved-email-status] (Rich Text: written into its <p>)
 //   [data-oa-saved-honeypot]      hidden <input>; a name autofill doesn't know (not "website")
 //   [data-oa-saved-share-price]  on the checkbox, its label, or inside the label: put prices
@@ -534,6 +534,8 @@
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (r.ok) return emailSay('sent', 'Sent — check your inbox.');
         if (j.error === 'email') return emailSay('invalid', 'Please check your email address.');
+        if (j.error === 'limit') return emailSay('limit', "You've sent a few of these already. Please try again later, or email us directly.");
+        if (j.error === 'link') return emailSay('link', 'Please take the web link out of your project name and try again.');
         throw new Error(j.error || r.status);
       });
     }).catch(function (err) {
