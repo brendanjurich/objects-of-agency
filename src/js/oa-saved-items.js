@@ -175,7 +175,14 @@
   const params = new URLSearchParams(location.search);
   const shareId = SHARE_ID.test(params.get('l') || '') ? params.get('l') : '';
   const shareParam = params.get('s');
-  let shared = shareParam && !shareId ? decodeShare(shareParam) : null;
+  // On a device that already holds every shared entry (the sender's own) the shared view
+  // and its Add button are redundant, so the visitor sees their own list instead.
+  function unlessOwned(list) {
+    if (!list) return null;
+    const have = load().items.map(idOf);
+    return list.items.every(function (e) { return have.indexOf(idOf(e)) > -1; }) ? null : list;
+  }
+  let shared = shareParam && !shareId ? unlessOwned(decodeShare(shareParam)) : null;
 
   // A short link's list, with any #p= prices put back in item order. null when it is
   // gone, malformed, or slow — the visitor then sees their own list.
@@ -676,7 +683,7 @@
     document.documentElement.classList.add('oa-saved-ready');
   }
   paintCount();
-  if (shareId && templates.length) loadShared(shareId).then(function (list) { shared = list; release(); });
+  if (shareId && templates.length) loadShared(shareId).then(function (list) { shared = unlessOwned(list); release(); });
   else release();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paintButtons);
   else paintButtons();
