@@ -7,7 +7,11 @@
 // Hooks (Designer):
 //   [data-oa-save]            Save button instance (product template, 3 of them).
 //                             Gets data-oa-save-state="saved|idle" and its label swapped.
-//   [data-option]             option slug, on each configurator option list item
+//   [data-oa-create-brief]    Create Brief button instance (product template, 3 of them).
+//                             Its /contact link gets ?from=product; a click hands this
+//                             configuration to oa-brief.js (key oa-brief-piece:v1, a saved
+//                             entry's shape plus the piece name from the page's .config_title)
+//   [data-option]            option slug, on each configurator option list item
 //                             (the element that also carries data-price)
 //   [data-oa-saved-count]     nav badge. The number goes into its text element (so the
 //                             Designer's text style survives); the badge is hidden at zero
@@ -380,6 +384,24 @@
     if (!btn || !slug) return;
     e.preventDefault();
     toggle(btn);
+  }, true);
+
+  // Create Brief: the link navigates as normal (page-leave fade, new tab); the click only
+  // leaves this configuration for the brief. localStorage, so a new tab still gets it.
+  if (slug) document.querySelectorAll('[data-oa-create-brief] a[href^="/"]').forEach(function (a) {
+    const url = new URL(a.getAttribute('href'), location.origin);
+    url.searchParams.set('from', 'product');
+    a.setAttribute('href', url.pathname + url.search + url.hash);
+  });
+  document.addEventListener('click', function (e) {
+    if (!slug || !e.target.closest('[data-oa-create-brief]')) return;
+    const title = Array.prototype.slice.call(document.querySelectorAll('.config_title'))
+      .filter(function (el) { return !el.closest('.w-condition-invisible'); })[0];
+    const entry = readConfig();
+    delete entry.price;
+    entry.name = title ? title.textContent.trim() : '';
+    entry.qty = 1;
+    try { localStorage.setItem('oa-brief-piece:v1', JSON.stringify(entry)); } catch (err) {}
   }, true);
 
   // Row controls. Capture phase for the same reason as Save: their links are href="#".
