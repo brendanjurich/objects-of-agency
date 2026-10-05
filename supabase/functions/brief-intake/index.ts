@@ -108,7 +108,7 @@ function ackEmail(b: Record<string, unknown>, ref: string) {
   const first = ((b.name as string | null) ?? "").split(" ")[0] || "Hello";
   const next: Record<string, string> = {
     client: `We'll come back within ${RESPONSE} with first thoughts, a couple of questions if we have them, and a time to talk.`,
-    home: `We'll come back within ${RESPONSE}. Commissions with us run in three short stages: 1. A conversation about the piece and a site measure if required. 2. Design and construction drawings with pricing. 3. Manufacture. Nothing is binding until you've seen the price and chosen to go ahead.`,
+    home: `We'll come back within ${RESPONSE}. Commissions with us run in three short stages:\n1. A conversation about the piece and a site measure if required.\n2. Design and construction drawings with pricing.\n3. Manufacture.\nNothing is binding until you've seen the price and chosen to go ahead.`,
     venue: `We'll come back within ${RESPONSE} with first thoughts and a time to talk. For quantities, we'll ask about the programme early so the making fits it.`,
   };
   // A note with a link reaches the studio in full but is never echoed to the visitor's inbox.
@@ -117,10 +117,10 @@ function ackEmail(b: Record<string, unknown>, ref: string) {
 <p>Thanks for this. Here's your brief as you gave it to us, written up so it's useful to you whether or not we go further together.</p>
 <h3>Project brief · ${esc(ref)}</h3>
 <table cellpadding="4">${r.map(([k, v]) => `<tr><td style="color:#666">${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}</table>
-<p>${esc(next[b.audience as string])}</p>
-<p>Brendan Jurich<br>Objects of Agency · Perth</p>
+<p>${esc(next[b.audience as string]).replace(/\n/g, "<br>")}</p>
+<p>Kind regards,<br>Brendan Jurich<br>Objects of Agency · Perth</p>
 <p style="font-size:12px;color:#888">You're receiving this because you sent a brief at objects.agency. We keep briefs for twelve months. <a href="https://objects.agency/privacy">Privacy</a></p>`;
-  const text = `${first},\n\nThanks for this. Here's your brief as you gave it to us.\n\nProject brief · ${ref}\n${r.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${next[b.audience as string]}\n\nBrendan Jurich\nObjects of Agency · Perth`;
+  const text = `${first},\n\nThanks for this. Here's your brief as you gave it to us.\n\nProject brief · ${ref}\n${r.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${next[b.audience as string]}\n\nKind regards,\nBrendan Jurich\nObjects of Agency · Perth`;
   return { subject: `Your brief — ${ref}`, html, text };
 }
 
