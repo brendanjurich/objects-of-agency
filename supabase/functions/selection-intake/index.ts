@@ -51,9 +51,9 @@ function visitorEmail(project: string, items: Item[], link: string) {
 <ul>${lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
 <p><a href="${esc(link)}">Open the list</a> — from there you can add it to your saved items on any device, share it, or start a brief.</p>
 <p>Indicative prices are on the site; they aren't included here.</p>
-<p>Brendan Jurich<br>Objects of Agency · Perth</p>
+<p>Kind regards,<br>Brendan Jurich<br>Objects of Agency · Perth</p>
 <p style="font-size:12px;color:#888">You're receiving this because you asked for it at objects.agency. We keep saved lists for twelve months. <a href="https://objects.agency/privacy">Privacy</a></p>`;
-  const text = `Here's the list you saved at objects.agency.\n\n${title}\n${lines.map((l) => `- ${l}`).join("\n")}\n\nOpen the list: ${link}\n\nIndicative prices are on the site; they aren't included here.\n\nBrendan Jurich\nObjects of Agency · Perth`;
+  const text = `Here's the list you saved at objects.agency.\n\n${title}\n${lines.map((l) => `- ${l}`).join("\n")}\n\nOpen the list: ${link}\n\nIndicative prices are on the site; they aren't included here.\n\nKind regards,\nBrendan Jurich\nObjects of Agency · Perth`;
   return { subject: title, html, text };
 }
 

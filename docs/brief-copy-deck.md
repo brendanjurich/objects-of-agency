@@ -293,7 +293,9 @@ We keep briefs for twelve months. [Privacy](https://objects.agency/privacy)
 Thanks for looking. We'll send a note when something new leaves the workshop
 — rarely, and about {series list} if you chose any. Nothing else.
 
-Brendan
+Kind regards,
+Brendan Jurich
+Objects of Agency · Perth
 
 ---
 
