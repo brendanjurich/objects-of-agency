@@ -588,7 +588,7 @@
       if (status) status.textContent = e.message === 'limit'
         ? copy('limit-text', "You've sent a few of these already. Please try again later, or email us directly.")
         : e.message === 'link'
-          ? copy('link-text', "Please take the web link out of your name or pieces and try again. Links are fine in the note.")
+          ? copy('link-text', "Please take the web link out of your name, pieces or project name and try again. Links are fine in the note.")
           : copy('error-text', "That didn't send. Please try again, or email us directly.");
       console.error('oa-brief', e);
     }
