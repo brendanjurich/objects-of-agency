@@ -469,7 +469,8 @@
     setText(key, k); setText(val, v);
     if (chg) {
       if (onChange) chg.addEventListener('click', e => { e.preventDefault(); onChange(); });
-      else setHidden(chg, true);
+      // Hidden, not removed: the row is flex, so dropping a cell re-shrinks the label and the answer shifts
+      else chg.style.visibility = 'hidden';
     }
     return row;
   }
