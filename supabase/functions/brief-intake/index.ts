@@ -88,6 +88,7 @@ function rows(b: Record<string, unknown>) {
   const out: [string, string][] = [];
   const add = (k: string, v: string | null | undefined) => { if (v) out.push([k, v]); };
   const lab = (k: keyof typeof LABEL, v: unknown) => Array.isArray(v) ? v.map((x) => LABEL[k][x as string]).join(", ") : (v ? LABEL[k][v as string] : null);
+  add("Project", b.project as string | null);
   add("For", lab("audience", b.audience));
   add("After", lab("after", b.after));
   add("Pieces", (b.pieces as string[]).join(", "));
@@ -171,6 +172,7 @@ Deno.serve(async (req) => {
       after: many("after", body.after),
       pieces: Array.isArray(body.pieces) ? body.pieces.map((p) => short(p, 120)).filter(Boolean).slice(0, 12) : [],
       items: parseItems(body.items),
+      project: short(body.project, 120),
       bespoke: many("bespoke", body.bespoke),
       setting: many("setting", body.setting),
       quantity: one("quantity", body.quantity),
@@ -189,7 +191,7 @@ Deno.serve(async (req) => {
   } catch { return json(400, { error: "fields" }, origin); }
 
   // Short fields echoed into the visitor's email never carry a link; the note is handled in ackEmail.
-  const echoed = [row.name as string | null, ...(row.pieces as string[]), ...(row.items as Item[]).flatMap((i) => [i.name, ...Object.values(i.labels)])];
+  const echoed = [row.name as string | null, row.project as string | null, ...(row.pieces as string[]), ...(row.items as Item[]).flatMap((i) => [i.name, ...Object.values(i.labels)])];
   if (echoed.some(hasLink)) { console.log("rejected: link in a short field"); return json(400, { error: "link" }, origin); }
 
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);

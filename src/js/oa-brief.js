@@ -21,7 +21,8 @@
 // ?from=saved-items (the Saved Items page's brief link): the visitor's saved pieces arrive
 // as piece tags, the quantity question is pre-set from their total, and each saved
 // configuration still tagged at send goes out as items[] — read from oa-saved-items.js's
-// localStorage store. Price is never read.
+// localStorage store. Price is never read. The list's project name rides along as
+// `project`, captured on arrival — removing piece tags never changes it.
 
 (function () {
   const root = document.querySelector('[data-oa-brief]');
@@ -107,6 +108,7 @@
     const saved = savedItems();
     if (saved.length) {
       state.fromSaved = true; state.after = ['seen']; state.skipWhat = true;
+      try { state.project = (JSON.parse(localStorage.getItem('oa-saved-items:v1')).project || '').trim().slice(0, 120); } catch (e) {}
       saved.forEach(e => { if (state.pieces.indexOf(e.name) < 0) state.pieces.push(e.name); });
       const n = saved.reduce((sum, e) => sum + (e.qty || 1), 0);
       if (!state.quantity) state.quantity = n >= 10 ? 'ten-plus' : n > 1 ? 'few' : 'one';
@@ -248,12 +250,12 @@
   }
   const firstName = () => (val('first_name') || val('name') || '').trim().split(' ')[0];
   function save() {
-    const s = {}; KEYS.forEach(k => { s[k] = val(k); }); s.pieces = state.pieces; s.skipWhat = state.skipWhat; s.fromSaved = state.fromSaved;
+    const s = {}; KEYS.forEach(k => { s[k] = val(k); }); s.pieces = state.pieces; s.skipWhat = state.skipWhat; s.fromSaved = state.fromSaved; s.project = state.project;
     try { sessionStorage.setItem(STORE, JSON.stringify(s)); } catch (e) {}
   }
   function restore() {
     Object.keys(state).forEach(k => {
-      if (k === 'pieces' || k === 'skipWhat' || k === 'fromSaved') return; const v = state[k];
+      if (k === 'pieces' || k === 'skipWhat' || k === 'fromSaved' || k === 'project') return; const v = state[k];
       inputs(k).forEach(e => { if (e.type === 'checkbox') e.checked = Array.isArray(v) && v.indexOf(e.value) >= 0; else if (e.type === 'radio') e.checked = e.value === v; else if (typeof v === 'string') e.value = v; });
     });
   }
@@ -481,6 +483,7 @@
     const dl = $('[data-oa-brief-summary]'); if (!dl) return; dl.innerHTML = '';
     const rows = [];
     const add = (step, k, text) => { if (text && text.length) rows.push([step, k, Array.isArray(text) ? text.join(', ') : text]); };
+    add('project', 'Project', state.project); // no step, so no Change button: the name is edited on /saved-items
     add('who', 'For', label('audience', val('audience')));
     add('what', 'After', (val('after') || []).map(v => label('after', v)));
     add('piece', 'Pieces', state.pieces);
@@ -564,7 +567,7 @@
   async function payload() {
     const p = {}; KEYS.forEach(k => { p[k] = val(k); });
     p.name = fullName(); delete p.first_name; delete p.last_name;
-    p.email = val('email'); p.pieces = state.pieces; p.items = items(); p.website = honeypot ? honeypot.value : '';
+    p.email = val('email'); p.pieces = state.pieces; p.items = items(); p.project = state.project || ''; p.website = honeypot ? honeypot.value : '';
     p.referrer = document.referrer || ''; p.origin_url = location.href; p.started_at = startedAt; p.turnstile = await turnstileToken();
     return p;
   }
