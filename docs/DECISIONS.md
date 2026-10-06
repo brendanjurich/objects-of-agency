@@ -1427,3 +1427,28 @@ scroll is measured is the old overshoot, so navigation closes it instantly.
 motion. It is the slider curve. `docs/REFERENCE.md` → "Easing — pick by motion"
 now maps each kind of motion to its curve, and the osmo-in skill no longer lists
 `--ease-oa` as a house rule.
+
+---
+
+## 2026-10-06 — Saved Items styling batch: three traps, v1.0.232
+
+Ships Create Brief on product pages (`?from=product`), the §4 limit/link messages, the
+Edition-piece price, the aligned unpriced rows, the tablet nav badge and the Send/Share
+spinner. Three findings worth keeping:
+
+1. **An empty Rich Text `<p>` must be cleared to a zero-width joiner, not `''`.** The
+   Designer leaves `&zwj;` in an empty paragraph, which is what gives it a line of height.
+   `emailSay('')` wrote `''`, the line collapsed, and the modal grew 13px when "Sending…"
+   landed. Any script that clears a Designer text leaf should write `'‍'`.
+2. **Anything inside `.nav_component` is inverted while the tablet/mobile nav is closed.**
+   The closed nav runs `mix-blend-mode: difference` (that is how the white logo and bars
+   read dark on a light page), and a child cannot opt out of an ancestor's blend. The
+   Saved Items badge showed pale grey with a dark number until the menu opened. Fix:
+   `filter: invert(1)` on the badge while closed — the two inversions cancel and the
+   Designer keeps its colours. Any new coloured element in the mobile nav needs the same.
+3. **Webflow's base `svg { max-width: 100% }` caps an SVG at its parent's width.** The
+   spinner in the 1.1rem Share icon slot rendered at 17.6px whatever its class width said.
+   An SVG meant to overhang a small slot needs `max-width: none` in the Designer.
+
+Also: the L9 spinner arc fills only ~46% of its viewBox, so the SVG must be about twice
+the ring size you want (2.4rem for a ring the size of a 1.1rem icon).
