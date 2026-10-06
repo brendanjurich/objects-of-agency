@@ -7,7 +7,12 @@
 // Hooks (Designer):
 //   [data-oa-save]            Save button instance (product template, 3 of them).
 //                             Gets data-oa-save-state="saved|idle" and its label swapped.
-//   [data-option]             option slug, on each configurator option list item
+//   [data-oa-create-brief]    Create Brief button instance (product template, 3 of them).
+//                             Its /contact link gets ?from=product; a click hands this
+//                             configuration to oa-brief.js (key oa-brief-piece:v1, a saved
+//                             entry's shape plus the piece name from the page's .config_title)
+//   [data-oa-save-price]     a static piece's price text (no configurator), e.g. "A$19,000"
+//   [data-option]            option slug, on each configurator option list item
 //                             (the element that also carries data-price)
 //   [data-oa-saved-count]     nav badge. The number goes into its text element (so the
 //                             Designer's text style survives); the badge is hidden at zero
@@ -18,7 +23,8 @@
 // the current item, so the View piece link is an unlinked Clickable bound to it.
 //   [data-oa-saved-row]        the Collection item (row template)
 //   [data-oa-saved-name]       piece name; copied into the saved entry for the brief
-//   [data-oa-saved-price]      price number;  [data-oa-saved-price-wrap] hidden with no price
+//   [data-oa-saved-price]      price number;  [data-oa-saved-price-wrap] invisible with no price
+//                              (keeps its space, so priced and unpriced rows line up)
 //   [data-oa-saved-line="Sizes|Top-Material|Timber|Anodised-Finish"]
 //                              config line; its parent (bullet + text) hides when empty
 //   [data-oa-saved-qty="minus|plus"], [data-oa-saved-qty-value]
@@ -39,7 +45,7 @@
 //   [data-oa-saved-email-input]   email input; its dialog (or [data-oa-saved-email-form]) is
 //                                 the panel. Knobs on the panel: data-oa-saved-email-endpoint,
 //                                 data-oa-saved-turnstile-key,
-//                                 data-oa-saved-email-{sending|sent|invalid|error}-text
+//                                 data-oa-saved-email-{sending|sent|invalid|limit|link|error}-text
 //   [data-oa-saved-email-send], [data-oa-saved-email-status] (Rich Text: written into its <p>)
 //   [data-oa-saved-honeypot]      hidden <input>; a name autofill doesn't know (not "website")
 //   [data-oa-saved-share-price]  on the checkbox, its label, or inside the label: put prices
@@ -123,10 +129,10 @@
       const summary = document.getElementById(SUMMARY[input.name]);
       if (summary) labels[input.name] = summary.textContent.trim();
     });
-    const priceEl = document.querySelector('.configure_price');
-    const price = priceEl && !priceEl.closest('.w-condition-invisible')
-      ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) || null
-      : null;
+    // The configurator's live price, or a static piece's listed one
+    const priceEl = Array.prototype.slice.call(document.querySelectorAll('.configure_price, [data-oa-save-price]'))
+      .filter(function (el) { return !el.closest('.w-condition-invisible'); })[0];
+    const price = priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) || null : null;
     return { slug: slug, options: options, labels: labels, price: price };
   }
 
@@ -203,6 +209,25 @@
 
   // ---- announce (screen readers) — one polite live region, created on demand
   let live = null;
+  // ---- busy: the nearest ancestor holding a .loading_spinner (the modal card, or the share
+  // wrap the tapped button sits in) is marked while a request is out; oa-styles.css shows the
+  // spinner. Marked after 150ms, so a cached share link never flickers it.
+  function setBusy(from, on) {
+    let el = from;
+    while (el && el !== document.body && !el.querySelector('.loading_spinner')) el = el.parentElement;
+    if (!el || el === document.body) return;
+    clearTimeout(el.oaBusyTimer);
+    if (on) {
+      el.oaBusyTimer = setTimeout(function () {
+        el.setAttribute('data-oa-saved-busy', '');
+        el.setAttribute('aria-busy', 'true');
+      }, 150);
+    } else {
+      el.removeAttribute('data-oa-saved-busy');
+      el.removeAttribute('aria-busy');
+    }
+  }
+
   function announce(msg) {
     if (!live) {
       live = document.createElement('div');
@@ -273,7 +298,8 @@
   function fillRow(row, entry) {
     const price = row.querySelector('[data-oa-saved-price]');
     if (price) price.textContent = entry.price ? formatter.format(entry.price) : '';
-    setHidden(row.querySelector('[data-oa-saved-price-wrap]'), !entry.price);
+    const priceWrap = row.querySelector('[data-oa-saved-price-wrap]');
+    if (priceWrap) priceWrap.style.visibility = entry.price ? '' : 'hidden';
     if (shared) {
       row.querySelectorAll('[data-oa-saved-qty], [data-oa-saved-remove], [data-oa-saved-edit]')
         .forEach(function (el) { setHidden(el, true); });
@@ -382,6 +408,24 @@
     toggle(btn);
   }, true);
 
+  // Create Brief: the link navigates as normal (page-leave fade, new tab); the click only
+  // leaves this configuration for the brief. localStorage, so a new tab still gets it.
+  if (slug) document.querySelectorAll('[data-oa-create-brief] a[href^="/"]').forEach(function (a) {
+    const url = new URL(a.getAttribute('href'), location.origin);
+    url.searchParams.set('from', 'product');
+    a.setAttribute('href', url.pathname + url.search + url.hash);
+  });
+  document.addEventListener('click', function (e) {
+    if (!slug || !e.target.closest('[data-oa-create-brief]')) return;
+    const title = Array.prototype.slice.call(document.querySelectorAll('.config_title'))
+      .filter(function (el) { return !el.closest('.w-condition-invisible'); })[0];
+    const entry = readConfig();
+    delete entry.price;
+    entry.name = title ? title.textContent.trim() : '';
+    entry.qty = 1;
+    try { localStorage.setItem('oa-brief-piece:v1', JSON.stringify(entry)); } catch (err) {}
+  }, true);
+
   // Row controls. Capture phase for the same reason as Save: their links are href="#".
   // Qty updates in place so keyboard focus stays on the button; Remove re-renders and
   // moves focus to the row that took its place.
@@ -445,10 +489,12 @@
   const hpHook = emailForm && emailForm.querySelector('[data-oa-saved-honeypot]');
   const honeypot = hpHook && (hpHook.matches('input') ? hpHook : hpHook.querySelector('input'));
   if (emailStatus) emailStatus.setAttribute('aria-live', 'polite');
-  // A Rich Text status keeps its <p> (and the styling on it); write into the leaf
+  // A Rich Text status keeps its <p> (and the styling on it); write into the leaf. Cleared
+  // to a zero-width joiner, as the Designer leaves it, so the empty line keeps its height
+  // and the modal doesn't grow when a message lands.
   function emailSay(key, fallback) {
     if (!emailStatus) return;
-    const text = key ? emailKnob('email-' + key + '-text', fallback) : '';
+    const text = key ? emailKnob('email-' + key + '-text', fallback) : '‍';
     (emailStatus.querySelector('p') || emailStatus).textContent = text;
   }
 
@@ -523,6 +569,7 @@
     const items = payload(list).items;
     sending = true;
     emailSay('sending', 'Sending…');
+    setBusy(emailField, true);
     turnstileToken().then(function (t) {
       return fetch(EMAIL_ENDPOINT, {
         method: 'POST',
@@ -534,6 +581,8 @@
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (r.ok) return emailSay('sent', 'Sent — check your inbox.');
         if (j.error === 'email') return emailSay('invalid', 'Please check your email address.');
+        if (j.error === 'limit') return emailSay('limit', "You've sent a few of these already. Please try again later, or email us directly.");
+        if (j.error === 'link') return emailSay('link', 'Please take the web link out of your project name and try again.');
         throw new Error(j.error || r.status);
       });
     }).catch(function (err) {
@@ -541,6 +590,7 @@
       console.error('oa-saved-items', err);
     }).then(function () {
       sending = false;
+      setBusy(emailField, false);
       token = '';
       if (window.turnstile && widget && widget !== 'loading') { try { window.turnstile.reset(widget); } catch (e) {} }
     });
@@ -607,11 +657,13 @@
     if (!btn.hasAttribute('data-oa-saved-share-text') && label) btn.setAttribute('data-oa-saved-share-text', label.textContent);
     const restore = function () { setLabel(btn, btn.getAttribute('data-oa-saved-share-text') || ''); };
     const flash = function (text) {
+      setBusy(btn, false);
       setLabel(btn, text);
       clearTimeout(copiedTimer);
       copiedTimer = setTimeout(restore, 2500);
     };
     const failed = function (err) {
+      setBusy(btn, false);
       flash(TEXT.failed);
       announce('The share link couldn’t be made. Check your connection and try again.');
       console.error('oa-saved-items', err);
@@ -619,10 +671,12 @@
     const list = load();
     const title = linkTitle(list);
     const urlP = shareLink(list);
+    setBusy(btn, true);
     if (navigator.share && matchMedia('(pointer: coarse)').matches) {
       clearTimeout(copiedTimer);
       restore();
       urlP.then(function (url) {
+        setBusy(btn, false);
         return navigator.share({ url: url, title: title }).catch(function (err) {
           if (err && err.name === 'NotAllowedError') {
             setLabel(btn, TEXT.tap);
@@ -636,7 +690,7 @@
       flash(TEXT.copied);
       announce('Share link copied.');
     }, function () {
-      urlP.then(function (url) { window.prompt('Copy this link to share your saved items:', url); }, failed);
+      urlP.then(function (url) { setBusy(btn, false); window.prompt('Copy this link to share your saved items:', url); }, failed);
     });
   }, true);
 

@@ -59,6 +59,35 @@ html.w-mod-js:not(.wf-design-mode):not(.oa-saved-ready) :is([data-oa-saved-count
   display: none !important;
 }
 
+/* Saved Items loading spinner (.loading_spinner, adapted from Osmo's Bunny player loader).
+   Behavioural glue only: oa-saved-items.js marks the spinner's container
+   [data-oa-saved-busy] while a request is out. Size, colour, fade and the scrim (none) are
+   Designer knobs on .loading_spinner / .loading_spinner-svg. The ring turns only while
+   shown; reduced motion gets a still ring (the status text and announcement carry it). */
+[data-oa-saved-busy] .loading_spinner {
+  opacity: 1;
+  visibility: visible;
+}
+.loading_spinner-svg {
+  animation: oa-spin 1s linear infinite paused;
+}
+[data-oa-saved-busy] .loading_spinner-svg {
+  animation-play-state: running;
+}
+/* In the Share button the spinner sits in the icon slot: the icon steps aside for it */
+[data-oa-saved-share] :has(> .loading_spinner) > :not(.loading_spinner) {
+  transition: opacity 300ms ease;
+}
+[data-oa-saved-share][data-oa-saved-busy] :has(> .loading_spinner) > :not(.loading_spinner) {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading_spinner-svg { animation: none; }
+}
+@keyframes oa-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Loader — hidden in Designer & no-JS fallback */
 html.wf-design-mode .loader,
 .no-js .loader {
@@ -341,6 +370,21 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   /* Default state — closed */
   .nav_component {
     mix-blend-mode: difference;
+  }
+
+  /* The Saved Items badge keeps its Designer colours: difference would invert them,
+     so pre-invert while closed and the two cancel out. No colours here. */
+  .nav_component:not(.is-open) [data-oa-saved-count] {
+    filter: invert(1);
+  }
+
+  /* The badge beside the hamburger steps aside while the menu (which has its own) is open */
+  .nav_mobile_logo-contain [data-oa-saved-count] {
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  .nav_component.is-open .nav_mobile_logo-contain [data-oa-saved-count] {
+    opacity: 0;
+    visibility: hidden;
   }
 
   .nav_mobile_logo .logo_svg {

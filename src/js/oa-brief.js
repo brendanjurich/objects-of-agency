@@ -12,6 +12,8 @@
 //   data-oa-brief-endpoint       Edge Function URL (required to send)
 //   data-oa-brief-turnstile-key  Cloudflare Turnstile site key (optional)
 //   data-oa-brief-response       response promise text, default "two working days"
+//   data-oa-brief-{error|limit|link}-text  send failure: generic, rate limit (429), link in a
+//                                short field (400)
 //
 // Honeypot: [data-oa-brief-honeypot] (the input, or a wrapper holding it), falling back to
 // name="website". Give it a name autofill doesn't know — autofill ignores autocomplete="off",
@@ -23,6 +25,10 @@
 // configuration still tagged at send goes out as items[] — read from oa-saved-items.js's
 // localStorage store. Price is never read. The list's project name rides along as
 // `project`, captured on arrival — removing piece tags never changes it.
+//
+// ?from=product (a product page's Create Brief link): that page's configuration arrives as
+// a piece tag, read from the oa-brief-piece:v1 key oa-saved-items.js writes on click, and
+// goes out in items[] the same way. Kept in the draft, so several pieces can gather.
 
 (function () {
   const root = document.querySelector('[data-oa-brief]');
@@ -114,9 +120,20 @@
       if (!state.quantity) state.quantity = n >= 10 ? 'ten-plus' : n > 1 ? 'few' : 'one';
     }
   }
+  const configKey = e => e.slug + '|' + Object.keys(e.options || {}).sort().map(k => k + ':' + e.options[k]).join(',');
+  if (params.get('from') === 'product') {
+    let piece = null;
+    try { piece = JSON.parse(localStorage.getItem('oa-brief-piece:v1') || 'null'); } catch (e) {}
+    if (piece && piece.slug && piece.name) {
+      state.after = ['seen']; state.skipWhat = true;
+      if (state.pieces.indexOf(piece.name) < 0) state.pieces.push(piece.name);
+      state.configs = (state.configs || []).filter(e => configKey(e) !== configKey(piece)).concat([piece]).slice(-12);
+      if (!state.quantity) state.quantity = 'one';
+    }
+  }
   // Removing a piece's tag drops its configurations too
-  const items = () => !state.fromSaved ? [] : savedItems()
-    .filter(e => state.pieces.indexOf(e.name) >= 0).slice(0, 12)
+  const items = () => (state.fromSaved ? savedItems() : []).concat(state.configs || [])
+    .filter((e, i, all) => state.pieces.indexOf(e.name) >= 0 && all.findIndex(x => configKey(x) === configKey(e)) === i).slice(0, 12)
     .map(e => {
       const labels = {}; Object.keys(e.labels || {}).forEach(k => { if (e.labels[k]) labels[k] = e.labels[k]; });
       return { slug: e.slug, name: e.name, options: e.options || {}, labels: labels, qty: e.qty || 1 };
@@ -250,12 +267,12 @@
   }
   const firstName = () => (val('first_name') || val('name') || '').trim().split(' ')[0];
   function save() {
-    const s = {}; KEYS.forEach(k => { s[k] = val(k); }); s.pieces = state.pieces; s.skipWhat = state.skipWhat; s.fromSaved = state.fromSaved; s.project = state.project;
+    const s = {}; KEYS.forEach(k => { s[k] = val(k); }); s.pieces = state.pieces; s.skipWhat = state.skipWhat; s.fromSaved = state.fromSaved; s.configs = state.configs; s.project = state.project;
     try { sessionStorage.setItem(STORE, JSON.stringify(s)); } catch (e) {}
   }
   function restore() {
     Object.keys(state).forEach(k => {
-      if (k === 'pieces' || k === 'skipWhat' || k === 'fromSaved' || k === 'project') return; const v = state[k];
+      if (k === 'pieces' || k === 'skipWhat' || k === 'fromSaved' || k === 'configs' || k === 'project') return; const v = state[k];
       inputs(k).forEach(e => { if (e.type === 'checkbox') e.checked = Array.isArray(v) && v.indexOf(e.value) >= 0; else if (e.type === 'radio') e.checked = e.value === v; else if (typeof v === 'string') e.value = v; });
     });
   }
@@ -583,7 +600,11 @@
       finish(j.ref || '');
     } catch (e) {
       btn.disabled = false; turnstileReset();
-      if (status) status.textContent = copy('error-text', "That didn't send. Please try again, or email us directly.");
+      if (status) status.textContent = e.message === 'limit'
+        ? copy('limit-text', "You've sent a few of these already. Please try again later, or email us directly.")
+        : e.message === 'link'
+          ? copy('link-text', "Please take the web link out of your name, pieces or project name and try again. Links are fine in the note.")
+          : copy('error-text', "That didn't send. Please try again, or email us directly.");
       console.error('oa-brief', e);
     }
   }
