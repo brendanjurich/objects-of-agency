@@ -349,6 +349,15 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
     filter: invert(1);
   }
 
+  /* The badge beside the hamburger steps aside while the menu (which has its own) is open */
+  .nav_mobile_logo-contain [data-oa-saved-count] {
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  .nav_component.is-open .nav_mobile_logo-contain [data-oa-saved-count] {
+    opacity: 0;
+    visibility: hidden;
+  }
+
   .nav_mobile_logo .logo_svg {
     fill: #ffffff !important;
     transition: fill 0.3s ease;
