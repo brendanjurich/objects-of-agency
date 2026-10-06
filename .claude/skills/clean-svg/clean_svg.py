@@ -19,6 +19,7 @@ from collections import Counter
 SVG = "http://www.w3.org/2000/svg"
 XLINK = "http://www.w3.org/1999/xlink"
 SERIF = "http://www.serif.com/"
+AFFINITY = "https://www.affinity.studio/"  # Affinity v3 renamed serif: to affinity:
 XML = "http://www.w3.org/XML/1998/namespace"
 
 ET.register_namespace("", SVG)
@@ -420,7 +421,7 @@ def drop_noop_clips(root, vb):
 def strip_cruft_attrs(root, doc_has_stroke):
     for el in root.iter():
         for k in list(el.attrib):
-            if k.startswith(f"{{{SERIF}}}") or k == f"{{{XML}}}space":
+            if k.startswith((f"{{{SERIF}}}", f"{{{AFFINITY}}}")) or k == f"{{{XML}}}space":
                 del el.attrib[k]
         if el is not root and not doc_has_stroke:
             for k in list(el.attrib):
@@ -461,7 +462,7 @@ def normalise_ids(root):
             if cur:
                 seen.add(cur)
             continue
-        human = el.get(f"{{{SERIF}}}id") or cur
+        human = el.get(f"{{{SERIF}}}id") or el.get(f"{{{AFFINITY}}}id") or cur
         new = kebab(human)
         if not new:
             del el.attrib["id"]
