@@ -99,6 +99,11 @@
   function write(list) {
     memory = list;
     try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
+    // A changed list makes a new link, so "Link copied" no longer holds
+    document.querySelectorAll('[data-oa-saved-share-state="copied"]').forEach(function (b) {
+      b.removeAttribute('data-oa-saved-share-state');
+      setLabel(b, b.getAttribute('data-oa-saved-share-text') || '');
+    });
   }
   function store(list) {
     write(list);
@@ -655,7 +660,10 @@
     e.preventDefault();
     const label = btn.querySelector('.button_main_text');
     if (!btn.hasAttribute('data-oa-saved-share-text') && label) btn.setAttribute('data-oa-saved-share-text', label.textContent);
-    const restore = function () { setLabel(btn, btn.getAttribute('data-oa-saved-share-text') || ''); };
+    const restore = function () {
+      btn.removeAttribute('data-oa-saved-share-state');
+      setLabel(btn, btn.getAttribute('data-oa-saved-share-text') || '');
+    };
     const flash = function (text) {
       setBusy(btn, false);
       setLabel(btn, text);
@@ -687,7 +695,10 @@
       return;
     }
     copyLink(urlP, title).then(function () {
+      // Stays until the list changes (see write())
       flash(TEXT.copied);
+      clearTimeout(copiedTimer);
+      btn.setAttribute('data-oa-saved-share-state', 'copied');
       announce('Share link copied.');
     }, function () {
       urlP.then(function (url) { setBusy(btn, false); window.prompt('Copy this link to share your saved items:', url); }, failed);
