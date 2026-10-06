@@ -59,6 +59,28 @@ html.w-mod-js:not(.wf-design-mode):not(.oa-saved-ready) :is([data-oa-saved-count
   display: none !important;
 }
 
+/* Saved Items loading spinner (.loading_spinner, adapted from Osmo's Bunny player loader).
+   Behavioural glue only: oa-saved-items.js marks the spinner's container
+   [data-oa-saved-busy] while a request is out. Size, colour, fade and the scrim (none) are
+   Designer knobs on .loading_spinner / .loading_spinner-svg. The ring turns only while
+   shown; reduced motion gets a still ring (the status text and announcement carry it). */
+[data-oa-saved-busy] .loading_spinner {
+  opacity: 1;
+  visibility: visible;
+}
+.loading_spinner-svg {
+  animation: oa-spin 1s linear infinite paused;
+}
+[data-oa-saved-busy] .loading_spinner-svg {
+  animation-play-state: running;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading_spinner-svg { animation: none; }
+}
+@keyframes oa-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Loader — hidden in Designer & no-JS fallback */
 html.wf-design-mode .loader,
 .no-js .loader {

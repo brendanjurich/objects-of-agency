@@ -209,6 +209,25 @@
 
   // ---- announce (screen readers) — one polite live region, created on demand
   let live = null;
+  // ---- busy: the nearest ancestor holding a .loading_spinner (the modal card, or the share
+  // wrap the tapped button sits in) is marked while a request is out; oa-styles.css shows the
+  // spinner. Marked after 150ms, so a cached share link never flickers it.
+  function setBusy(from, on) {
+    let el = from;
+    while (el && el !== document.body && !el.querySelector('.loading_spinner')) el = el.parentElement;
+    if (!el || el === document.body) return;
+    clearTimeout(el.oaBusyTimer);
+    if (on) {
+      el.oaBusyTimer = setTimeout(function () {
+        el.setAttribute('data-oa-saved-busy', '');
+        el.setAttribute('aria-busy', 'true');
+      }, 150);
+    } else {
+      el.removeAttribute('data-oa-saved-busy');
+      el.removeAttribute('aria-busy');
+    }
+  }
+
   function announce(msg) {
     if (!live) {
       live = document.createElement('div');
@@ -550,6 +569,7 @@
     const items = payload(list).items;
     sending = true;
     emailSay('sending', 'Sending…');
+    setBusy(emailField, true);
     turnstileToken().then(function (t) {
       return fetch(EMAIL_ENDPOINT, {
         method: 'POST',
@@ -570,6 +590,7 @@
       console.error('oa-saved-items', err);
     }).then(function () {
       sending = false;
+      setBusy(emailField, false);
       token = '';
       if (window.turnstile && widget && widget !== 'loading') { try { window.turnstile.reset(widget); } catch (e) {} }
     });
@@ -636,11 +657,13 @@
     if (!btn.hasAttribute('data-oa-saved-share-text') && label) btn.setAttribute('data-oa-saved-share-text', label.textContent);
     const restore = function () { setLabel(btn, btn.getAttribute('data-oa-saved-share-text') || ''); };
     const flash = function (text) {
+      setBusy(btn, false);
       setLabel(btn, text);
       clearTimeout(copiedTimer);
       copiedTimer = setTimeout(restore, 2500);
     };
     const failed = function (err) {
+      setBusy(btn, false);
       flash(TEXT.failed);
       announce('The share link couldn’t be made. Check your connection and try again.');
       console.error('oa-saved-items', err);
@@ -648,10 +671,12 @@
     const list = load();
     const title = linkTitle(list);
     const urlP = shareLink(list);
+    setBusy(btn, true);
     if (navigator.share && matchMedia('(pointer: coarse)').matches) {
       clearTimeout(copiedTimer);
       restore();
       urlP.then(function (url) {
+        setBusy(btn, false);
         return navigator.share({ url: url, title: title }).catch(function (err) {
           if (err && err.name === 'NotAllowedError') {
             setLabel(btn, TEXT.tap);
@@ -665,7 +690,7 @@
       flash(TEXT.copied);
       announce('Share link copied.');
     }, function () {
-      urlP.then(function (url) { window.prompt('Copy this link to share your saved items:', url); }, failed);
+      urlP.then(function (url) { setBusy(btn, false); window.prompt('Copy this link to share your saved items:', url); }, failed);
     });
   }, true);
 
