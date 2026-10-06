@@ -343,6 +343,12 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
     mix-blend-mode: difference;
   }
 
+  /* The Saved Items badge keeps its Designer colours: difference would invert them,
+     so pre-invert while closed and the two cancel out. No colours here. */
+  .nav_component:not(.is-open) [data-oa-saved-count] {
+    filter: invert(1);
+  }
+
   .nav_mobile_logo .logo_svg {
     fill: #ffffff !important;
     transition: fill 0.3s ease;
