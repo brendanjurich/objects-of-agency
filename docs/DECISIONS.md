@@ -187,9 +187,11 @@ Slides 1–3 download even when unreachable, but they already carry Webflow `src
 
 GSAP computes `xPercent` as a percentage of the element's **own rendered width**. `display:none` removes the element from layout entirely (width = 0), so `xPercent: 100` produces 0px movement — the animation silently does nothing. For any element that GSAP must be able to animate, hide it with `opacity:0` (preserves layout dimensions) rather than `display:none`. This applies to the desktop `.crisp-header__slider-slide-inner` on tablet — it stays in layout so GSAP can drive it; only `opacity:0` hides it visually.
 
-### iPad Pro portrait (1024 × 1366) sits above Webflow's 991px tablet breakpoint
+### iPad Pro portrait sits above Webflow's 991px tablet breakpoint
 
-Webflow's built-in "Tablet" breakpoint fires at ≤991px. iPad Pro portrait is 1024px wide (CSS pixels) — above that threshold — so it inherits desktop styles. For the hero image swap we set our media query at `max-width: 1024px` to capture it. iPad landscape (≥1180px) stays on desktop images intentionally. Any future breakpoint-sensitive CSS that should cover iPad Pro portrait must use `1024px`, not `991px`.
+Webflow's built-in "Tablet" breakpoint fires at ≤991px. iPad Pro portrait is wider: 1024px (12.9") and **1032px (13", M4)**, CSS pixels — so it inherits desktop styles while the nav (≤1134) is already in hamburger mode. Until 08-10-2026 the hero image swap used `max-width: 1024px`; that missed the 13" (1032) and still gave both iPad Pros the desktop hero layout (long CTA, slider thumbnails, tagline at the bottom) under the tablet nav.
+
+Now: the hero's ≤991 Designer styles are ported to `(min-width: 992px) and (max-width: 1134px) and (orientation: portrait)` in `oa-styles.css` ("HOMEPAGE HERO — TABLET PORTRAIT"), and the image swap runs at `(max-width: 1024px), (max-width: 1134px) and (orientation: portrait)`. **Portrait, not width alone**: a landscape laptop window at 992–1134 keeps the desktop hero. iPad landscape (≥1180px) stays desktop intentionally. Any future CSS that should treat iPad Pro portrait as tablet uses that portrait band, not `1024px`. The port is a copy of Designer values — re-port if a ≤991 hero style changes.
 
 ---
 
