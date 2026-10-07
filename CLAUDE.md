@@ -55,6 +55,10 @@ keys, tokens, or `.env` files.**
 5. Update the URL(s) in Webflow → Site Settings → Custom Code (or page-level settings)
 6. Force jsDelivr cache purge: `https://purge.jsdelivr.net/gh/brendanjurich/objects-of-agency@v1.0.X/[path]`
 
+**Tags are immutable** — any change ships as a new tag. `.claude/hooks/guard_tags.py`
+blocks moving, deleting or force-pushing a tag; it is registered in this repo's
+`.claude/settings.json` and in the command centre's.
+
 When presenting CDN updates after a tag, always show: **from `@v1.0.X` → to `@v1.0.Y`** for each changed file. Only the files that changed need their URL bumped; unchanged files can stay on their current tag.
 
 ---

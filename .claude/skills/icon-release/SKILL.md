@@ -12,6 +12,22 @@ Webflow's own uploader re-encodes and renames files, so it is bypassed entirely.
 **Never skip the verification gates.** Every one of them exists because something
 actually went wrong. The traps are listed at the bottom.
 
+Copy this checklist and tick it off as you go:
+
+```
+- [ ] Step 0 — inventory masters, archive the previous release to ss/
+- [ ] Step 1–2 — icons.py svgs (light, dark, combined favicon)
+- [ ] Step 3 — icons.py ico
+- [ ] Step 4 — icons.py audit → fail: Brendan re-exports, back to Step 0
+- [ ] Step 5 — manifest on the new tag
+- [ ] Step 6 — head code on the new tag (4 links + base constant)
+- [ ] Step 7 — verify → fail: back to the failing step; never tag
+- [ ] Step 8 — commit, tag, 200 check on every URL before Webflow
+- [ ] Step 9 — live audit after Brendan republishes
+```
+
+Needs: macOS (`md5`), `pip3 install Pillow`, the chrome-devtools MCP (Steps 7, 9).
+
 ## Paths
 
 | What | Where |
@@ -21,141 +37,67 @@ actually went wrong. The traps are listed at the bottom.
 | Superseded previous release | `02-brand/oa-logo/icons/ss/` |
 | Head code (paste into Webflow) | `02-brand/oa-logo/icons/webflow-head-code.html` |
 | Shipped copies | `01-projects/objects-of-agency-website/src/icons/` |
+| Build + gate script | `scripts/icons.py` in this skill folder |
 
 Paths are relative to the command-centre root. The website repo is nested inside it
 and keeps its own history, remote and tags.
 
-## Step 0 — Inventory and archive
-
-Confirm what actually changed before touching anything.
+Steps 0–4 run from `02-brand/oa-logo/icons/`:
 
 ```bash
 cd 02-brand/oa-logo/icons
-md5 raw-files/*/*.png raw-files/svg/*.svg
-python3 -c "
-from PIL import Image; import glob
-for f in sorted(glob.glob('raw-files/**/*.png', recursive=True)):
-    im = Image.open(f); print(f, im.size, im.mode)
-"
+X=../../../01-projects/objects-of-agency-website/.claude/skills/icon-release/scripts/icons.py
 ```
+
+Every gate in the script exits non-zero with a message naming the file and the
+number. Don't work around a failed gate.
+
+## Step 0 — Inventory and archive
+
+Confirm what actually changed before touching anything: `python3 $X inventory`
+(md5, size and mode of every master).
 
 Move the previous release's built outputs into `ss/` if Brendan hasn't already.
 `ss/` is the archive — never delete it, it's the rollback reference.
 
 **Expect PNGs to be RGB with no alpha.** Alpha on apple-touch or the maskable is a
-defect (see traps).
+defect (see traps); the inventory flags it.
 
-## Step 1 — Clean the SVGs
+## Step 1–2 — SVGs and `oa-favicon.svg`
 
-Affinity exports carry ~1200 bytes of cruft. Extract and rebuild rather than
-hand-editing, so geometry cannot drift.
+`python3 $X svgs` rebuilds rather than hand-edits, so geometry cannot drift. From
+each Affinity master it keeps only `viewBox="0 0 48 48"`, `fill-rule`, `clip-rule`,
+the BG rect and the mark path. Everything else is cruft (~1200 bytes). Output:
+`oa-icon-light.svg`, `oa-icon-dark.svg`. **Gate: each output's `d` string is
+byte-identical to its source.**
 
-Strip: `<?xml?>`, `<!DOCTYPE>`, `version`, `width`/`height="100%"`, `xmlns:xlink`,
-`xmlns:serif`, `xml:space`, every `serif:id`, all empty artboard `<g>` wrappers, the
-locked `id="FAV-48-…-MSTR---LOCK-🔒"` rect (painted over, dead weight), the
-`<clipPath>` + its `clip-path` reference (the clip rect equals the viewBox, so it
-clips nothing), and `stroke-linejoin`/`stroke-miterlimit` (no strokes exist).
+It then builds `oa-favicon.svg`. When the two variants share geometry (the current
+state — the optical corner-radius correction was retired), it stores the geometry
+once and swaps fills with class-based `fill` overrides under
+`@media (prefers-color-scheme:dark)` — not CSS custom properties, not `display`
+toggling.
 
-Keep: `viewBox="0 0 48 48"`, `fill-rule`, `clip-rule`, the BG rect, the mark path.
-
-```python
-import re
-def extract(f):
-    s = open(f, encoding="utf-8").read()
-    ds = re.findall(r'\sd="([^"]+)"', s)
-    assert len(ds) == 1, f"{f}: expected 1 path, got {len(ds)}"
-    bg = re.search(r'<rect id="BG"[^>]*fill:(#[0-9a-fA-F]{6})', s).group(1)
-    fg = re.search(r'\sd="[^"]+"\s+style="fill:(#[0-9a-fA-F]{6})', s).group(1)
-    return ds[0], bg, fg
-
-TPL = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" '
-       'fill-rule="evenodd" clip-rule="evenodd">\n'
-       '  <rect width="48" height="48" fill="{bg}"/>\n'
-       '  <path fill="{fg}" d="{d}"/>\n'
-       '</svg>\n')
-```
-
-Write `oa-icon-light.svg` and `oa-icon-dark.svg`. **Gate: assert each output's `d`
-string is byte-identical to its source.**
-
-## Step 2 — Build `oa-favicon.svg`
-
-Check whether the two variants share geometry:
-
-```python
-assert light_d == dark_d   # if this holds, use the single-geometry form below
-```
-
-**If identical** (current state — the optical corner-radius correction was retired),
-store the geometry once and swap fills. Class-based `fill` overrides — not CSS custom
-properties, not `display` toggling:
-
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill-rule="evenodd" clip-rule="evenodd">
-  <style>
-    .bg{fill:#fafaf8}
-    .fg{fill:#0a0a0a}
-    @media (prefers-color-scheme:dark){.bg{fill:#0a0a0a}.fg{fill:#fafaf8}}
-  </style>
-  <rect class="bg" width="48" height="48"/>
-  <path class="fg" d="…"/>
-</svg>
-```
-
-**If the variants ever diverge again**, fall back to two `<g class="oa-light">` /
-`<g class="oa-dark">` groups toggled by `display`. Only do this when geometry
-genuinely differs — duplicating identical artwork invites drift.
+**If the variants ever diverge again**, the script stops. Build `oa-favicon.svg` by
+hand with two `<g class="oa-light">` / `<g class="oa-dark">` groups toggled by
+`display`. Only do this when geometry genuinely differs — duplicating identical
+artwork invites drift.
 
 This file is the **static default only**. The live theme swap is JS-driven (Step 6).
 
 ## Step 3 — Build `favicon.ico` (16 + 32 + 48)
 
-**Pillow's ICO writer silently drops the extra sizes** — it produced a 531-byte
-single-size file. Hand-pack the container, embedding each PNG verbatim:
-
-```python
-import struct
-from PIL import Image
-sizes = [16, 32, 48]
-blobs = []
-for s in sizes:
-    p = f"raw-files/favicon/oa-favicon-{s}.png"
-    assert Image.open(p).size == (s, s)
-    blobs.append((s, open(p, "rb").read()))
-header  = struct.pack("<HHH", 0, 1, len(blobs))
-offset  = 6 + 16 * len(blobs)
-entries = data = b""
-for s, png in blobs:
-    entries += struct.pack("<BBBBHHII", s, s, 0, 0, 1, 32, len(png), offset)
-    offset  += len(png); data += png
-open("favicon.ico", "wb").write(header + entries + data)
-
-assert sorted(Image.open("favicon.ico").ico.sizes()) == [(16,16),(32,32),(48,48)]
-```
+`python3 $X ico`. **Pillow's ICO writer silently drops the extra sizes** — it
+produced a 531-byte single-size file — so the script hand-packs the container with
+`struct`, embedding each PNG verbatim. Gate: the file holds all three sizes.
 
 The ICO is built from the **dark** variant and is dark-only — a single `.ico` cannot
 theme-swap. It's the legacy/Windows fallback.
 
 ## Step 4 — Audit the raster set (safe zones)
 
-This is the gate that catches real defects. Measure **radial** extent, not bbox — the
-mark is circular and Android's safe zone is a circle.
-
-```python
-from PIL import Image
-import math
-def audit(f):
-    im = Image.open(f).convert("RGB"); w,h = im.size; px = im.load()
-    bg = px[0,0]
-    corners_ok = all(px[x,y] == bg for x,y in [(0,0),(w-1,0),(0,h-1),(w-1,h-1)])
-    cx, cy = (w-1)/2, (h-1)/2; maxr = 0
-    for y in range(h):
-        for x in range(w):
-            r,g,b = px[x,y]
-            if abs(r-bg[0])+abs(g-bg[1])+abs(b-bg[2]) > 30:
-                maxr = max(maxr, math.hypot(x-cx, y-cy))
-    return (2*maxr)/w, corners_ok
-```
+`python3 $X audit`. This is the gate that catches real defects. It measures
+**radial** extent, not bbox — the mark is circular and Android's safe zone is a
+circle.
 
 | File | Purpose | Target | Hard limit |
 |---|---|---|---|
@@ -164,16 +106,17 @@ def audit(f):
 | `oa-favicon-16/32/48.png` | ICO payload | ~75% | — |
 | `oa-apple-touch-icon.png` | iOS tile, **no alpha** | ~78–80% | — |
 
-**Gates:**
+**Gates (all in the script):**
 - maskable and `any` **must be different files** — they shipped byte-identical once,
   which cannot satisfy both (a 61%-padded `any` looks undersized uncropped; a 79%
   maskable touches the mask rim).
-- maskable `corners_ok` must be **True** and the image must have no alpha — the mask
-  crops *into* the background, so a transparent corner shows as a wedge.
-- Centring offset should be ≤2px.
+- maskable corners must be solid background and the image must have no alpha — the
+  mask crops *into* the background, so a transparent corner shows as a wedge.
+- Centring offset ≤2px.
 
-If a threshold fails, **stop and tell Brendan which file to re-export and to what
-number.** Don't pad or rescale his artwork.
+If a gate fails, **stop and tell Brendan which file to re-export and to what
+number.** Don't pad or rescale his artwork. When the new export lands, go back to
+Step 0.
 
 ## Step 5 — Manifest
 
@@ -217,6 +160,9 @@ incognito with hard reload, in both OS themes. The static `href` stays
    Serve it and screenshot in **both** schemes via chrome-devtools `emulate`.
    Include the fixed `oa-icon-light.svg` / `oa-icon-dark.svg` as controls — the
    combined file must match each exactly.
+
+If any check fails, go back to the step that built the failing file, rebuild, and
+re-run all five checks. Nothing is tagged until every check passes.
 
 ## Step 8 — Deploy
 
@@ -286,7 +232,7 @@ If the deployed tag is still the old one, the paste didn't save — Webflow's
   Settings deliberately (so a leaked tag renders current art); filename matching would
   silently stop working.
 - **jsDelivr tags are immutable.** Any asset change needs a new tag — never re-point
-  an existing one.
+  an existing one. `.claude/hooks/guard_tags.py` blocks it from either session root.
 - **Command centre is text-only.** `*.png` is gitignored there; the website repo needs
   its scoped `!src/icons/` exception (already present).
 - **Live OS theme toggle won't repaint an already-drawn tab icon on iOS**, even with
