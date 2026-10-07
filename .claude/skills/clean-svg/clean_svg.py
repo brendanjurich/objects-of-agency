@@ -586,8 +586,13 @@ def main():
     else:
         # Deletions are legitimate (--drop-guides); mutations never are.
         after_geo = geometry(root)
-        assert not (Counter(after_geo) - Counter(before_geo)), \
-            "GEOMETRY DRIFT — surviving path data does not match the source"
+        # An explicit exit, not an assert: `python3 -O` strips asserts.
+        drift = Counter(after_geo) - Counter(before_geo)
+        if drift:
+            where = [f"  <{el.tag.split('}')[-1]} id={el.get('id')!r}> {a}=\"{el.get(a)[:60]}…\""
+                     for el in root.iter() for a in GEOMETRY_ATTRS if el.get(a) in drift]
+            sys.exit("GEOMETRY DRIFT — surviving path data does not match the "
+                     f"source in {len(where)} attribute(s):\n" + "\n".join(where[:10]))
         lost = len(before_geo) - len(after_geo)
 
     ET.indent(root, space="  ")

@@ -1,9 +1,30 @@
 ---
 name: osmo-in
 description: Use when an osmo.supply resource is being brought into the site — Brendan pastes Osmo's "AI instructions", a CSS + JS block, or Copy-to-Webflow markup, with or without a framing sentence. Also fires on "osmo-in", "here's the osmo code", "adapt this osmo component", or any third-party Webflow component arriving as code to absorb. Audits the stock resource against house rules (no CDN GSAP, rem over em, the Designer owns the design knobs, easing chosen per motion), adapts it into src/, and hands the styling knobs back to the Webflow Designer.
+hooks:
+  PostToolUse:
+    - matcher: "Write|Edit"
+      hooks:
+        - type: command
+          command: python3 "$CLAUDE_PROJECT_DIR/.claude/skills/osmo-in/hooks/guard_gsap.py"
 ---
 
 # Osmo in
+
+Copy this checklist and tick it off as you go:
+
+```
+- [ ] Step 0 — scope and name (sitewide/page-level, mount, pasted/rebuilt)
+- [ ] Step 1 — audit → GATE: wait for Brendan's go
+- [ ] Step 2 — adapt to the rules (JS, CSS split, header banner)
+- [ ] Step 3 — Designer handoff table + do-not-touch list
+- [ ] Step 4 — write files, register in CLAUDE.md
+- [ ] Step 5 — verify (every check passes, or back to Step 2/4)
+- [ ] Step 6 — deploy on a new tag, 200 check before Webflow
+```
+
+The skill's hook rejects any `src/js` or `src/css` write that loads GSAP from a
+CDN or calls `gsap.defaults()` / `registerEase()`.
 
 Absorbing a resource from **osmo.supply** into this site. Brendan inspects the
 component on a staging testing ground, pastes the Webflow elements in (or rebuilds
@@ -230,6 +251,9 @@ Write `src/js/oa-<name>.js` (+ CSS if page-level). In the same change:
   that's the proof the split didn't drop a knob on the floor.
 - **Verify hooks against the live post-JS DOM** — not the served HTML, not the canvas.
 
+If any check fails, go back: a code fault to Step 2, a missing registration or
+file to Step 4. Re-run every check. Do not tag until all of them pass.
+
 ## Step 6 — Deploy
 
 Follow `CLAUDE.md` → **CDN Deployment Workflow**. Don't restate it here; that file owns
@@ -258,4 +282,5 @@ touching Webflow → Brendan bumps the URLs → publish. Report the bump as
   was built, tagged `v1.0.125`, published and rolled back — the component was fine, the
   content it demanded wasn't wanted. The tag stays; it was deployed.
 - **jsDelivr tags are immutable.** Any change needs a new tag — never re-point one.
+  `.claude/hooks/guard_tags.py` blocks it from either session root.
 - **A 0-result is not evidence of absence** when querying the Designer or the DOM.

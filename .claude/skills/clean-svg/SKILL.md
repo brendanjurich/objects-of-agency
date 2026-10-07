@@ -1,9 +1,23 @@
 ---
 name: clean-svg
 description: Use when an Affinity Designer SVG export needs cleaning before it goes anywhere else — especially Lottie Labs for animation, but equally Figma, Rive, Webflow or src/svg/. Fires on "clean this SVG", "clean-svg", "strip the Affinity cruft", "prep this for Lottie", "this SVG won't import properly", or an .svg dropped in with no framing. Strips the serif:/DOCTYPE/artboard scaffolding, inlines CSS onto presentation attributes, collapses nested matrix wrappers, names the layers, and proves the result renders pixel-identically.
+hooks:
+  PreToolUse:
+    - matcher: "Write|Edit|Bash"
+      hooks:
+        - type: command
+          command: python3 "$CLAUDE_PROJECT_DIR/.claude/skills/clean-svg/hooks/guard_public_svg.py"
 ---
 
 # Clean SVG
+
+**This website repo is public — cleaned brand assets never live in it.** Output
+goes to `02-brand/oa-logo/clean-svg/` in the private command centre, unless the
+asset is genuinely shipped by the site (`src/svg/`). An asset committed here and
+deleted later still sits in public history. The skill's hook blocks an `.svg`
+written anywhere in this repo outside `src/svg/` or `src/icons/`.
+
+Needs: macOS (`qlmanage`, for `pixdiff.py`), `pip3 install Pillow`.
 
 Affinity exports carry ~40–50% dead weight and a nesting structure built for
 Affinity's own layer panel, not for an importer. Lottie Labs reads what
@@ -20,7 +34,7 @@ Two scripts, both stdlib + Pillow (this repo has no build step and no `lxml`):
 
 **Never hand-edit an Affinity export.** Geometry drift is invisible in a diff
 and obvious on screen a week later. The script never rewrites path data unless
-`--precision` is passed, and asserts it.
+`--precision` is passed, and checks it.
 
 ## Run
 
@@ -33,7 +47,7 @@ python3 $D/pixdiff.py path/to/export.svg path/to/out.svg   # the gate
 Then read the report — it is the deliverable, not a log.
 
 **Where the files live.** Brand artwork moves through two folders in the
-command centre, both private:
+command centre, both private. Paths are relative to the command-centre root:
 
 | Folder | Holds |
 |---|---|
@@ -72,13 +86,16 @@ strokes, `role`/`aria-label`, and any id something references by `url(#…)`.
 
 **1. Geometry.** Every surviving `d`/`points` string must be byte-identical to
 the source. Deletions are allowed (that is what `--drop-guides` does);
-mutations never are. The script asserts this and dies on failure.
+mutations never are. The script checks this and exits on failure, naming the path that drifted.
 
 **2. Pixels.** `pixdiff.py` must PASS. It normalises both files to the same
 explicit size first — otherwise it just measures the intrinsic-size change the
 clean deliberately makes. A SOFT PASS is only acceptable when you can name what
 differs (dropped guides, edge antialiasing). *This gate caught two real bugs
 during the build; do not skip it because the report looked clean.*
+A hard FAIL means the output does not ship: re-run with `--keep`, show Brendan
+the two renders, and treat it as a `clean_svg.py` bug to fix before the clean
+is redone.
 
 **3. Warnings.** Every WARNING is read out to Brendan, not swallowed. They are
 the difference between "cleaned" and "will actually animate".
@@ -133,13 +150,10 @@ file; cleaning it wholesale produces a mess in every tool.
   browser now render at intrinsic size instead of scaling to fill. That is
   correct and wanted — `width="100%"` is exactly what makes importers guess a
   canvas.
-- **This repo is public — cleaned brand assets never live here.** Not in this
-  skill folder, not anywhere in the repo, unless the asset is genuinely
-  shipped by the site. Everything else (logo masters, curve exports bound for
-  Lottie Labs, work-in-progress marks) goes to `02-brand/oa-logo/clean-svg/`
-  in the private command centre. Write it there in the first place rather than
-  moving it afterwards — an asset committed here and deleted later still sits
-  in the public history, and only an unpushed branch can be rewritten.
+- **The public-repo rule covers everything not shipped** — logo masters, curve
+  exports bound for Lottie Labs, work-in-progress marks. Write to
+  `02-brand/oa-logo/clean-svg/` in the first place rather than moving it
+  afterwards; only an unpushed branch can be rewritten.
 - **The output is not automatically for the repo.** A cleaned file bound for
   `src/svg/` still follows `CLAUDE.md` → CDN Deployment Workflow; a file bound
   for Lottie Labs never enters the repo at all. Ask which it is.

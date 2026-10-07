@@ -1,0 +1,6 @@
+#!/bin/sh
+# Blocks the commit if a guard hook test fails. Enable once per clone:
+#   git config core.hooksPath .githooks
+python3 .claude/hooks/test_guards.py >/dev/null 2>&1 && exit 0
+python3 .claude/hooks/test_guards.py 2>&1 | tail -20
+exit 1

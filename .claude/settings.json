@@ -13,5 +13,28 @@
       "Bash(python3 ~/.claude/bin/gen-skills-ref.py)",
       "Bash(grep -nE 'firecrawl-cli|firecrawl-scrape|firecrawl:firecrawl `' ~/.claude/SKILLS.md)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_tags.py\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "d=\"$CLAUDE_PROJECT_DIR\"; git -C \"$d\" config --get core.hooksPath >/dev/null || git -C \"$d\" config core.hooksPath .githooks; true"
+          }
+        ]
+      }
+    ]
   }
 }
