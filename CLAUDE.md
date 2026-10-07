@@ -254,4 +254,4 @@ this section carries only what is specific to this repo.
 - **Surgical changes, especially here:** jsDelivr serves these files by path and
   Webflow pins exact tags, so an unrequested edit can ship straight to the live site.
 - **Verification here is visual/behavioural** on staging or the published site, plus the deploy checklist for shipped changes — there is no test suite for `src/`.
-- **Guard hooks have tests:** `.claude/hooks/test_guards.py` covers all three guards (tags, clean-svg, osmo-in). `.githooks/pre-commit` runs it and blocks the commit on a failure. Enable once per clone: `git config core.hooksPath .githooks`. Editing a guard means adding its new case there.
+- **Guard hooks have tests:** `.claude/hooks/test_guards.py` covers all three guards (tags, clean-svg, osmo-in). `.githooks/pre-commit` runs it and blocks the commit on a failure. A `SessionStart` hook in `.claude/settings.json` sets `core.hooksPath` on any clone where it is unset. Editing a guard means adding its new case there.

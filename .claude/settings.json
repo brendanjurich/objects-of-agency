@@ -25,6 +25,16 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "d=\"$CLAUDE_PROJECT_DIR\"; git -C \"$d\" config --get core.hooksPath >/dev/null || git -C \"$d\" config core.hooksPath .githooks; true"
+          }
+        ]
+      }
     ]
   }
 }
