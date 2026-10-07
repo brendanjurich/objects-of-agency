@@ -430,7 +430,31 @@ function restoreConfig() {
 }
 
 // ============================================================
-// 6. INIT ON DOM READY
+// 6. STICKY PANEL MASK
+// ============================================================
+// [data-oa-stuck-mask] sits inside the sticky panel and covers the band above it.
+// It gets .is-active only while the panel is stuck, so at rest it never covers
+// the title. The look is Designer work: the mask carries data-state, and its
+// opacity reads Lumos's state variable.
+function initStickyMask() {
+  const mask = document.querySelector('[data-oa-stuck-mask]');
+  if (!mask) return;
+  const panel = mask.parentElement;
+  let stickyTop = 0;
+
+  function readTop() { stickyTop = parseFloat(getComputedStyle(panel).top) || 0; }
+  function update() {
+    mask.classList.toggle('is-active', panel.getBoundingClientRect().top <= stickyTop + 0.5);
+  }
+
+  readTop();
+  update();
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', function () { readTop(); update(); });
+}
+
+// ============================================================
+// 7. INIT ON DOM READY
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
   restoreConfig();
@@ -438,4 +462,5 @@ document.addEventListener('DOMContentLoaded', function () {
   initCascadingSlider();
   initPricingEngine();
   initSummaryUpdater();
+  initStickyMask();
 });
