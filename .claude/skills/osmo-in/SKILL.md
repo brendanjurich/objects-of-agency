@@ -6,7 +6,7 @@ hooks:
     - matcher: "Write|Edit"
       hooks:
         - type: command
-          command: python3 "$CLAUDE_PROJECT_DIR/.claude/skills/osmo-in/hooks/guard_gsap.py"
+          command: f="$CLAUDE_PROJECT_DIR/.claude/skills/osmo-in/hooks/guard_gsap.py"; [ -f "$f" ] || exit 0; python3 "$f"
 ---
 
 # Osmo in

@@ -215,11 +215,42 @@ footer.footer_main_wrap {
 /* Tablet image swap — opacity (not display:none) preserves layout for GSAP xPercent.
    Desktop image stays in layout on tablet so GSAP can still animate it; opacity hides it visually.
    display:block overrides the display:none Webflow sets on .is-tablet at the desktop breakpoint.
-   1024px threshold captures iPad Pro portrait (1024×1366) which sits above Webflow's 991px BP. */
+   1024px keeps the old 12.9" iPad Pro (1024×1366) in either orientation; the portrait query
+   adds iPad Pro 13" (1032×1376) — see HOMEPAGE HERO — TABLET PORTRAIT below. */
 .crisp-header__slider-slide-inner.is-tablet { opacity: 0; }
-@media (max-width: 1024px) {
+@media (max-width: 1024px), (max-width: 1134px) and (orientation: portrait) {
   .crisp-header__slider-slide-inner:not(.is-tablet) { opacity: 0; }
   .crisp-header__slider-slide-inner.is-tablet { display: block; opacity: 1; }
+}
+
+/* ============================================================
+   HOMEPAGE HERO — TABLET PORTRAIT (992–1134px, portrait)
+   iPad Pro 13" portrait is 1032px wide: above Webflow's tablet breakpoint
+   (≤991), inside the hamburger nav band (≤1134). This ports the hero's
+   ≤991 Designer styles up so it gets the tablet hero under the tablet nav.
+   Portrait only: a landscape window at this width keeps the desktop hero.
+   Scoped under .hero_main_wrap to beat the homepage's page-level
+   min-width:992px scale <style>, which loads after this file.
+   Hero is locked (08-10-2026) — if a ≤991 hero style changes, re-port here.
+   ============================================================ */
+@media screen and (min-width: 992px) and (max-width: 1134px) and (orientation: portrait) {
+  .hero_main_wrap .u-content-wrapper { text-align: var(--_alignment---direction, start); flex-flow: column; justify-content: space-between; }
+  .hero_main_wrap .button_main_icon.w-variant-e85564cd-af30-a478-692b-71732aefb3ab { aspect-ratio: auto; width: auto; }
+  .hero_main_wrap .hero_main_bottom { width: 35vw; margin-right: var(--site--margin); margin-bottom: var(--site--margin); margin-left: var(--site--margin); }
+  .hero_main_wrap .crisp-header__slider-nav { display: none; overflow: visible; }
+  .hero_main_wrap .crisp-header__slider-nav-btn { width: 2.5rem; }
+  .hero_main_wrap .crisp-header__slider-list { width: 100%; }
+  .hero_main_wrap .logo-tag_svg { width: 55vw; }
+  .hero_main_wrap .bunny-bg__playpause { bottom: auto; right: auto; }
+  .hero_main_wrap .hero_feed_grid { max-width: 27.5rem; margin-right: var(--site--margin); margin-bottom: var(--site--margin); flex: 0 1 auto; }
+  .hero_main_wrap .hero_main_logo { width: 100%; }
+  .hero_main_wrap .hero_main_mid { padding-right: var(--site--margin); padding-left: var(--site--margin); top: 6.5rem; bottom: auto; }
+  .hero_main_wrap .hero_feed_top-slide { height: 100%; }
+  .hero_main_wrap .demo-section__fade-left-2 { display: block; }
+  .hero_main_wrap .nav_viewport_wrapper { display: none; }
+  .hero_main_wrap .hero_feed_cta-item.is-long { display: none; }
+  .hero_main_wrap .hero_feed_cta-item.is-short { display: flex; }
+  .hero_main_wrap .hero_bg_fade { display: block; }
 }
 
 /* GREETINGS: hardcoded 9-item, 36s cycle */
