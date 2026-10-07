@@ -6,7 +6,7 @@ hooks:
     - matcher: "Write|Edit|Bash"
       hooks:
         - type: command
-          command: python3 "$CLAUDE_PROJECT_DIR/.claude/skills/clean-svg/hooks/guard_public_svg.py"
+          command: f="$CLAUDE_PROJECT_DIR/.claude/skills/clean-svg/hooks/guard_public_svg.py"; [ -f "$f" ] || exit 0; python3 "$f"
 ---
 
 # Clean SVG
