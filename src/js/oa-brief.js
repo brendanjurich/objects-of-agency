@@ -188,25 +188,33 @@
 
   // ---- transition (GSAP if present, respects reduced motion)
   // The step on screen fades out, the swap happens, then the new step fades in place
-  // while its chips rise into it, staggered, and the root eases from the old height to
-  // the new one. Only the chips move: moving the block too stacked the two shifts, and
-  // late chips were still rising after the block had landed. Back reverses the rise.
-  // No blur. Timings are Designer knobs on the root, in seconds: data-oa-brief-exit
-  // (0.16), data-oa-brief-enter (0.4), data-oa-brief-stagger (0.12, total spread across
-  // a step's chips; 0 turns it off); data-oa-brief-shift is the chip rise in px (6; 0 = off).
+  // while its items land in reading order — question heading, sub-text, then each
+  // answer (legend, chip, field, summary) — and the root eases from the old height to
+  // the new one. The block itself never moves: moving it and its items stacked the two
+  // shifts. Cascading the whole step, not just the chips, gives a 3-chip panel enough
+  // to compose with. Back reverses the rise. No blur. Timings are Designer knobs on
+  // the root, in seconds: data-oa-brief-exit (0.16), data-oa-brief-enter (0.4),
+  // data-oa-brief-stagger (0.04, per item, total capped at STAGGER_CAP so an 18-chip
+  // step doesn't drag; 0 turns it off); data-oa-brief-shift is the rise in px (6; 0 = off).
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const knob = (k, d) => { const v = parseFloat(root.getAttribute('data-oa-brief-' + k)); return isNaN(v) ? d : v; };
-  const EXIT = knob('exit', 0.16), ENTER = knob('enter', 0.4), STAGGER = knob('stagger', 0.12), SHIFT = knob('shift', 6);
-  const chipsIn = els => els.reduce((a, el) => a.concat($$('label', el)), []);
+  const EXIT = knob('exit', 0.16), ENTER = knob('enter', 0.4), STAGGER = knob('stagger', 0.04), SHIFT = knob('shift', 6);
+  const STAGGER_CAP = 0.24;
+  // An item nested in another item is dropped, so nothing moves twice.
+  const ITEM = '.w-richtext, legend, label, .brief_summary';
+  const itemsIn = els => els.reduce((a, el) => a.concat($$(ITEM, el)), [])
+    .filter((el, i, all) => !all.some(o => o !== el && o.contains(el)));
   // Enter: power3.out — answers the click at once and lands softly. `dir` is -1 on Back,
-  // so the chips come from above. Clear the chips' transform when done: a leftover
+  // so the items come from above. Clear the items' transform when done: a leftover
   // identity matrix makes a stacking context, which trapped the piece list's z-index
-  // under .brief_nav's Back/Continue.
+  // under .brief_nav's Back/Continue. The chip's own CSS transition (.form_ui_label is
+  // `all 0.2s`) chases every frame GSAP writes, so the chip dipped the wrong way before
+  // rising: switch it off for the tween and hand it back after.
   function reveal(els, dir) {
     if (reduce || !window.gsap) return;
     window.gsap.fromTo(els, { opacity: 0 }, { opacity: 1, duration: ENTER, ease: 'power3.out', clearProps: 'opacity' });
-    const chips = chipsIn(els).filter(l => l.getClientRects().length);
-    if (chips.length > 1 && STAGGER > 0) window.gsap.fromTo(chips, { opacity: 0, y: SHIFT * (dir || 1) }, { opacity: 1, y: 0, duration: ENTER, ease: 'power3.out', stagger: { amount: STAGGER }, clearProps: 'opacity,transform' });
+    const items = itemsIn(els).filter(l => l.getClientRects().length);
+    if (items.length > 1 && STAGGER > 0) window.gsap.fromTo(items, { opacity: 0, y: SHIFT * (dir || 1), transition: 'none' }, { opacity: 1, y: 0, duration: ENTER, ease: 'power3.out', stagger: { each: Math.min(STAGGER, STAGGER_CAP / (items.length - 1)) }, clearProps: 'opacity,transform,transition' });
   }
   // `apply` hides the old step, shows the new one and calls reveal(). A second call while
   // an exit is running (a fast Back, a double Continue) drops the first one's apply —
@@ -218,7 +226,7 @@
     const out = steps.reduce((a, s) => a.concat(s.els), []).filter(el => !el.hidden);
     if (reduce || !g || instant || !out.length) { apply(); return; }
     const h0 = root.offsetHeight;
-    g.killTweensOf(out); const chips = chipsIn(out); g.killTweensOf(chips); g.set(chips, { clearProps: 'opacity,transform' });
+    g.killTweensOf(out); const items = itemsIn(out); g.killTweensOf(items); g.set(items, { clearProps: 'opacity,transform,transition' });
     // Exit: power2.in, opacity only — it gets out of the way and nobody watches it leave.
     leaving = g.to(out, { opacity: 0, duration: EXIT, ease: 'power2.in', onComplete: () => {
       leaving = null;
