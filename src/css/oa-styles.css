@@ -509,24 +509,92 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
   z-index: -1;
 }
 
-/* The list opens from display:none, which nothing can transition out of, so the
-   entry runs off @starting-style: the resting state stays fully visible and the
-   browser animates from the starting values each time the list becomes rendered.
-   A class flipped on the next frame would do the same job but leaves the list
-   invisible if the engine ever fails to flip it; this degrades to no animation
-   instead. Closing runs the same fade and drop in reverse: `display` transitions
-   with allow-discrete, so the engine's display:none lands only once the fade has
-   finished. Each direction uses the transition on the state it goes to, so the
-   open rule sets the opening time (300ms) and [hidden] sets the closing time
-   (400ms). A closing list ignores taps. Browsers without allow-discrete close
-   instantly, as before. Height is deliberately not animated, because it would
-   fight the list's own scroll. Duration and distance are knobs. */
-.brief_fields_list-wrap {
+/* The piece list behaves like the browser's own dropdown. Where anchor positioning
+   exists, oa-brief.js makes it a popover, so it renders in the top layer above
+   every section, whatever their z-index. It lines up with the input and matches its
+   width, and it caps its height to the room left in the viewport. When less than
+   the flip height is left below the input, it opens above instead. It follows the
+   input as the page scrolls.
+
+   Placement belongs to this file, and the look belongs to the Designer class.
+   Three Designer variables tune the placement:
+   brief/list-offset is the gap to the input (it flips with the list),
+   brief/list-max is the tallest the list gets, and brief/list-flip is the least
+   room the list needs below the input before it opens above.
+   min-height is the flip trigger: a box taller than the room below overflows,
+   and that is what makes flip-block try the other side. --oa-list-fit is the
+   list's natural height, which the engine measures on every open, so a short
+   list never gets padded out to the flip height.
+
+   The fallback values apply only until the variables exist. */
+[data-oa-brief-piece-input] {
+  anchor-name: --oa-brief-piece;
+}
+
+/* A popover's UA border, padding and colour, at zero specificity, so the
+   Designer class still wins wherever it sets them. */
+:where(.brief_fields_list-wrap[popover]) {
+  border: 0;
+  padding: 0;
+  color: inherit;
+}
+
+.brief_fields_list-wrap[popover] {
+  position: fixed;
+  position-anchor: --oa-brief-piece;
+  position-area: bottom;
+  position-try-fallbacks: flip-block;
+  inset: auto;
+  width: anchor-size(width);
+  margin: 0;
+  margin-block-start: var(--brief--list-offset, 0.5rem);
+  min-height: min(var(--brief--list-flip, 9rem), var(--oa-list-fit, 9rem));
+  max-height: min(var(--brief--list-max, 30rem), 100%);
+  overflow: auto;
+  transition: opacity 0.3s var(--ease-oa), transform 0.3s var(--ease-oa);
+}
+
+.brief_fields_list-wrap[popover]:not(:popover-open) {
+  display: none;
+}
+
+/* Opening and closing. The engine shows the popover in its closed state, reads
+   which side it landed on, then sets data-oa-open, so the list always travels
+   out from the input: it drops when below and rises when above. It hides the
+   popover only once the closing fade has run, because Safari pulls a closing
+   popover out of the top layer at once. Each direction uses the transition on
+   the state it goes to: open is 300ms, closed is 400ms. A closing list ignores
+   taps. Height is deliberately not animated, because it would fight the list's
+   own scroll. Duration and distance are knobs. */
+.brief_fields_list-wrap[popover]:not([data-oa-open]) {
+  opacity: 0;
+  transform: translateY(-0.5rem);
+  pointer-events: none;
+  transition-duration: 0.4s;
+}
+
+.brief_fields_list-wrap[popover][data-oa-side="top"]:not([data-oa-open]) {
+  transform: translateY(0.5rem);
+}
+
+/* No anchor positioning (Safari before 26): there is no popover, so the list
+   sits in the field's label (position: relative), and the engine sets its top to
+   the input's bottom edge. It has no flip and no viewport cap, and a later
+   section can cover it.
+   The list opens from display:none, which nothing can transition out of, so the
+   entry runs off @starting-style, and closing transitions `display` with
+   allow-discrete, so display:none lands once the fade has finished. */
+.brief_fields_list-wrap:not([popover]) {
+  position: absolute;
+  inset: auto 0;
+  margin-top: var(--brief--list-offset, 0.5rem);
+  min-height: 0;
+  max-height: var(--brief--list-max, 30rem);
   transition: opacity 0.3s var(--ease-oa), transform 0.3s var(--ease-oa),
     display 0.3s allow-discrete;
 }
 
-.brief_fields_list-wrap[hidden] {
+.brief_fields_list-wrap:not([popover])[hidden] {
   opacity: 0;
   transform: translateY(-0.5rem);
   pointer-events: none;
@@ -534,15 +602,17 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 }
 
 @starting-style {
-  .brief_fields_list-wrap {
+  .brief_fields_list-wrap:not([popover]) {
     opacity: 0;
     transform: translateY(-0.5rem);
   }
 }
 
+/* !important because the open and closed states above set their own durations
+   at higher specificity. */
 @media (prefers-reduced-motion: reduce) {
   .brief_fields_list-wrap {
-    transition-duration: 0.01ms;
+    transition-duration: 0.01ms !important;
   }
 }
 
