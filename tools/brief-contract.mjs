@@ -123,6 +123,12 @@ try {
     const listRule = (css.match(/\.brief_fields_list-wrap[^{]*\{[^}]*\}/) || [''])[0];
     if (/overflow\s*:\s*(auto|scroll)/.test(listRule) && /justify-content\s*:\s*(center|flex-end|space-)/.test(listRule))
       fail.push('.brief_fields_list-wrap centres a scrolling column — options above the top edge cannot be scrolled to or clicked; use justify-content: flex-start');
+    // oa-styles.css places the list and outranks the class, so leftover placement
+    // there is dead weight that reads as a live knob. Height runs off brief/list-max
+    // and brief/list-flip instead.
+    const placed = ['position', 'inset', 'top', 'right', 'bottom', 'left', 'min-height', 'max-height']
+      .filter(p => new RegExp('[{;\\s]' + p + '\\s*:').test(listRule));
+    if (placed.length) console.log('  note  .brief_fields_list-wrap sets ' + placed.join(', ') + ' — oa-styles.css owns placement; clear these in the Designer');
   }
 } catch {}
 

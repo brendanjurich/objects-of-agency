@@ -1479,3 +1479,61 @@ Slides 2 and 3 carry no `data-slideshow="parallax"` layer, so only slides 0–1 
 wipe. Pre-existing; `innerOf()` skips a missing layer.
 
 ---
+
+## 2026-10-08 — Brief piece list is a native-style dropdown: popover + anchor positioning, v1.0.239
+
+The list sat under the "start a chat" section and pinned itself right of the input.
+Both came from Designer placement on `.brief_fields_list-wrap`: `position:absolute`,
+`inset: 6.1rem 3rem 0% auto` (shrink-to-fit width off the right edge), and a `z-index:99`
+that could not leave `.section_project_brief`'s `z-index:1` stacking context.
+
+### Top layer, placed by CSS
+
+Where `position-area` is supported, `oa-brief.js` makes the list `popover="manual"`
+and `oa-styles.css` anchors it to the input: same left edge and width, `flip-block`
+above when there is too little room below, height capped to the room left, and it
+tracks the input on scroll with no listener. Verified in Chromium and WebKit 27,
+desktop and phone, against staging.
+
+Two things measured, not assumed:
+
+- **An anchored box does not cap its own height.** `align-self:start` doesn't either;
+  only `max-height: min(<knob>, 100%)` does, since `100%` resolves against the
+  position-area cell.
+- **`flip-block` only fires when the box overflows**, so `min-height` is the flip
+  trigger. A bare `min-height` pads a one-item list out to the threshold, so the engine
+  writes the list's natural height to `--oa-list-fit` on each open and CSS takes the
+  smaller.
+
+### Motion is driven by attribute, not `@starting-style`
+
+`@starting-style` values are not flipped by `flip-block`, so a list opened above got
+no entry motion. Safari also has no `overlay` transition, so a closing popover leaves
+the top layer at once and its fade is lost. The engine now shows the popover in its
+closed state, reads the side, sets `data-oa-side`, commits that style, then sets
+`data-oa-open`. Closing removes `data-oa-open` and calls `hidePopover()` only once
+`getAnimations()` has finished. The list always travels out from the input.
+
+### Knobs
+
+Designer variables `brief/list-offset`, `brief/list-max`, `brief/list-flip`
+(`--brief--list-*`); the CSS fallbacks (0.5rem, 30rem, 9rem) hold only until the
+variables exist. The class keeps the look: background, radius, shadow, padding.
+`tools/brief-contract.mjs` notes leftover placement on the class.
+
+### Fallback without anchor positioning (Safari < 26)
+
+No popover. The list stays absolute in the label. The label is a flex box, so the
+list's **static position is the label's top, not the input's bottom**, and no DOM
+order fixes that. The engine sets `top` from the input's bottom edge on open. No flip,
+no viewport cap, and a later section can cover it.
+
+### Also
+
+Closes on a press outside and on Tab, as well as Escape and the toggle. A pick still
+keeps it open. Native `<datalist>` is gone on purpose: keeping it alongside would
+draw the browser's popup over ours, so iOS's QuickType suggestions bar stays empty.
+The Safari shrink-to-fit width workaround in `openList()` is deleted, because the
+width is fixed now.
+
+---

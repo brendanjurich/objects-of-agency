@@ -188,25 +188,33 @@
 
   // ---- transition (GSAP if present, respects reduced motion)
   // The step on screen fades out, the swap happens, then the new step fades in place
-  // while its chips rise into it, staggered, and the root eases from the old height to
-  // the new one. Only the chips move: moving the block too stacked the two shifts, and
-  // late chips were still rising after the block had landed. Back reverses the rise.
-  // No blur. Timings are Designer knobs on the root, in seconds: data-oa-brief-exit
-  // (0.16), data-oa-brief-enter (0.4), data-oa-brief-stagger (0.12, total spread across
-  // a step's chips; 0 turns it off); data-oa-brief-shift is the chip rise in px (6; 0 = off).
+  // while its items land in reading order — question heading, sub-text, then each
+  // answer (legend, chip, field, summary) — and the root eases from the old height to
+  // the new one. The block itself never moves: moving it and its items stacked the two
+  // shifts. Cascading the whole step, not just the chips, gives a 3-chip panel enough
+  // to compose with. Back reverses the rise. No blur. Timings are Designer knobs on
+  // the root, in seconds: data-oa-brief-exit (0.16), data-oa-brief-enter (0.4),
+  // data-oa-brief-stagger (0.04, per item, total capped at STAGGER_CAP so an 18-chip
+  // step doesn't drag; 0 turns it off); data-oa-brief-shift is the rise in px (6; 0 = off).
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const knob = (k, d) => { const v = parseFloat(root.getAttribute('data-oa-brief-' + k)); return isNaN(v) ? d : v; };
-  const EXIT = knob('exit', 0.16), ENTER = knob('enter', 0.4), STAGGER = knob('stagger', 0.12), SHIFT = knob('shift', 6);
-  const chipsIn = els => els.reduce((a, el) => a.concat($$('label', el)), []);
+  const EXIT = knob('exit', 0.16), ENTER = knob('enter', 0.4), STAGGER = knob('stagger', 0.04), SHIFT = knob('shift', 6);
+  const STAGGER_CAP = 0.24;
+  // An item nested in another item is dropped, so nothing moves twice.
+  const ITEM = '.w-richtext, legend, label, .brief_summary';
+  const itemsIn = els => els.reduce((a, el) => a.concat($$(ITEM, el)), [])
+    .filter((el, i, all) => !all.some(o => o !== el && o.contains(el)));
   // Enter: power3.out — answers the click at once and lands softly. `dir` is -1 on Back,
-  // so the chips come from above. Clear the chips' transform when done: a leftover
+  // so the items come from above. Clear the items' transform when done: a leftover
   // identity matrix makes a stacking context, which trapped the piece list's z-index
-  // under .brief_nav's Back/Continue.
+  // under .brief_nav's Back/Continue. The chip's own CSS transition (.form_ui_label is
+  // `all 0.2s`) chases every frame GSAP writes, so the chip dipped the wrong way before
+  // rising: switch it off for the tween and hand it back after.
   function reveal(els, dir) {
     if (reduce || !window.gsap) return;
     window.gsap.fromTo(els, { opacity: 0 }, { opacity: 1, duration: ENTER, ease: 'power3.out', clearProps: 'opacity' });
-    const chips = chipsIn(els).filter(l => l.getClientRects().length);
-    if (chips.length > 1 && STAGGER > 0) window.gsap.fromTo(chips, { opacity: 0, y: SHIFT * (dir || 1) }, { opacity: 1, y: 0, duration: ENTER, ease: 'power3.out', stagger: { amount: STAGGER }, clearProps: 'opacity,transform' });
+    const items = itemsIn(els).filter(l => l.getClientRects().length);
+    if (items.length > 1 && STAGGER > 0) window.gsap.fromTo(items, { opacity: 0, y: SHIFT * (dir || 1), transition: 'none' }, { opacity: 1, y: 0, duration: ENTER, ease: 'power3.out', stagger: { each: Math.min(STAGGER, STAGGER_CAP / (items.length - 1)) }, clearProps: 'opacity,transform,transition' });
   }
   // `apply` hides the old step, shows the new one and calls reveal(). A second call while
   // an exit is running (a fast Back, a double Continue) drops the first one's apply —
@@ -218,7 +226,7 @@
     const out = steps.reduce((a, s) => a.concat(s.els), []).filter(el => !el.hidden);
     if (reduce || !g || instant || !out.length) { apply(); return; }
     const h0 = root.offsetHeight;
-    g.killTweensOf(out); const chips = chipsIn(out); g.killTweensOf(chips); g.set(chips, { clearProps: 'opacity,transform' });
+    g.killTweensOf(out); const items = itemsIn(out); g.killTweensOf(items); g.set(items, { clearProps: 'opacity,transform,transition' });
     // Exit: power2.in, opacity only — it gets out of the way and nobody watches it leave.
     leaving = g.to(out, { opacity: 0, duration: EXIT, ease: 'power2.in', onComplete: () => {
       leaving = null;
@@ -321,9 +329,44 @@
     pieceList.setAttribute('data-lenis-prevent', ''); // let a scrolling list scroll under Lenis
     pieceInput.setAttribute('role', 'combobox'); pieceInput.setAttribute('aria-autocomplete', 'list');
     pieceInput.setAttribute('aria-controls', pieceList.id); pieceInput.setAttribute('aria-expanded', 'false');
-    setHidden(pieceList, true);
+    // With anchor positioning the list is a popover, placed by oa-styles.css. Without
+    // it the list stays in the label, under the input, and shows and hides as before.
+    const pop = CSS.supports('position-area: bottom') && typeof pieceList.showPopover === 'function';
+    if (pop) pieceList.setAttribute('popover', 'manual'); else setHidden(pieceList, true);
     const opts = () => $$('[role="option"]', pieceList);
-    const isOpen = () => !pieceList.hidden;
+    const isOpen = () => pop ? pieceList.hasAttribute('data-oa-open') : !pieceList.hidden;
+    function showList(on) {
+      pieceInput.setAttribute('aria-expanded', String(on)); setToggleOpen(on);
+      if (!pop) {
+        setHidden(pieceList, !on);
+        // The label is a flex box, so the list's static position is the label's top,
+        // not the input's bottom. Pin it under the input.
+        const o = on && pieceList.offsetParent;
+        if (o) pieceList.style.top = (pieceInput.getBoundingClientRect().bottom - o.getBoundingClientRect().top) + 'px';
+        return;
+      }
+      if (!on) {
+        if (!isOpen()) return;
+        pieceList.removeAttribute('data-oa-open');
+        // Safari pulls a closing popover out of the top layer at once, so hide it only
+        // after the fade. A reopen cancels the fade, which rejects, and that is fine.
+        Promise.all(pieceList.getAnimations().map(a => a.finished))
+          .then(() => { if (!isOpen()) pieceList.hidePopover(); }, () => {});
+        return;
+      }
+      if (!pieceList.matches(':popover-open')) pieceList.showPopover();
+      // The list's natural height, so a short list never gets padded out to the
+      // flip height. With the floor at 0, scrollHeight is the content height.
+      pieceList.style.setProperty('--oa-list-fit', '0px');
+      pieceList.style.setProperty('--oa-list-fit', pieceList.scrollHeight + 'px');
+      // Which side the CSS chose, so the closed state sits on the input's side of
+      // the list and the entry travels away from the input.
+      const up = pieceList.getBoundingClientRect().top < pieceInput.getBoundingClientRect().top;
+      pieceList.setAttribute('data-oa-side', up ? 'top' : 'bottom');
+      if (isOpen()) return;
+      void getComputedStyle(pieceList).transform; // commit the closed state on this side first
+      pieceList.setAttribute('data-oa-open', '');
+    }
     // Each option carries the nav's hover tile, because Brendan built the option
     // with .nav_dropdown_hover_tile. oa-global's initDirectionalHover() binds at
     // DOMContentLoaded and cannot see options that only exist once the list opens,
@@ -354,7 +397,7 @@
       const lit = opts()[active]; if (lit && lit.oaTile) lit.oaTile.leave('bottom'); // keyboard fill
       active = -1; pieceInput.removeAttribute('aria-activedescendant');
       // Picking from the full list leaves the matches unchanged, so keep the options that
-      // are there: a rebuild re-lays out the box, and Safari flashes it wrapped (below).
+      // are there: a rebuild re-lays out the box and drops the hover fill.
       if (isOpen() && names.join('\n') === opts().map(o => o.dataset.value).join('\n')) {
         opts().forEach(o => { o.classList.remove('is-active'); o.setAttribute('aria-selected', 'false'); });
         return;
@@ -367,18 +410,12 @@
         setText(o, n); bindTile(o); pieceList.appendChild(o);
       });
       const any = pieceList.children.length > 0;
-      // Safari with always-on scrollbars (a mouse attached) drops the scrollbar from the
-      // list's shrink-to-fit width when an open, scrolling list gets new options, so the
-      // box loses ~15px and names wrap. Flipping overflow makes WebKit measure it again.
-      if (isOpen()) { pieceList.style.overflowY = 'scroll'; void pieceList.offsetWidth; pieceList.style.overflowY = ''; }
       pieceList.scrollTop = top;
-      setHidden(pieceList, !any); pieceInput.setAttribute('aria-expanded', String(any));
-      setToggleOpen(any);
+      showList(any);
     }
     function closeList() {
-      setHidden(pieceList, true); active = -1;
-      pieceInput.setAttribute('aria-expanded', 'false'); pieceInput.removeAttribute('aria-activedescendant');
-      setToggleOpen(false);
+      showList(false); active = -1;
+      pieceInput.removeAttribute('aria-activedescendant');
     }
     // The arrow rotates off the site's State Manager, the same machinery as the nav
     // dropdown caret: .brief_fields-toggle already carries the Designer's
@@ -403,7 +440,7 @@
       if (prev && prev !== os[active] && prev.oaTile) prev.oaTile.leave(down ? 'top' : 'bottom');
       if (os[active].oaTile) os[active].oaTile.enter(down ? 'top' : 'bottom');
     }
-    // The list stays open until the arrow toggle (or Escape) shuts it, so a visitor can
+    // A pick leaves the list open (the toggle, Escape, Tab or a press elsewhere shuts it), so a visitor can
     // add several pieces in a row. Picking refreshes it against the now-empty input.
     function pick(n) { pieceInput.value = n; addPiece(); openList(); }
     pieceInput.addEventListener('input', () => { picking = false; openList(); });
@@ -415,7 +452,11 @@
       } else if (e.key === 'Enter') {
         e.preventDefault(); const o = opts()[active];
         if (isOpen() && o) pick(o.dataset.value); else { addPiece(); if (isOpen()) openList(); }
-      } else if (e.key === 'Escape') closeList(); // the toggle is out of the tab order
+      } else if (e.key === 'Escape' || e.key === 'Tab') closeList(); // the toggle is out of the tab order
+    });
+    // Like the native list, a press anywhere else shuts it. A pick keeps it open.
+    document.addEventListener('pointerdown', e => {
+      if (isOpen() && !pieceList.contains(e.target) && e.target !== pieceInput && !(toggle && toggle.contains(e.target))) closeList();
     });
     pieceInput.addEventListener('change', () => { if (!picking) addPiece(); });
     [pieceList, toggle].forEach(el => {
