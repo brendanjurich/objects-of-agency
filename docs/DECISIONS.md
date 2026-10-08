@@ -1454,3 +1454,28 @@ spinner. Three findings worth keeping:
 
 Also: the L9 spinner arc fills only ~46% of its viewBox, so the SVG must be about twice
 the ring size you want (2.4rem for a ring the size of a 1.1rem icon).
+
+## 2026-10-08 — Hero tablet images dropped, swap CSS removed, v1.0.237
+
+Supersedes the image-swap parts of 2026-06-16: the `opacity:0` rationale and the
+"image swap runs at…" clause. The TABLET PORTRAIT layout port stays.
+
+**No portrait device can reach slides 1–3.** Measured on staging across portrait
+phones and tablets (393–1032px, iPad mini to iPad Pro 13", Tab S9, Surface Pro 7):
+`.crisp-header__slider-nav` is `display:none` in every case — below 992 by the Designer,
+992–1134 portrait by the ported block. The slideshow navigates only by thumb, so portrait
+only ever sees slide 0, the video. The `.is-tablet` images were unreachable, yet portrait
+loaded them **and** the opacity-hidden desktop set: 411 KB + 337 KB per load. Brendan
+deleted the `.is-tablet` images in the Designer; iPhone image transfer went 2.25 → 1.84 MB.
+
+**The leftover swap rule blanked slides at 992–1024.** `(max-width: 1024px)` also matches
+landscape windows, and the nav shows from **992** there (not ≥1280, as 2026-06-09 says —
+the Designer has moved since). With the tablet images gone, the rule left the desktop
+images at `opacity:0`, so clicking a thumb wiped in an empty frame. Removing the block
+fixes it. Desktop images now show at every width; they still download in portrait
+(337 KB), unreachable — gating them is an open option, not done.
+
+Slides 2 and 3 carry no `data-slideshow="parallax"` layer, so only slides 0–1 drift in the
+wipe. Pre-existing; `innerOf()` skips a missing layer.
+
+---

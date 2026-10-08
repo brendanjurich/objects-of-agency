@@ -212,17 +212,6 @@ footer.footer_main_wrap {
   transform: scale(1) rotate(0.001deg);
 }
 
-/* Tablet image swap — opacity (not display:none) preserves layout for GSAP xPercent.
-   Desktop image stays in layout on tablet so GSAP can still animate it; opacity hides it visually.
-   display:block overrides the display:none Webflow sets on .is-tablet at the desktop breakpoint.
-   1024px keeps the old 12.9" iPad Pro (1024×1366) in either orientation; the portrait query
-   adds iPad Pro 13" (1032×1376) — see HOMEPAGE HERO — TABLET PORTRAIT below. */
-.crisp-header__slider-slide-inner.is-tablet { opacity: 0; }
-@media (max-width: 1024px), (max-width: 1134px) and (orientation: portrait) {
-  .crisp-header__slider-slide-inner:not(.is-tablet) { opacity: 0; }
-  .crisp-header__slider-slide-inner.is-tablet { display: block; opacity: 1; }
-}
-
 /* ============================================================
    HOMEPAGE HERO — TABLET PORTRAIT (992–1134px, portrait)
    iPad Pro 13" portrait is 1032px wide: above Webflow's tablet breakpoint
