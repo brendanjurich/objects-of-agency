@@ -362,9 +362,15 @@
       // Which side the CSS chose, so the closed state sits on the input's side of
       // the list and the entry travels away from the input.
       const up = pieceList.getBoundingClientRect().top < pieceInput.getBoundingClientRect().top;
+      if (isOpen()) { pieceList.setAttribute('data-oa-side', up ? 'top' : 'bottom'); return; }
+      // Jump to the closed state on this side with the transition off. Left on, a side
+      // change since the last open slides the closed state across and the list enters
+      // from the wrong side.
+      pieceList.style.transition = 'none';
       pieceList.setAttribute('data-oa-side', up ? 'top' : 'bottom');
-      if (isOpen()) return;
-      void getComputedStyle(pieceList).transform; // commit the closed state on this side first
+      void getComputedStyle(pieceList).transform;
+      pieceList.style.transition = '';
+      void getComputedStyle(pieceList).transform;
       pieceList.setAttribute('data-oa-open', '');
     }
     // Each option carries the nav's hover tile, because Brendan built the option

@@ -1513,6 +1513,9 @@ the top layer at once and its fade is lost. The engine now shows the popover in 
 closed state, reads the side, sets `data-oa-side`, commits that style, then sets
 `data-oa-open`. Closing removes `data-oa-open` and calls `hidePopover()` only once
 `getAnimations()` has finished. The list always travels out from the input.
+The side change itself must happen with the transition off (v1.0.241). Left on,
+the closed state slides from one side to the other, and a list that opened below
+last time drops into its place above rather than rising.
 
 ### Knobs
 
