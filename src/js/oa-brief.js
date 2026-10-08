@@ -187,23 +187,26 @@
   }
 
   // ---- transition (GSAP if present, respects reduced motion)
-  // The step on screen fades out, the swap happens, then the new step fades in with its
-  // chips staggered, and the root eases from the old height to the new one so Back /
-  // Continue glide rather than jump. Timings are Designer knobs on the root, in seconds:
-  // data-oa-brief-exit (0.2), data-oa-brief-enter (0.45), data-oa-brief-stagger (0.2,
-  // total spread across a step's chips; 0 turns it off).
+  // The step on screen fades out, the swap happens, then the new step fades in place
+  // while its chips rise into it, staggered, and the root eases from the old height to
+  // the new one. Only the chips move: moving the block too stacked the two shifts, and
+  // late chips were still rising after the block had landed. Back reverses the rise.
+  // No blur. Timings are Designer knobs on the root, in seconds: data-oa-brief-exit
+  // (0.16), data-oa-brief-enter (0.4), data-oa-brief-stagger (0.12, total spread across
+  // a step's chips; 0 turns it off); data-oa-brief-shift is the chip rise in px (6; 0 = off).
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const knob = (k, d) => { const v = parseFloat(root.getAttribute('data-oa-brief-' + k)); return isNaN(v) ? d : v; };
-  const EXIT = knob('exit', 0.2), ENTER = knob('enter', 0.45), STAGGER = knob('stagger', 0.2);
-  const ease = () => window.CustomEase && window.gsap.parseEase('oa') ? 'oa' : 'power2.out';
+  const EXIT = knob('exit', 0.16), ENTER = knob('enter', 0.4), STAGGER = knob('stagger', 0.12), SHIFT = knob('shift', 6);
   const chipsIn = els => els.reduce((a, el) => a.concat($$('label', el)), []);
-  // Clear the transform too: a leftover identity matrix still makes the step a stacking
-  // context, which trapped the piece list's z-index under .brief_nav's Back/Continue.
-  function reveal(els) {
+  // Enter: power3.out — answers the click at once and lands softly. `dir` is -1 on Back,
+  // so the chips come from above. Clear the chips' transform when done: a leftover
+  // identity matrix makes a stacking context, which trapped the piece list's z-index
+  // under .brief_nav's Back/Continue.
+  function reveal(els, dir) {
     if (reduce || !window.gsap) return;
-    window.gsap.fromTo(els, { opacity: 0, y: 8, filter: 'blur(4px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: ENTER, ease: ease(), clearProps: 'filter,transform' });
+    window.gsap.fromTo(els, { opacity: 0 }, { opacity: 1, duration: ENTER, ease: 'power3.out', clearProps: 'opacity' });
     const chips = chipsIn(els).filter(l => l.getClientRects().length);
-    if (chips.length > 1 && STAGGER > 0) window.gsap.fromTo(chips, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: ENTER, ease: ease(), stagger: { amount: STAGGER }, clearProps: 'opacity,transform' });
+    if (chips.length > 1 && STAGGER > 0) window.gsap.fromTo(chips, { opacity: 0, y: SHIFT * (dir || 1) }, { opacity: 1, y: 0, duration: ENTER, ease: 'power3.out', stagger: { amount: STAGGER }, clearProps: 'opacity,transform' });
   }
   // `apply` hides the old step, shows the new one and calls reveal(). A second call while
   // an exit is running (a fast Back, a double Continue) drops the first one's apply —
@@ -216,19 +219,21 @@
     if (reduce || !g || instant || !out.length) { apply(); return; }
     const h0 = root.offsetHeight;
     g.killTweensOf(out); const chips = chipsIn(out); g.killTweensOf(chips); g.set(chips, { clearProps: 'opacity,transform' });
-    leaving = g.to(out, { opacity: 0, y: -8, filter: 'blur(4px)', duration: EXIT, ease: ease(), onComplete: () => {
+    // Exit: power2.in, opacity only — it gets out of the way and nobody watches it leave.
+    leaving = g.to(out, { opacity: 0, duration: EXIT, ease: 'power2.in', onComplete: () => {
       leaving = null;
-      g.set(out, { clearProps: 'opacity,filter,transform' });
+      g.set(out, { clearProps: 'opacity' });
       g.killTweensOf(root); root.style.height = '';
       apply();
       const h1 = root.offsetHeight;
-      if (h1 !== h0) g.fromTo(root, { height: h0 }, { height: h1, duration: ENTER, ease: ease(), clearProps: 'height' });
+      if (h1 !== h0) g.fromTo(root, { height: h0 }, { height: h1, duration: ENTER, ease: 'power3.out', clearProps: 'height' });
     } });
   }
 
   let idx = 0;
   let first = true;
   function show(i, push) {
+    const dir = i < idx ? -1 : 1;
     const r = route(); idx = Math.max(0, Math.min(i, r.length - 1)); const st = r[idx];
     const moved = !first;
     swap(() => {
@@ -251,7 +256,7 @@
       // Focus the heading only when the visitor moves between steps. Doing it on the
       // first render puts a focus ring on the opening question before anyone has acted.
       if (h && moved) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
-      reveal(st.els);
+      reveal(st.els, dir);
       save();
     }, !moved);
     if (push) history.pushState({ oaBrief: idx }, '');
