@@ -6,8 +6,10 @@
    Drawer Navigation"; the engine is the piece-drawer section of
    oa-brief.js. This file carries only what the Webflow Designer
    cannot express: the <dialog> reset, the positioning the engine
-   slides levels against, the Done bar's stacking above the sheets,
-   and the canvas preview.
+   slides levels against, and the Done bar's stacking above the sheets.
+   The canvas preview (data-preview="true" | "sheet" on the dialog) is
+   an Embed inside the drawer, because site custom code never reaches
+   the Designer canvas (DECISIONS 2026-08-17).
    Deliberately NOT set here, because they are Designer knobs:
    panel width, edge-strip width (and the sheet's left offset, which
    must match it), padding, gaps, type, colours, borders, shadow, the
@@ -88,28 +90,4 @@ dialog[data-oa-brief-drawer]::backdrop {
 /* A long level scrolls inside itself and never chains to the page. */
 [data-oa-brief-drawer] [data-oa-brief-drawer-list] {
   overscroll-behavior: contain;
-}
-
-/* ---- Designer canvas preview. The engine never runs on the canvas, so a closed
-   dialog would be invisible there. data-preview="true" on the dialog shows the
-   panel; "sheet" also shows the sheet template over it. Scoped to wf-design-mode,
-   so neither value does anything on the published site. */
-html.wf-design-mode dialog[data-oa-brief-drawer]:is([data-preview="true"], [data-preview="sheet"]) {
-  display: block;
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  z-index: 1000;
-}
-
-html.wf-design-mode dialog[data-oa-brief-drawer][data-preview="sheet"] [data-oa-brief-drawer-templates] {
-  display: contents;
-}
-
-html.wf-design-mode dialog[data-oa-brief-drawer]:is([data-preview="true"], [data-preview="sheet"]) :is([data-oa-brief-drawer-panel], [data-oa-brief-drawer-backdrop], [data-oa-brief-drawer-sheet]) {
-  visibility: visible;
-  opacity: 1;
 }
