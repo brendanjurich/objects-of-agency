@@ -38,7 +38,7 @@ for (const id of ['who','looking','what','piece','bespoke','where','when','you',
   check('step pair: ' + id, byStep[id] === 2, (byStep[id] || 0) + ' block(s)');
 
 // 3. named inputs the engine reads
-for (const n of ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','interest','note','email','practice','piece_input'])
+for (const n of ['audience','after','bespoke','setting','quantity','timing','timing_date','budget','materials','interest','note','email','practice'])
   check('input name="' + n + '"', names.has(n), names.has(n) ? '' : 'ABSENT from served DOM');
 
 // Honeypot: must exist, and must not carry a name browser autofill recognises — a field
@@ -59,29 +59,28 @@ for (const [label, attr] of [
   ['Send','data-oa-brief-send'], ['Done (looking)','data-oa-brief-finish'],
   ['progress','data-oa-brief-progress'], ['status live region','data-oa-brief-status'],
   ['email error','data-oa-brief-error'], ['summary target','data-oa-brief-summary'],
-  ['piece tags','data-oa-brief-pieces'], ['piece input','data-oa-brief-piece-input'],
+  ['piece tags','data-oa-brief-pieces'], ['piece drawer opener','data-oa-brief-piece-open'],
   ['sent heading','data-oa-brief-sent-heading'], ['sent body','data-oa-brief-sent-body'],
   ['ref line','data-oa-brief-ref-line'],
 ]) check(label, has(new RegExp(attr + '="')), '');
 
-// 4b. the Designer-built piece list. Optional by contract — without it the engine
-// falls back to a native datalist — but once built, every part has to stay, because
-// a missing piece degrades silently rather than erroring.
-if (has(/data-oa-brief-piece-list="/)) {
-  const listBlock = (html.match(/data-oa-brief-piece-list="[\s\S]{0,2000}/) || [''])[0];
-  check('piece list wrapper', true);
-  check('piece option template inside the list', /data-oa-brief-piece-option="/.test(listBlock),
-    'the engine clones this one node per match');
-  check('option carries the hover tile', /nav_dropdown_hover_tile/.test(listBlock),
-    'oa-brief.js binds the directional fill to it; oa-styles.css supplies the mask box');
-  check('option holds a text leaf the engine can write into',
-    /data-oa-brief-piece-option="[\s\S]{0,600}<(?:p|h[1-6])[ >]/.test(listBlock),
-    'setText() targets p/h*; without one it would overwrite the tile');
-  check('piece toggle arrow', has(/data-oa-brief-piece-toggle="/),
-    'engine flips .is-active on it, which the State Manager turns into the rotation');
-} else {
-  console.log('  note  no [data-oa-brief-piece-list] — engine falls back to the native datalist (no arrow on touch)');
-}
+// 4b. the piece drawer. Every part is a hook the engine walks; a missing one makes it
+// warn and skip, and the visitor has no way to name a piece.
+for (const [label, attr] of [
+  ['drawer <dialog>', 'data-oa-brief-drawer'], ['drawer backdrop', 'data-oa-brief-drawer-backdrop'],
+  ['drawer panel', 'data-oa-brief-drawer-panel'], ['series list', 'data-oa-brief-drawer-list'],
+  ['sheet template', 'data-oa-brief-drawer-sheet'], ['series row template', 'data-oa-brief-drawer-series-row'],
+  ['piece row template', 'data-oa-brief-drawer-piece-row'], ['row text slot', 'data-oa-brief-drawer-text'],
+  ['Done bar', 'data-oa-brief-drawer-done'], ['"Something else" row', 'data-oa-brief-drawer-other-toggle'],
+]) check(label, has(new RegExp(attr + '="')), '');
+check('drawer root is a <dialog>', /<dialog[^>]*data-oa-brief-drawer=""/.test(html), 'showModal() needs a real dialog');
+// Webflow turns a custom-tag button into a Link (<a>), which can't be disabled or pressed.
+check('drawer rows are real <button>s', !/<a[^>]*data-oa-brief-drawer-(?:pick|done|back|edge|other)/.test(html));
+// The CMS list is the catalogue. Unbound text slots publish empty, and the drawer has no series.
+const items = [...html.matchAll(/data-oa-brief-drawer-item="[\s\S]{0,400}?data-oa-brief-drawer-name="[^>]*>([^<]*)<[\s\S]{0,200}?data-oa-brief-drawer-series="[^>]*>([^<]*)</g)];
+check('CMS items carry a name and a series', items.length > 0 && items.every(m => m[1].trim() && m[2].trim()),
+  items.length + ' item(s)' + (items.some(m => !m[1].trim() || !m[2].trim()) ? ', some unbound' : ''));
+check('Residential filtered out of the drawer', !items.some(m => m[2].trim() === 'Residential'));
 
 // The piece tag has the same template rule, and the same silent failure: renderPieces()
 // clears [data-oa-brief-pieces] on every change, so a tag built and styled in the
@@ -116,19 +115,6 @@ try {
       const rule = new RegExp('\\.' + cls + '[^{]*\\{[^}]*display\\s*:', 'i');
       if (rule.test(css)) console.log('  note  .' + cls + ' sets `display` — engine overrides it inline; do not rely on [hidden] alone');
     }
-    // Centring a scrolling column puts the overflow on BOTH sides of the box, and
-    // scrollTop cannot go negative, so everything above the top edge is unreachable
-    // and unclickable — it reads as a list that is simply cut off. Cost real time
-    // on 16-09-2026: seven options were silently amputated from the piece list.
-    const listRule = (css.match(/\.brief_fields_list-wrap[^{]*\{[^}]*\}/) || [''])[0];
-    if (/overflow\s*:\s*(auto|scroll)/.test(listRule) && /justify-content\s*:\s*(center|flex-end|space-)/.test(listRule))
-      fail.push('.brief_fields_list-wrap centres a scrolling column — options above the top edge cannot be scrolled to or clicked; use justify-content: flex-start');
-    // oa-styles.css places the list and outranks the class, so leftover placement
-    // there is dead weight that reads as a live knob. Height runs off brief/list-max
-    // and brief/list-flip instead.
-    const placed = ['position', 'inset', 'top', 'right', 'bottom', 'left', 'min-height', 'max-height']
-      .filter(p => new RegExp('[{;\\s]' + p + '\\s*:').test(listRule));
-    if (placed.length) console.log('  note  .brief_fields_list-wrap sets ' + placed.join(', ') + ' — oa-styles.css owns placement; clear these in the Designer');
   }
 } catch {}
 

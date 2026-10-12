@@ -1540,3 +1540,47 @@ The Safari shrink-to-fit width workaround in `openList()` is deleted, because th
 width is fixed now.
 
 ---
+
+## 2026-10-12 — Brief piece picker is a drill-down drawer (Osmo Stacked Drawer, adapted)
+
+The combobox (text input + popover list) is gone. On a phone the input raised the
+keyboard every time, and 28 names in one list was too long. Grilled plan, Q1–Q23:
+command centre `inbox/PARKED-2026-10-12-brief-piece-drawer-plan.md`. It supersedes
+the 08-10 picker handoff and the 2026-10-08 popover entry above.
+
+### Shape
+
+A field-styled opener → a `<dialog>` drawer from the right → one row per CMS Series
+→ a sheet per series ("The whole series" + its pieces). Rows toggle; Done, Esc and
+the backdrop close; Esc steps back one level first. Capped at 12 (what `brief-intake`
+keeps). "Something else" is the only text field, and shows only when tapped. The
+payload is unchanged: `pieces: string[]` of names.
+
+### Why a `<dialog>`, not Osmo's fixed div
+
+The step tween leaves a transform on the step, and `position: fixed` inside a
+transformed ancestor is positioned against that ancestor, not the viewport.
+`showModal()` puts the drawer in the top layer, and makes the page behind inert,
+which is the focus trap.
+
+### Catalogue from the CMS
+
+`CATALOGUE` in `oa-brief.js` is gone. The drawer holds a flat Products Collection
+List (in its hidden templates wrapper); the engine groups items by their Series text,
+in the list's sort order. Webflow can't nest Products under Series — Series has no
+reference back.
+
+### Webflow MCP traps hit building it
+
+- **A custom-tag `button` becomes a Link (`<a>`).** Create buttons as `type: "DOM"`
+  with `dom_tag: "button"`. An `<a>` can't be `disabled`, and `aria-pressed` on a link
+  is wrong. `tools/brief-contract.mjs` now fails on an `<a>` drawer control.
+- **`type` is a reserved attribute** — no `type="button"`. Harmless here: no `<form>`.
+- **A new `ul` arrives with three empty `li`s**, and an `li` is refused outside a list.
+- **Text on a div block inside a DOM element is set on its String child.**
+- **A second class (`u-display-none`) fails to apply**, so `piece-drawer_hidden`
+  carries `display: none` itself. CSS hiding still publishes; Designer *visibility*
+  doesn't — `brief_tags` and the old list had been hidden that way, so the published
+  brief had no tags.
+- **A Collection List inside a component definition:** source sets, but filters,
+  sort and field bindings fail ("No source connected"). Those are set in the Designer.

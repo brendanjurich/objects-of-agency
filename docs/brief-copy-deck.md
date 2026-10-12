@@ -103,11 +103,20 @@ Chips (multi; "not sure" clears the others):
 **Sub:** Start typing a name, or list a few.
 
 **Field label:** Piece
-**Placeholder:** ViewFinder Aurum, XO Sideboard…
-**Helper under field:** Press enter to add another.
+**Opener (field-styled button):** Choose pieces
 
-Autocomplete source: catalogue names (`brief-catalogue.json`, from CMS).
-Accepts free text.
+**Drawer** (12-10-2026 — replaces the typed field; Designer text unless noted):
+- Title: Choose pieces · back button: Close
+- Series rows: the CMS Series names, from the Products Collection List
+- Sheet back button: All series · sheet title: the series name (engine)
+- First row of each sheet: The whole series (`data-oa-brief-whole-series-text`; submits the series name)
+- Fixed rows: Custom cabinetry · Something else → field placeholder "Name the piece", button "Add"
+- Done bar: Done → Done · {n} (`data-oa-brief-drawer-count-text`) → Done · {n} max at 12 (`data-oa-brief-drawer-full-text`)
+
+Source: the Products CMS collection, Residential filtered out. Free text only via
+"Something else". Payload unchanged: `pieces` is a list of names.
+
+*The Sub line above still says "Start typing" — it no longer fits. Brendan's copy call.*
 
 ---
 
