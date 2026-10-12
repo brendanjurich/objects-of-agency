@@ -34,7 +34,6 @@
   const root = document.querySelector('[data-oa-brief]');
   if (!root) return;
 
-  const CATALOGUE = ['ViewFinder Argent','ViewFinder Aurum','ViewFinder CR','ViewFinder Cuprum','ViewFinder Noir CR','ViewFinder Noir Nest','ViewFinder Noir S','ViewFinder Umbra','ViewFinder Xen','XO Sideboard','Sideboard 2','Interior Credenza','Console Table 1','Dining Table 1','Desk 1','Laptop Table','Bedside Table 1','Seat 1','Seat 2','Hemisphere','ViewFinder Series','Vesper Series','Terroir Series','Locus Series','Noir Series','Nested Tables','Edition Pieces','Custom Cabinetry'];
   const ENDPOINT = root.getAttribute('data-oa-brief-endpoint') || '';
   const TURNSTILE_KEY = root.getAttribute('data-oa-brief-turnstile-key') || '';
   const RESPONSE = root.getAttribute('data-oa-brief-response') || 'two working days';
@@ -308,184 +307,300 @@
   if (back) back.addEventListener('click', e => { e.preventDefault(); history.back(); });
   window.addEventListener('popstate', e => { if (e.state && typeof e.state.oaBrief === 'number') show(e.state.oaBrief, false); });
 
-  // ---- pieces: catalogue autocomplete + tags
-  // A native <datalist> can't be styled, and Chrome only shows its arrow on hover, so
-  // touch visitors never find the list. If the Designer builds one in the piece step, the
-  // engine drives that instead: [data-oa-brief-piece-list] holding one
-  // [data-oa-brief-piece-option] (cloned per match; the keyboard highlight gets .is-active),
-  // plus an optional [data-oa-brief-piece-toggle] that opens it. Without them, datalist.
-  const pieceInput = $('[data-oa-brief-piece-input]');
-  const pieceList = $('[data-oa-brief-piece-list]');
-  const pieceOptTpl = pieceList && $('[data-oa-brief-piece-option]', pieceList);
-  if (pieceInput && pieceOptTpl) {
-    const toggle = $('[data-oa-brief-piece-toggle]');
-    const tpl = pieceOptTpl.cloneNode(true); tpl.removeAttribute('data-oa-brief-piece-option'); pieceOptTpl.remove();
-    let active = -1;
-    // Picking an option or pressing the toggle blurs the input first, and blur fires
-    // `change`, which would add the half-typed text as a piece. pointerdown lands before both.
-    let picking = false;
-    pieceList.id = pieceList.id || 'oa-brief-catalogue';
-    pieceList.setAttribute('role', 'listbox');
-    pieceList.setAttribute('data-lenis-prevent', ''); // let a scrolling list scroll under Lenis
-    pieceInput.setAttribute('role', 'combobox'); pieceInput.setAttribute('aria-autocomplete', 'list');
-    pieceInput.setAttribute('aria-controls', pieceList.id); pieceInput.setAttribute('aria-expanded', 'false');
-    // With anchor positioning the list is a popover, placed by oa-styles.css. Without
-    // it the list stays in the label, under the input, and shows and hides as before.
-    const pop = CSS.supports('position-area: bottom') && typeof pieceList.showPopover === 'function';
-    if (pop) pieceList.setAttribute('popover', 'manual'); else setHidden(pieceList, true);
-    const opts = () => $$('[role="option"]', pieceList);
-    const isOpen = () => pop ? pieceList.hasAttribute('data-oa-open') : !pieceList.hidden;
-    function showList(on) {
-      pieceInput.setAttribute('aria-expanded', String(on)); setToggleOpen(on);
-      if (!pop) {
-        setHidden(pieceList, !on);
-        // The label is a flex box, so the list's static position is the label's top,
-        // not the input's bottom. Pin it under the input.
-        const o = on && pieceList.offsetParent;
-        if (o) pieceList.style.top = (pieceInput.getBoundingClientRect().bottom - o.getBoundingClientRect().top) + 'px';
-        return;
-      }
-      if (!on) {
-        if (!isOpen()) return;
-        pieceList.removeAttribute('data-oa-open');
-        // Safari pulls a closing popover out of the top layer at once, so hide it only
-        // after the fade. A reopen cancels the fade, which rejects, and that is fine.
-        Promise.all(pieceList.getAnimations().map(a => a.finished))
-          .then(() => { if (!isOpen()) pieceList.hidePopover(); }, () => {});
-        return;
-      }
-      if (!pieceList.matches(':popover-open')) pieceList.showPopover();
-      // The list's natural height, so a short list never gets padded out to the
-      // flip height. With the floor at 0, scrollHeight is the content height.
-      pieceList.style.setProperty('--oa-list-fit', '0px');
-      pieceList.style.setProperty('--oa-list-fit', pieceList.scrollHeight + 'px');
-      // Which side the CSS chose, so the closed state sits on the input's side of
-      // the list and the entry travels away from the input.
-      const up = pieceList.getBoundingClientRect().top < pieceInput.getBoundingClientRect().top;
-      if (isOpen()) { pieceList.setAttribute('data-oa-side', up ? 'top' : 'bottom'); return; }
-      // Jump to the closed state on this side with the transition off. Left on, a side
-      // change since the last open slides the closed state across and the list enters
-      // from the wrong side.
-      pieceList.style.transition = 'none';
-      pieceList.setAttribute('data-oa-side', up ? 'top' : 'bottom');
-      void getComputedStyle(pieceList).transform;
-      pieceList.style.transition = '';
-      void getComputedStyle(pieceList).transform;
-      pieceList.setAttribute('data-oa-open', '');
-    }
-    // Each option carries the nav's hover tile, because Brendan built the option
-    // with .nav_dropdown_hover_tile. oa-global's initDirectionalHover() binds at
-    // DOMContentLoaded and cannot see options that only exist once the list opens,
-    // so bind per clone here instead of bumping the sitewide file. The list is
-    // rebuilt on every open, so listeners never accumulate. Vertical axis and mouse
-    // only, matching the stacked list on /about; the keyboard equivalent is the
-    // .is-active class, which the site's State Manager already hands the Designer.
-    function bindTile(opt) {
-      const tile = opt.querySelector('.nav_dropdown_hover_tile');
-      if (!tile) return;
-      const exit = dir => dir === 'top' ? 'translateY(-100%)' : 'translateY(100%)';
-      const edge = e => (e.clientY - opt.getBoundingClientRect().top) < opt.offsetHeight / 2 ? 'top' : 'bottom';
-      const enter = dir => {
-        tile.style.transition = 'none';
-        tile.style.transform = exit(dir);
-        void tile.offsetHeight;    // forced reflow to flush the jump
-        tile.style.transition = '';  // back to the CSS transition
-        tile.style.transform = 'translate(0%, 0%)';
-      };
-      const leave = dir => { tile.style.transform = exit(dir); };
-      opt.oaTile = { enter, leave }; // highlight() drives the same fill from the keyboard
-      opt.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') enter(edge(e)); });
-      opt.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') leave(edge(e)); });
-    }
-    function openList() {
-      const q = pieceInput.value.trim().toLowerCase();
-      const names = CATALOGUE.filter(n => n.toLowerCase().indexOf(q) >= 0);
-      const lit = opts()[active]; if (lit && lit.oaTile) lit.oaTile.leave('bottom'); // keyboard fill
-      active = -1; pieceInput.removeAttribute('aria-activedescendant');
-      // Picking from the full list leaves the matches unchanged, so keep the options that
-      // are there: a rebuild re-lays out the box and drops the hover fill.
-      if (isOpen() && names.join('\n') === opts().map(o => o.dataset.value).join('\n')) {
-        opts().forEach(o => { o.classList.remove('is-active'); o.setAttribute('aria-selected', 'false'); });
-        return;
-      }
-      const top = pieceList.scrollTop; // a refresh after a pick keeps the visitor's place
-      pieceList.innerHTML = '';
-      names.forEach((n, i) => {
-        const o = tpl.cloneNode(true); o.id = 'oa-brief-piece-' + i; o.dataset.value = n;
-        o.setAttribute('role', 'option'); o.setAttribute('aria-selected', 'false');
-        setText(o, n); bindTile(o); pieceList.appendChild(o);
-      });
-      const any = pieceList.children.length > 0;
-      pieceList.scrollTop = top;
-      showList(any);
-    }
-    function closeList() {
-      showList(false); active = -1;
-      pieceInput.removeAttribute('aria-activedescendant');
-    }
-    // The arrow rotates off the site's State Manager, the same machinery as the nav
-    // dropdown caret: .brief_fields-toggle already carries the Designer's
-    // rotate(calc(-180deg * var(--_state---false))) and its transition. The nav flips
-    // that variable through [data-state~="expanded"] + aria-expanded; this toggle is a
-    // plain div with no ARIA of its own — the combobox input owns aria-expanded — so
-    // use .is-active, the State Manager's own class hook. It flips the same variable
-    // and gives the Designer a real open state to style.
-    function setToggleOpen(on) { if (toggle) toggle.classList.toggle('is-active', on); }
-    // `down` is the arrow key's direction. A keyboard has no cursor to read an entry
-    // edge from, so take it from the key: moving down the list, the fill enters from
-    // the top and the row above empties upwards, so it reads as one continuous travel
-    // down the column — the same motion a mouse gets, rather than a separate look the
-    // Designer would have to style twice.
-    function highlight(i, down) {
-      const os = opts(); if (!os.length) return;
-      const prev = os[active];
-      active = (i + os.length) % os.length;
-      os.forEach((o, j) => { o.classList.toggle('is-active', j === active); o.setAttribute('aria-selected', String(j === active)); });
-      pieceInput.setAttribute('aria-activedescendant', os[active].id);
-      os[active].scrollIntoView({ block: 'nearest' });
-      if (prev && prev !== os[active] && prev.oaTile) prev.oaTile.leave(down ? 'top' : 'bottom');
-      if (os[active].oaTile) os[active].oaTile.enter(down ? 'top' : 'bottom');
-    }
-    // A pick leaves the list open (the toggle, Escape, Tab or a press elsewhere shuts it), so a visitor can
-    // add several pieces in a row. Picking refreshes it against the now-empty input.
-    function pick(n) { pieceInput.value = n; addPiece(); openList(); }
-    pieceInput.addEventListener('input', () => { picking = false; openList(); });
-    pieceInput.addEventListener('keydown', e => {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault(); if (!isOpen()) openList();
-        const down = e.key === 'ArrowDown';
-        highlight(active < 0 ? (down ? 0 : -1) : active + (down ? 1 : -1), down);
-      } else if (e.key === 'Enter') {
-        e.preventDefault(); const o = opts()[active];
-        if (isOpen() && o) pick(o.dataset.value); else { addPiece(); if (isOpen()) openList(); }
-      } else if (e.key === 'Escape' || e.key === 'Tab') closeList(); // the toggle is out of the tab order
-    });
-    // Like the native list, a press anywhere else shuts it. A pick keeps it open.
-    document.addEventListener('pointerdown', e => {
-      if (isOpen() && !pieceList.contains(e.target) && e.target !== pieceInput && !(toggle && toggle.contains(e.target))) closeList();
-    });
-    pieceInput.addEventListener('change', () => { if (!picking) addPiece(); });
-    [pieceList, toggle].forEach(el => {
-      if (!el) return;
-      el.addEventListener('pointerdown', () => { picking = true; });
-      el.addEventListener('pointercancel', () => { picking = false; });
-      el.addEventListener('mousedown', e => e.preventDefault()); // keep focus in the input
-    });
-    pieceList.addEventListener('click', e => {
-      picking = false; const o = e.target.closest('[role="option"]'); if (o) pick(o.dataset.value);
-    });
-    if (toggle) {
-      toggle.setAttribute('aria-label', 'Show pieces'); toggle.setAttribute('tabindex', '-1');
-      toggle.addEventListener('click', e => { e.preventDefault(); picking = false; if (isOpen()) closeList(); else openList(); });
-    }
-  } else if (pieceInput) {
-    const dl = document.createElement('datalist'); dl.id = 'oa-brief-catalogue';
-    CATALOGUE.forEach(n => { const o = document.createElement('option'); o.value = n; dl.appendChild(o); });
-    pieceInput.insertAdjacentElement('afterend', dl); pieceInput.setAttribute('list', dl.id);
-    pieceInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addPiece(); } });
-    pieceInput.addEventListener('change', addPiece);
+  // ---- pieces: drill-down drawer + tags
+  /* ============================================================
+     OSMO — Stacked Drawer Navigation (brief piece picker)
+     ------------------------------------------------------------
+     Adapted for Objects of Agency from osmo.supply's "Stacked
+     Drawer Navigation". Differences from the stock resource:
+       • A picker, not a nav — rows toggle pieces into state.pieces
+         (aria-pressed) instead of linking; the drawer stays open
+         until Done, Esc or the backdrop. Capped at MAX_PIECES.
+       • Rows come from the CMS — a flat Products Collection List in
+         the drawer, grouped into one sheet per Series (A–Z) here, cloned
+         from one sheet template. Each sheet opens with a "whole
+         series" row that submits the series name.
+       • The root is a <dialog> opened with showModal(): the step
+         tween leaves a transform on the step, which would trap a
+         position:fixed drawer, and the top layer makes the page
+         behind inert (the focus trap). Esc and the cancel event step
+         back one level before closing.
+       • No CDN GSAP, no CustomEase — window.gsap only; without it the
+         drawer still opens, steps and closes, it just doesn't move.
+       • Easing per motion, not Osmo's one curve: enters power3.out,
+         leaves power2.in, rows power2.out, edge strip power1.out.
+         Durations are Designer knobs on the brief root.
+       • Reduced motion via gsap.matchMedia(), read at each open.
+       • Page scroll locked with window.lenis while open.
+       • Nav furniture dropped: bar, logo, bag, menu toggle, promo,
+         footer, featured group, "shop all" links, status attribute.
+     Page-level (/contact), part of oa-brief.js. Raw-served (no build).
+     ============================================================ */
+  // Hooks, all inside [data-oa-brief]:
+  //   [data-oa-brief-piece-open]          the field-styled button that opens the drawer
+  //   [data-oa-brief-drawer]              the <dialog>
+  //   [data-oa-brief-drawer-backdrop]     the dim layer; a tap closes
+  //   [data-oa-brief-drawer-panel]        level one: the series rows
+  //   [data-oa-brief-drawer-list="series"] where the series rows go
+  //   [data-oa-brief-drawer-pick="value"] a row that toggles that value (Custom Cabinetry is one)
+  //   [data-oa-brief-drawer-other-toggle] the "Something else" row; [data-oa-brief-drawer-other] holds
+  //                                       its field and [data-oa-brief-drawer-other-add]
+  //   [data-oa-brief-drawer-done]         the Done bar; [data-oa-brief-drawer-done-text] its label
+  //   Per level: [data-oa-brief-drawer-edge], [data-oa-brief-drawer-back],
+  //   [data-oa-brief-drawer-title], [data-oa-brief-drawer-list]
+  //   Templates (inside a u-display-none wrapper, so they still publish):
+  //   [data-oa-brief-drawer-sheet], [data-oa-brief-drawer-series-row], [data-oa-brief-drawer-piece-row],
+  //   each row holding a [data-oa-brief-drawer-text] slot
+  //   CMS source: [data-oa-brief-drawer-item], holding [data-oa-brief-drawer-name] and
+  //   [data-oa-brief-drawer-series]
+  // Knobs on the root, in seconds: data-oa-brief-drawer-enter (0.5), -exit (0.35), -stagger (0.03).
+  // Copy knobs: data-oa-brief-whole-series-text, -drawer-done-text, -drawer-count-text, -drawer-full-text.
+  const MAX_PIECES = 12; // brief-intake keeps the first 12
+  function addPiece(v) {
+    v = (v || '').trim();
+    if (!v || state.pieces.indexOf(v) >= 0 || state.pieces.length >= MAX_PIECES) return;
+    state.pieces.push(v); renderPieces(); save();
   }
-  function addPiece() { const v = pieceInput.value.trim(); if (v && state.pieces.indexOf(v) < 0) state.pieces.push(v); pieceInput.value = ''; renderPieces(); save(); }
+  function togglePiece(v) {
+    const i = state.pieces.indexOf(v);
+    if (i >= 0) state.pieces.splice(i, 1); else if (state.pieces.length < MAX_PIECES) state.pieces.push(v);
+    renderPieces(); save();
+  }
+  let syncDrawer = () => {};
+  (function initDrawer() {
+    const opener = $('[data-oa-brief-piece-open]');
+    if (!opener) return;
+    const D = 'data-oa-brief-drawer';
+    const dlg = $('[' + D + ']');
+    const panel = dlg && $('[' + D + '-panel]', dlg);
+    const sheetTpl = dlg && $('[' + D + '-sheet]', dlg);
+    const seriesTpl = dlg && $('[' + D + '-series-row]', dlg);
+    const pieceTpl = dlg && $('[' + D + '-piece-row]', dlg);
+    const seriesList = panel && $('[' + D + '-list="series"]', panel);
+    if (!dlg || typeof dlg.showModal !== 'function' || !panel || !sheetTpl || !seriesTpl || !pieceTpl || !seriesList) {
+      console.warn('[oa-brief] piece drawer markup incomplete — skipping'); return;
+    }
+    const backdrop = $('[' + D + '-backdrop]', dlg);
+    const doneText = $('[' + D + '-done-text]', dlg);
+    // The count is the only feedback a reader gets that a tap landed, and the only word on why
+    // rows went disabled at the cap, so it announces.
+    if (doneText) doneText.setAttribute('aria-live', 'polite');
+    const ENTER_D = knob('drawer-enter', 0.5), EXIT_D = knob('drawer-exit', 0.35), STAGGER_D = knob('drawer-stagger', 0.03);
+    const g = window.gsap;
+    let still = false;
+    if (g) g.matchMedia().add('(prefers-reduced-motion: reduce)', () => { still = true; return () => { still = false; }; });
+    const animate = () => !!g && !still;
+    // Shown/hidden without GSAP too: inline visibility + opacity, the same props autoAlpha writes.
+    const vis = (els, on) => [].concat(els).forEach(el => {
+      if (!el) return; if (g) g.killTweensOf(el);
+      el.style.visibility = on ? 'visible' : 'hidden'; el.style.opacity = on ? '1' : '0';
+    });
+    const clone = (tpl, attr) => { const c = tpl.cloneNode(true); c.removeAttribute(attr); return c; };
+    const text = (el, sel) => { const t = el.querySelector(sel); return t ? t.textContent.trim() : ''; };
+    const slot = (row, s) => setText($('[' + D + '-text]', row) || row, s);
+    const button = row => row.matches('button, a') ? row : $('button, a', row);
+
+    // ---- build: CMS items → series → one sheet each. Series run A–Z (Webflow can't sort a
+    // Collection List by a referenced item's name); pieces keep the list's own sort.
+    const groups = new Map();
+    $$('[' + D + '-item]', dlg).forEach(it => {
+      const name = text(it, '[' + D + '-name]'), series = text(it, '[' + D + '-series]');
+      if (!name || !series) return;
+      if (!groups.has(series)) groups.set(series, []);
+      if (groups.get(series).indexOf(name) < 0) groups.get(series).push(name);
+    });
+    const LEVEL = '[' + D + '-level]';
+    panel.setAttribute(D + '-level', '');
+    const sheets = [], parentOf = new Map(), triggerOf = new Map();
+    const pieceRow = (label, value) => {
+      const row = clone(pieceTpl, D + '-piece-row'); slot(row, label);
+      const b = button(row); b.setAttribute(D + '-pick', value);
+      if (label !== value) b.setAttribute('aria-label', label + ': ' + value);
+      return row;
+    };
+    Array.from(groups.keys()).sort((a, b) => a.localeCompare(b)).forEach(series => {
+      const names = groups.get(series);
+      const sheet = clone(sheetTpl, D + '-sheet');
+      sheet.setAttribute(D + '-level', '');
+      sheet.id = 'oa-brief-drawer-sheet-' + sheets.length;
+      setText($('[' + D + '-title]', sheet), series);
+      const list = $('[' + D + '-list]', sheet);
+      list.appendChild(pieceRow(copy('whole-series-text', 'The whole series'), series));
+      names.forEach(n => list.appendChild(pieceRow(n, n)));
+      const row = clone(seriesTpl, D + '-series-row'); slot(row, series);
+      const trigger = button(row);
+      trigger.setAttribute('aria-controls', sheet.id); trigger.setAttribute('aria-expanded', 'false');
+      trigger.addEventListener('click', e => { e.preventDefault(); openSheet(sheet); });
+      seriesList.appendChild(row);
+      panel.appendChild(sheet);
+      sheets.push(sheet); parentOf.set(sheet, panel); triggerOf.set(sheet, trigger);
+    });
+    const levels = [panel].concat(sheets);
+    const own = (level, sel) => $$(sel, level).filter(el => el.closest(LEVEL) === level);
+    const edges = levels.reduce((a, l) => a.concat(own(l, '[' + D + '-edge]')), []);
+    const doneBar = $('[' + D + '-done]', dlg);
+    const stack = [panel];
+
+    // ---- levels: the one on top is live, the ones under it are inert apart from their edge strip
+    function updateLevels() {
+      const top = stack[stack.length - 1];
+      levels.forEach(level => {
+        const behind = level !== top && stack.indexOf(level) >= 0;
+        Array.prototype.forEach.call(level.children, c => {
+          if (!c.matches('[' + D + '-edge], ' + LEVEL + ', [' + D + '-done]')) c.inert = behind;
+        });
+      });
+      sheets.forEach(s => triggerOf.get(s).setAttribute('aria-expanded', String(stack.indexOf(s) >= 0)));
+    }
+    function resetLevels() {
+      stack.splice(1);
+      if (g) g.set(sheets, { clearProps: 'transform' });
+      vis(sheets, false); vis(edges, false);
+      updateLevels();
+    }
+    // Rows land in reading order: back, title, then each row. Enters → power2.out.
+    function reveal(level, delay) {
+      if (!animate()) return;
+      const els = own(level, '[' + D + '-back], [' + D + '-title], [' + D + '-list] > *').filter(el => el.getClientRects().length);
+      if (!els.length) return;
+      g.fromTo(els, { opacity: 0, x: 24 }, {
+        opacity: 1, x: 0, duration: ENTER_D, ease: 'power2.out', delay: delay || 0,
+        stagger: Math.min(STAGGER_D, STAGGER_CAP / Math.max(els.length - 1, 1)), clearProps: 'opacity,transform'
+      });
+    }
+    // The title takes focus, so a reader hears where they are, as the brief's step headings do.
+    function focusLevel(level) {
+      const t = own(level, '[' + D + '-title]')[0] || own(level, 'button, a[href]')[0];
+      if (!t) return;
+      if (!t.matches('button, a[href], input')) t.setAttribute('tabindex', '-1');
+      t.focus({ preventScroll: true });
+    }
+    function openSheet(sheet) {
+      if (stack.indexOf(sheet) >= 0) return;
+      const parent = parentOf.get(sheet);
+      stack.push(sheet); updateLevels();
+      vis(sheet, true);
+      const edge = own(parent, '[' + D + '-edge]');
+      vis(edge, true);
+      if (animate()) {
+        // Enters: power3.out — a full-height panel crossing the drawer, settling softly.
+        g.fromTo(sheet, { xPercent: 100 }, { xPercent: 0, duration: ENTER_D, ease: 'power3.out' });
+        // State feedback: the strip underneath fades up once the sheet has cleared it.
+        g.fromTo(edge, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: 'power1.out', delay: ENTER_D * 0.4 });
+        reveal(sheet);
+      }
+      focusLevel(sheet);
+    }
+    function closeTo(level) {
+      const i = stack.indexOf(level);
+      if (i < 0 || i === stack.length - 1) return;
+      const closing = stack.splice(i + 1); updateLevels();
+      const edge = own(level, '[' + D + '-edge]');
+      const done = () => { const gone = closing.filter(s => stack.indexOf(s) < 0); vis(gone, false); if (g) g.set(gone, { clearProps: 'transform' }); };
+      if (animate()) {
+        // Leaves: power2.in, shorter than the entrance — nobody watches it go.
+        g.to(closing[0], { xPercent: 100, duration: EXIT_D, ease: 'power2.in', onComplete: done });
+        g.to(edge, { opacity: 0, duration: 0.2, ease: 'power1.out', onComplete: () => vis(edge, false) });
+      } else { done(); vis(edge, false); }
+      triggerOf.get(closing[0]).focus({ preventScroll: true });
+    }
+
+    // ---- open / close
+    let open = false;
+    function openDrawer() {
+      if (open) return; open = true;
+      if (g) g.killTweensOf([panel, backdrop]);
+      resetLevels(); syncDrawer();
+      if (!dlg.open) dlg.showModal();
+      opener.setAttribute('aria-expanded', 'true');
+      if (window.lenis) window.lenis.stop();
+      vis([panel, backdrop], true);
+      if (animate()) {
+        // Enters: power3.out — answers the tap at once, lands softly.
+        g.fromTo(panel, { xPercent: 100 }, { xPercent: 0, duration: ENTER_D, ease: 'power3.out' });
+        if (backdrop) g.fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: ENTER_D, ease: 'power2.out' });
+        reveal(panel, 0.1);
+      }
+      focusLevel(panel);
+    }
+    function closeDrawer() {
+      if (!open) return; open = false;
+      opener.setAttribute('aria-expanded', 'false');
+      const done = () => {
+        if (open) return; // reopened mid-exit
+        dlg.close(); resetLevels();
+        if (g) g.set(panel, { clearProps: 'transform' });
+        if (window.lenis) window.lenis.start();
+        opener.focus({ preventScroll: true });
+      };
+      if (!animate()) return done();
+      // Leaves: power2.in, ~0.7× the entrance.
+      g.to(panel, { xPercent: 100, duration: EXIT_D, ease: 'power2.in' });
+      g.to(backdrop || {}, { opacity: 0, duration: EXIT_D, ease: 'power2.in', onComplete: done });
+    }
+    function stepBack() { if (stack.length > 1) closeTo(stack[stack.length - 2]); else closeDrawer(); }
+
+    // ---- ticks, the cap and the Done label follow state.pieces
+    syncDrawer = () => {
+      const n = state.pieces.length, full = n >= MAX_PIECES;
+      $$('[' + D + '-pick]', dlg).forEach(b => {
+        const on = state.pieces.indexOf(b.getAttribute(D + '-pick')) >= 0;
+        b.setAttribute('aria-pressed', String(on));
+        b.disabled = full && !on;
+      });
+      const other = $('[' + D + '-other-toggle]', dlg); if (other) other.disabled = full;
+      if (doneText) setText(doneText, full ? fill(copy('drawer-full-text', 'Done · {n} max'), { n: MAX_PIECES })
+        : n ? fill(copy('drawer-count-text', 'Done · {n}'), { n: n }) : copy('drawer-done-text', 'Done'));
+    };
+
+    // ---- "Something else": a field shown in place, so the keyboard only comes when asked for
+    const otherToggle = $('[' + D + '-other-toggle]', dlg);
+    const other = $('[' + D + '-other]', dlg);
+    const otherInput = other && $('input', other);
+    if (otherToggle && otherInput) {
+      setHidden(other, true);
+      otherToggle.setAttribute('aria-expanded', 'false');
+      const shut = () => { setHidden(other, true); otherToggle.setAttribute('aria-expanded', 'false'); };
+      const add = () => { addPiece(otherInput.value); otherInput.value = ''; shut(); otherToggle.focus({ preventScroll: true }); };
+      otherToggle.addEventListener('click', e => {
+        e.preventDefault();
+        if (!other.hidden) return shut();
+        setHidden(other, false); otherToggle.setAttribute('aria-expanded', 'true'); otherInput.focus();
+      });
+      otherInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+      const addBtn = $('[' + D + '-other-add]', other);
+      if (addBtn) addBtn.addEventListener('click', e => { e.preventDefault(); add(); });
+    }
+
+    // ---- input
+    opener.setAttribute('aria-haspopup', 'dialog'); opener.setAttribute('aria-expanded', 'false');
+    opener.addEventListener('click', e => { e.preventDefault(); openDrawer(); });
+    dlg.setAttribute('data-lenis-prevent', ''); // the levels scroll under Lenis
+    dlg.addEventListener('click', e => {
+      const t = e.target;
+      const pick = t.closest('[' + D + '-pick]');
+      if (pick) { e.preventDefault(); if (!pick.disabled) togglePiece(pick.getAttribute(D + '-pick')); return; }
+      if (t.closest('[' + D + '-done]')) { e.preventDefault(); return closeDrawer(); }
+      if (backdrop && backdrop.contains(t)) return closeDrawer();
+      const nav = t.closest('[' + D + '-back], [' + D + '-edge]');
+      if (!nav) return;
+      e.preventDefault();
+      const level = nav.closest(LEVEL);
+      if (nav.hasAttribute(D + '-edge')) closeTo(level);
+      else if (level === panel) closeDrawer();
+      else closeTo(parentOf.get(level));
+    });
+    // Esc steps back a level. Handled on keydown; `cancel` covers the platform's own close
+    // request (Android back), and is skipped when the keydown already took this Esc.
+    let escTaken = false;
+    dlg.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault(); escTaken = true; setTimeout(() => { escTaken = false; }, 0);
+      stepBack();
+    });
+    dlg.addEventListener('cancel', e => { e.preventDefault(); if (!escTaken) stepBack(); });
+    resetLevels();
+  })();
   // Same template rule as the summary rows and the piece options: if the Designer
   // marks one tag inside [data-oa-brief-pieces], the engine clones it per piece and
   // the styling on the canvas is the styling that ships. Without one it falls back to
@@ -496,6 +611,7 @@
   const tagTpl = tagTplSrc && tagTplSrc.cloneNode(true);
   if (tagTpl) tagTpl.removeAttribute('data-oa-brief-piece-tag');
   function renderPieces() {
+    syncDrawer();
     const w = tagWrap; if (!w) return; w.innerHTML = '';
     state.pieces.forEach((p, i) => {
       const remove = () => { state.pieces.splice(i, 1); renderPieces(); save(); };
