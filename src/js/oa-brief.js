@@ -382,6 +382,9 @@
     }
     const backdrop = $('[' + D + '-backdrop]', dlg);
     const doneText = $('[' + D + '-done-text]', dlg);
+    // The count is the only feedback a reader gets that a tap landed, and the only word on why
+    // rows went disabled at the cap, so it announces.
+    if (doneText) doneText.setAttribute('aria-live', 'polite');
     const ENTER_D = knob('drawer-enter', 0.5), EXIT_D = knob('drawer-exit', 0.35), STAGGER_D = knob('drawer-stagger', 0.03);
     const g = window.gsap;
     let still = false;
