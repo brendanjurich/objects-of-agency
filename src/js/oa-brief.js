@@ -317,7 +317,7 @@
          (aria-pressed) instead of linking; the drawer stays open
          until Done, Esc or the backdrop. Capped at MAX_PIECES.
        • Rows come from the CMS — a flat Products Collection List in
-         the drawer, grouped into one sheet per Series here, cloned
+         the drawer, grouped into one sheet per Series (A–Z) here, cloned
          from one sheet template. Each sheet opens with a "whole
          series" row that submits the series name.
        • The root is a <dialog> opened with showModal(): the step
@@ -397,7 +397,8 @@
     const slot = (row, s) => setText($('[' + D + '-text]', row) || row, s);
     const button = row => row.matches('button, a') ? row : $('button, a', row);
 
-    // ---- build: CMS items → series → one sheet each, in the Collection List's sort order
+    // ---- build: CMS items → series → one sheet each. Series run A–Z (Webflow can't sort a
+    // Collection List by a referenced item's name); pieces keep the list's own sort.
     const groups = new Map();
     $$('[' + D + '-item]', dlg).forEach(it => {
       const name = text(it, '[' + D + '-name]'), series = text(it, '[' + D + '-series]');
@@ -414,7 +415,8 @@
       if (label !== value) b.setAttribute('aria-label', label + ': ' + value);
       return row;
     };
-    groups.forEach((names, series) => {
+    Array.from(groups.keys()).sort((a, b) => a.localeCompare(b)).forEach(series => {
+      const names = groups.get(series);
       const sheet = clone(sheetTpl, D + '-sheet');
       sheet.setAttribute(D + '-level', '');
       sheet.id = 'oa-brief-drawer-sheet-' + sheets.length;

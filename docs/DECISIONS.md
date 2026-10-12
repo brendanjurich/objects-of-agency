@@ -1566,8 +1566,9 @@ which is the focus trap.
 ### Catalogue from the CMS
 
 `CATALOGUE` in `oa-brief.js` is gone. The drawer holds a flat Products Collection
-List (in its hidden templates wrapper); the engine groups items by their Series text,
-in the list's sort order. Webflow can't nest Products under Series — Series has no
+List (in its hidden templates wrapper); the engine groups items by their Series text.
+Series rows run A–Z in the engine, because Webflow can't sort a Collection List by a
+referenced item's name; pieces keep the list's sort (Name A–Z). Webflow can't nest Products under Series — Series has no
 reference back.
 
 ### Webflow MCP traps hit building it
