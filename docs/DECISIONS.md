@@ -1594,8 +1594,10 @@ but the engine sizes it onto an anchor and it clips (`overflow: hidden`), so the
 slides out of the anchor's right edge and the backdrop dims only that box. A click
 outside the box lands on `::backdrop`, whose target is the dialog itself — that closes.
 
-- **Anchor:** `[data-oa-brief-drawer-anchor]` (`.piece_drawer_contain`, the image
-  panel) above 767px; the whole brief card (`[data-oa-brief]`) at and below, where the
+- **Anchor:** `[data-oa-brief-drawer-anchor]` (`.piece_drawer_slot`, the right-hand
+  column of the image panel's 1fr 1fr grid; the picked-piece tags sit in the left) above
+  767px — moved off `.piece_drawer_contain` 13-10-2026 so the drawer fills that column,
+  not the whole card; `.piece-drawer_panel` is 100% wide at every breakpoint; the whole brief card (`[data-oa-brief]`) at and below, where the
   panel is ~217px tall — three rows. Measured after the scroll lock, re-measured on resize.
 - **Why not a non-modal panel inside the container:** the container sits inside the
   field's `<label>`, so every tap in a drawer built there would be forwarded to the

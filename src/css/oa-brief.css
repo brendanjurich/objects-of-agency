@@ -76,12 +76,15 @@ dialog[data-oa-brief-drawer]::backdrop {
   z-index: 2;
 }
 
+/* z-index 2, not 1: the oa Divider component is position:relative; z-index:1 and
+   follows the strip in DOM order, so a tie painted it across the strip. The engine's
+   sheets are appended after the strip, so they still win their tie at 2. */
 [data-oa-brief-drawer-edge] {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  z-index: 1;
+  z-index: 2;
 }
 
 /* One Done bar for every level, so it rides above the sheets. */
