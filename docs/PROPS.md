@@ -161,6 +161,7 @@ boundary. Set on `[data-legal-toc-accordion]`.
 | `data-oa-brief-enter` | `0.4` | Step fade-in. |
 | `data-oa-brief-stagger` | `0.04` | Gap between items landing (total capped at 0.24; `0` = off). |
 | `data-oa-brief-shift` | `6` px | Rise as items land (`0` = off). |
+| `data-oa-brief-tag-fade` | `0.25` | Fade-in of a new piece tag and the Selections label (`0` = off). |
 | `data-oa-brief-drawer-enter` | `0.5` | Piece drawer slide-in. |
 | `data-oa-brief-drawer-exit` | `0.35` | Piece drawer slide-out. |
 | `data-oa-brief-drawer-stagger` | `0.03` | Gap between drawer rows landing. |

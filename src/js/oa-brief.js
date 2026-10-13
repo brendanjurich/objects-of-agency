@@ -680,9 +680,20 @@
   // [data-oa-brief-pieces-label] ("Selections:") shows only while there are tags. It may
   // sit inside [data-oa-brief-pieces]; the wipe below detaches it, so it goes back first.
   const tagLabel = $('[data-oa-brief-pieces-label]');
+  // Every render rebuilds every tag, so only a piece that wasn't shown last time fades in
+  // (and the label, when the first one lands). data-oa-brief-tag-fade (0.25; 0 = off).
+  // Enters: power2.out. Removal pops: fading out would hold the rebuild until it ends.
+  const TAG_FADE = knob('tag-fade', 0.25);
+  let shownTags = [];
+  const fadeIn = el => {
+    if (reduce || !window.gsap || TAG_FADE <= 0) return;
+    window.gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: TAG_FADE, ease: 'power2.out', clearProps: 'opacity' });
+  };
   function renderPieces() {
     syncDrawer();
+    const labelWasShown = tagLabel && !tagLabel.hidden;
     setHidden(tagLabel, !state.pieces.length);
+    if (!labelWasShown && state.pieces.length) fadeIn(tagLabel);
     const w = tagWrap; if (!w) return; w.innerHTML = '';
     if (tagLabel && !tagLabel.isConnected) w.appendChild(tagLabel);
     state.pieces.forEach((p, i) => {
@@ -701,7 +712,9 @@
       }
       b.setAttribute('aria-label', 'Remove ' + p);
       b.addEventListener('click', remove); w.appendChild(b);
+      if (shownTags.indexOf(p) < 0) fadeIn(b);
     });
+    shownTags = state.pieces.slice();
   }
 
   // ---- summary
