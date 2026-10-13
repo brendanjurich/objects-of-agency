@@ -72,8 +72,9 @@ for (const [label, attr] of [
   ['sheet template', 'data-oa-brief-drawer-sheet'], ['series row template', 'data-oa-brief-drawer-series-row'],
   ['piece row template', 'data-oa-brief-drawer-piece-row'], ['row text slot', 'data-oa-brief-drawer-text'],
   ['Done bar', 'data-oa-brief-drawer-done'], ['"Something else" row', 'data-oa-brief-drawer-other-toggle'],
+  ['drawer anchor (the box it opens over)', 'data-oa-brief-drawer-anchor'],
 ]) check(label, has(new RegExp(attr + '="')), '');
-check('drawer root is a <dialog>', /<dialog[^>]*data-oa-brief-drawer=""/.test(html), 'showModal() needs a real dialog');
+check('drawer root is a <dialog>', /<dialog[^>]*\sdata-oa-brief-drawer(?:="[^"]*")?[\s>]/.test(html), 'showModal() needs a real dialog');
 // Webflow turns a custom-tag button into a Link (<a>), which can't be disabled or pressed.
 check('drawer rows are real <button>s', !/<a[^>]*data-oa-brief-drawer-(?:pick|done|back|edge|other)/.test(html));
 // The CMS list is the catalogue. Unbound text slots publish empty, and the drawer has no series.

@@ -324,14 +324,17 @@
          tween leaves a transform on the step, which would trap a
          position:fixed drawer, and the top layer makes the page
          behind inert (the focus trap). Esc and the cancel event step
-         back one level before closing.
+         back one level before closing. The dialog is then sized onto
+         an anchor in the card and clips, so the menu reads as part of
+         the card, not a page overlay.
        • No CDN GSAP, no CustomEase — window.gsap only; without it the
          drawer still opens, steps and closes, it just doesn't move.
        • Easing per motion, not Osmo's one curve: enters power3.out,
          leaves power2.in, rows power2.out, edge strip power1.out.
          Durations are Designer knobs on the brief root.
        • Reduced motion via gsap.matchMedia(), read at each open.
-       • Page scroll locked with window.lenis while open.
+       • Page scroll locked while open — window.lenis, or the root's
+         overflow where Lenis isn't running (reduced motion).
        • Nav furniture dropped: bar, logo, bag, menu toggle, promo,
          footer, featured group, "shop all" links, status attribute.
      Page-level (/contact), part of oa-brief.js. Raw-served (no build).
@@ -339,6 +342,7 @@
   // Hooks, all inside [data-oa-brief]:
   //   [data-oa-brief-piece-open]          the field-styled button that opens the drawer
   //   [data-oa-brief-drawer]              the <dialog>
+  //   [data-oa-brief-drawer-anchor]       the box the drawer opens over (above 767px; below, the card)
   //   [data-oa-brief-drawer-backdrop]     the dim layer; a tap closes
   //   [data-oa-brief-drawer-panel]        level one: the series rows
   //   [data-oa-brief-drawer-list="series"] where the series rows go
@@ -505,15 +509,53 @@
       triggerOf.get(closing[0]).focus({ preventScroll: true });
     }
 
+    // ---- placement: the modal dialog is sized onto its anchor, so the menu belongs to the
+    // card — [data-oa-brief-drawer-anchor] (the image panel) above Webflow's small breakpoint,
+    // the whole brief card at and below it, where the panel is too short to scan. The dialog
+    // clips (oa-brief.css), so the panel slides out of the anchor's right edge and the
+    // backdrop dims only the anchor. Measured with the page scroll locked, so the box holds;
+    // re-measured on resize. No anchor: the dialog keeps its full-viewport fallback.
+    const anchor = $('[' + D + '-anchor]');
+    const small = window.matchMedia('(max-width: 767px)');
+    const anchorEl = () => small.matches ? root : anchor;
+    function bringIntoView() {
+      const el = anchorEl(); if (!el) return;
+      const r = el.getBoundingClientRect();
+      const by = r.bottom > innerHeight ? Math.min(r.bottom - innerHeight + 16, r.top) : r.top < 0 ? r.top : 0;
+      if (!by) return;
+      if (window.lenis) window.lenis.scrollTo(scrollY + by, { immediate: true, force: true });
+      else window.scrollTo(0, scrollY + by);
+    }
+    function place() {
+      const el = anchorEl();
+      ['top', 'left', 'width', 'height'].forEach(k => dlg.style.removeProperty('--oa-drawer-' + k));
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const top = Math.max(r.top, 0), bottom = Math.min(r.bottom, innerHeight);
+      dlg.style.setProperty('--oa-drawer-top', top + 'px');
+      dlg.style.setProperty('--oa-drawer-left', r.left + 'px');
+      dlg.style.setProperty('--oa-drawer-width', r.width + 'px');
+      dlg.style.setProperty('--oa-drawer-height', Math.max(bottom - top, 0) + 'px');
+    }
+    window.addEventListener('resize', () => { if (open) place(); });
+    // The box is fixed where the card was, so the page must not scroll under it. Lenis when it
+    // runs; without it (reduced motion skips Lenis, or its CDN failed) the root's overflow.
+    function lockScroll(on) {
+      if (window.lenis) return on ? window.lenis.stop() : window.lenis.start();
+      document.documentElement.style.overflow = on ? 'hidden' : '';
+    }
+
     // ---- open / close
     let open = false;
     function openDrawer() {
       if (open) return; open = true;
       if (g) g.killTweensOf([panel, backdrop]);
       resetLevels(); syncDrawer();
+      bringIntoView();
       if (!dlg.open) dlg.showModal();
-      opener.setAttribute('aria-expanded', 'true');
-      if (window.lenis) window.lenis.stop();
+      controls.forEach(c => c.setAttribute('aria-expanded', 'true'));
+      lockScroll(true);
+      place();
       vis([panel, backdrop], true);
       if (animate()) {
         // Enters: power3.out — answers the tap at once, lands softly.
@@ -525,13 +567,13 @@
     }
     function closeDrawer() {
       if (!open) return; open = false;
-      opener.setAttribute('aria-expanded', 'false');
+      controls.forEach(c => c.setAttribute('aria-expanded', 'false'));
       const done = () => {
         if (open) return; // reopened mid-exit
         dlg.close(); resetLevels();
         if (g) g.set(panel, { clearProps: 'transform' });
-        if (window.lenis) window.lenis.start();
-        opener.focus({ preventScroll: true });
+        lockScroll(false);
+        control().focus({ preventScroll: true });
       };
       if (!animate()) return done();
       // Leaves: power2.in, ~0.7× the entrance.
@@ -573,7 +615,12 @@
     }
 
     // ---- input
-    opener.setAttribute('aria-haspopup', 'dialog'); opener.setAttribute('aria-expanded', 'false');
+    // The opener hook may sit on a component wrapper (oa Button Menu: a div holding a Lumos
+    // Clickable's <a> and <button>), so ARIA and focus go to the real controls inside it, and
+    // focus returns to whichever one is rendered.
+    const controls = (opener.matches('button, a[href]') ? [opener] : []).concat($$('button, a[href]', opener));
+    const control = () => controls.filter(el => el.getClientRects().length)[0] || controls[0] || opener;
+    controls.forEach(c => { c.setAttribute('aria-haspopup', 'dialog'); c.setAttribute('aria-expanded', 'false'); });
     opener.addEventListener('click', e => { e.preventDefault(); openDrawer(); });
     dlg.setAttribute('data-lenis-prevent', ''); // the levels scroll under Lenis
     dlg.addEventListener('click', e => {
@@ -581,6 +628,8 @@
       const pick = t.closest('[' + D + '-pick]');
       if (pick) { e.preventDefault(); if (!pick.disabled) togglePiece(pick.getAttribute(D + '-pick')); return; }
       if (t.closest('[' + D + '-done]')) { e.preventDefault(); return closeDrawer(); }
+      // Outside the box: a modal dialog's ::backdrop click targets the dialog itself.
+      if (t === dlg) return closeDrawer();
       if (backdrop && backdrop.contains(t)) return closeDrawer();
       const nav = t.closest('[' + D + '-back], [' + D + '-edge]');
       if (!nav) return;

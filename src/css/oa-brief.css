@@ -29,17 +29,23 @@
   color: inherit;
 }
 
+/* Sized onto the anchor's box by oa-brief.js (--oa-drawer-*); the fallbacks are the
+   full viewport. overflow: hidden is the clip that makes the panel slide out of the
+   anchor's right edge rather than the window's. */
 dialog[data-oa-brief-drawer][open] {
   position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: auto;
+  top: var(--oa-drawer-top, 0);
+  left: var(--oa-drawer-left, 0);
+  width: var(--oa-drawer-width, 100%);
+  height: var(--oa-drawer-height, 100%);
   max-width: none;
   max-height: none;
   overflow: hidden;
 }
 
-/* The page dims through [data-oa-brief-drawer-backdrop], which the engine fades. */
+/* Only the anchor's box dims, through [data-oa-brief-drawer-backdrop], which the engine
+   fades. The page outside stays as it is, though it is inert while the drawer is open. */
 dialog[data-oa-brief-drawer]::backdrop {
   background-color: transparent;
 }
