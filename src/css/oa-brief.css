@@ -50,6 +50,12 @@ dialog[data-oa-brief-drawer]::backdrop {
   background-color: transparent;
 }
 
+/* The opener sits under the ::backdrop while the drawer is open, so its own cursor never
+   shows; oa-brief.js sets this attribute while the pointer is over it. */
+dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
+  cursor: pointer;
+}
+
 [data-oa-brief-drawer-backdrop] {
   position: absolute;
   inset: 0;

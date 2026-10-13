@@ -624,11 +624,15 @@
     opener.addEventListener('click', e => { e.preventDefault(); openDrawer(); });
     // The opener sits outside the modal, so it is inert while the drawer is open and never
     // matches Lumos's [data-trigger~="hover"]:hover, though a tap on it still closes (a
-    // ::backdrop click). Mirror the hover: a pointer over it flips the same trigger variables.
+    // ::backdrop click). Mirror the hover: a pointer over it flips the same trigger variables,
+    // and data-oa-brief-drawer-opener-hover gives the ::backdrop a pointer cursor (oa-brief.css).
     const trig = opener.closest('[data-trigger~="hover"]') || $('[data-trigger~="hover"]', opener);
     const hoverable = window.matchMedia('(hover: hover)');
-    const mirrorHover = on => trig && ['on', 'off'].forEach((k, i) => on
-      ? trig.style.setProperty('--_trigger---' + k, String(i)) : trig.style.removeProperty('--_trigger---' + k));
+    const mirrorHover = on => {
+      dlg.toggleAttribute(D + '-opener-hover', !!on);
+      if (trig) ['on', 'off'].forEach((k, i) => on
+        ? trig.style.setProperty('--_trigger---' + k, String(i)) : trig.style.removeProperty('--_trigger---' + k));
+    };
     dlg.addEventListener('pointermove', e => {
       const r = trig && trig.getBoundingClientRect();
       mirrorHover(r && dlg.open && hoverable.matches && e.target === dlg &&
