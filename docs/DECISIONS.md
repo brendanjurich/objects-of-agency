@@ -1585,3 +1585,27 @@ reference back.
   brief had no tags.
 - **A Collection List inside a component definition:** source sets, but filters,
   sort and field bindings fail ("No source connected"). Those are set in the Designer.
+
+### 13-10-2026 — the drawer opens inside the card, still modal
+
+Brendan: the menu belongs in the brief card, not over the page. The `<dialog>` stays
+modal (top layer, inert page, Esc, scroll lock — every a11y result above still holds)
+but the engine sizes it onto an anchor and it clips (`overflow: hidden`), so the panel
+slides out of the anchor's right edge and the backdrop dims only that box. A click
+outside the box lands on `::backdrop`, whose target is the dialog itself — that closes.
+
+- **Anchor:** `[data-oa-brief-drawer-anchor]` (`.piece_drawer_contain`, the image
+  panel) above 767px; the whole brief card (`[data-oa-brief]`) at and below, where the
+  panel is ~217px tall — three rows. Measured after the scroll lock, re-measured on resize.
+- **Why not a non-modal panel inside the container:** the container sits inside the
+  field's `<label>`, so every tap in a drawer built there would be forwarded to the
+  opener; and the focus trap, Esc and inertness would all be hand-built.
+- **Scroll lock without Lenis.** Reduced motion skips Lenis (`initSmoothScroll`), so the
+  engine falls back to `overflow: hidden` on `<html>` — otherwise the page scrolls under
+  a box fixed to where the card was.
+- **The opener can be a component wrapper.** `oa Button Menu` is a div holding a Lumos
+  Clickable's `<a>` and `<button>`; ARIA goes on both, focus returns to the rendered one.
+- **The brief is unlinked on /contact** (the `oa Project Brief` component has 0
+  instances). Designer edits go on the page elements; the canvas-preview Embed lives on
+  the page dialog and pins itself to the anchor with CSS anchor positioning.
+
