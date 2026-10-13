@@ -25,9 +25,11 @@
             else the host — so a plus in a card slot answers the
             whole card when the card carries data-oa-plus-scope.
      click  open/close: turns to the angle on open, back to 0 on
-            close. If that element carries aria-expanded it follows
-            that state (so any close turns it back); otherwise each
-            click alternates.
+            close. Follows aria-expanded on that element, or on the
+            first control inside it (a component wrapper such as
+            oa Button Menu, whose state sits on its Clickable), so
+            any close turns it back. With no aria-expanded anywhere,
+            each click alternates.
      slide  adds a step per next slide, takes one per previous,
             on the Lumos slider around it ([data-slider='component']).
             Swipes, keys and bullets count, not just the buttons.
@@ -93,20 +95,24 @@
     const scope = host.closest('[data-oa-plus-scope]') || host.closest('a, button') || host;
 
     if (trigger === 'click') {
-      // Follow the opener's own state when it has one, so a close from
-      // elsewhere (Escape, another item opening) turns it back too.
-      if (scope.hasAttribute('aria-expanded')) {
-        const open = () => scope.getAttribute('aria-expanded') === 'true';
-        if (open()) { // starts open: set, don't animate
-          target = angle;
-          if (window.gsap) window.gsap.set(host, { rotation: angle });
-          else host.style.transform = 'rotate(' + angle + 'deg)';
-        }
-        new MutationObserver(() => { if ((target === angle) !== open()) turnTo(open() ? angle : 0); })
-          .observe(scope, { attributes: true, attributeFilter: ['aria-expanded'] });
-      } else {
-        scope.addEventListener('click', () => turnTo(target === angle ? 0 : angle));
+      // Follow the opener's own state, so a close from elsewhere (Escape,
+      // another item opening) turns it back too. Looked up live: the page
+      // script that owns the state may set it after this runs. An empty
+      // aria-expanded is a Designer leftover, not state.
+      const SEL = '[aria-expanded]:not([aria-expanded=""])';
+      const stateEl = () => (scope.matches(SEL) ? scope : scope.querySelector(SEL));
+      const isOpen = (el) => el.getAttribute('aria-expanded') === 'true';
+      const first = stateEl();
+      if (first && isOpen(first)) { // starts open: set, don't animate
+        target = angle;
+        if (window.gsap) window.gsap.set(host, { rotation: angle });
+        else host.style.transform = 'rotate(' + angle + 'deg)';
       }
+      new MutationObserver(() => {
+        const el = stateEl();
+        if (el && (target === angle) !== isOpen(el)) turnTo(isOpen(el) ? angle : 0);
+      }).observe(scope, { attributes: true, subtree: true, attributeFilter: ['aria-expanded'] });
+      scope.addEventListener('click', () => { if (!stateEl()) turnTo(target === angle ? 0 : angle); });
       return;
     }
 

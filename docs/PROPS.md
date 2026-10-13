@@ -18,7 +18,7 @@ missing or invalid. Times are seconds unless marked ms. Eases are GSAP names
 
 ## Plus rotate — `oa-plus.js`
 
-Newest (v1.0.245). A "+" icon turns when something happens near it: hover on a
+Newest (v1.0.246). A "+" icon turns when something happens near it: hover on a
 button or card, open/close on click, or slide changes on a Lumos slider.
 Rebuilt from the camillemormal.com reference
 (`07-research/site-element-audits/2026-10-13-plus-symbol-rotate.md`, command
@@ -27,11 +27,11 @@ centre). Set on the element that turns, `[data-oa-plus]` — never
 
 | Attribute | Default | Controls |
 |---|---|---|
-| `data-oa-plus-trigger` | `hover` | `hover` — turns on mouse enter, back on leave. `click` — open/close: turns on open, back on close; follows the opener's `aria-expanded` if it has one, else alternates. `slide` — +angle per next slide, −angle per previous. |
+| `data-oa-plus-trigger` | `hover` | `hover` — turns on mouse enter, back on leave. `click` — open/close: turns on open, back on close; follows `aria-expanded` on the opener or the first control inside it (e.g. the Clickable in `oa Button Menu`), else alternates. `slide` — +angle per next slide, −angle per previous. |
 | `data-oa-plus-angle` | `90` | Degrees per turn. Negative turns anticlockwise. |
 | `data-oa-plus-duration` | `0.4` | Turn length. |
 | `data-oa-plus-ease` | `power2.inOut` | Turn curve. |
-| `data-oa-plus-scope` | — | Flag on an ancestor (e.g. a card) — hover/click there drives the plus. Without it: nearest `a`/`button`, else the plus itself. |
+| `data-oa-plus-scope` | — | Flag on an ancestor (e.g. a card, or a button component's wrap) — hover/click there drives the plus. Without it: nearest `a`/`button`, else the plus itself. |
 
 ## Line loader — `oa-loader-line.js`
 
