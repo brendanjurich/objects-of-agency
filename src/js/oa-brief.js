@@ -622,6 +622,20 @@
     const control = () => controls.filter(el => el.getClientRects().length)[0] || controls[0] || opener;
     controls.forEach(c => { c.setAttribute('aria-haspopup', 'dialog'); c.setAttribute('aria-expanded', 'false'); });
     opener.addEventListener('click', e => { e.preventDefault(); openDrawer(); });
+    // The opener sits outside the modal, so it is inert while the drawer is open and never
+    // matches Lumos's [data-trigger~="hover"]:hover, though a tap on it still closes (a
+    // ::backdrop click). Mirror the hover: a pointer over it flips the same trigger variables.
+    const trig = opener.closest('[data-trigger~="hover"]') || $('[data-trigger~="hover"]', opener);
+    const hoverable = window.matchMedia('(hover: hover)');
+    const mirrorHover = on => trig && ['on', 'off'].forEach((k, i) => on
+      ? trig.style.setProperty('--_trigger---' + k, String(i)) : trig.style.removeProperty('--_trigger---' + k));
+    dlg.addEventListener('pointermove', e => {
+      const r = trig && trig.getBoundingClientRect();
+      mirrorHover(r && dlg.open && hoverable.matches && e.target === dlg &&
+        e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
+    });
+    dlg.addEventListener('pointerleave', () => mirrorHover(false));
+    dlg.addEventListener('close', () => mirrorHover(false));
     dlg.setAttribute('data-lenis-prevent', ''); // the levels scroll under Lenis
     dlg.addEventListener('click', e => {
       const t = e.target;
@@ -659,9 +673,14 @@
   const tagTplSrc = tagWrap && $('[data-oa-brief-piece-tag]', tagWrap);
   const tagTpl = tagTplSrc && tagTplSrc.cloneNode(true);
   if (tagTpl) tagTpl.removeAttribute('data-oa-brief-piece-tag');
+  // [data-oa-brief-pieces-label] ("Selections:") shows only while there are tags. It may
+  // sit inside [data-oa-brief-pieces]; the wipe below detaches it, so it goes back first.
+  const tagLabel = $('[data-oa-brief-pieces-label]');
   function renderPieces() {
     syncDrawer();
+    setHidden(tagLabel, !state.pieces.length);
     const w = tagWrap; if (!w) return; w.innerHTML = '';
+    if (tagLabel && !tagLabel.isConnected) w.appendChild(tagLabel);
     state.pieces.forEach((p, i) => {
       const remove = () => { state.pieces.splice(i, 1); renderPieces(); save(); };
       let b;
