@@ -130,6 +130,7 @@ ScrollTrigger consumers (e.g. `oa-text-reveal.js`) run through the Lenis↔Scrol
 - Swiper carousels use custom `wrapperClass` and `slideClass` (not default `.swiper-wrapper` / `.swiper-slide`) to avoid conflicts with Webflow's own Swiper instance
 - GSAP `CustomEase` is registered globally in `oa-global.js` before any page scripts run
 - **Easing is chosen per motion, never by reflex** — no site-wide default curve; `--ease-oa` is only the slider's. Table in `docs/REFERENCE.md` → "Easing — pick by motion".
+- **Designer knobs are listed in `docs/PROPS.md`.** Any change that adds, renames, removes or re-defaults a `data-` knob updates it in the same commit — `/props` (`.claude/skills/props/`).
 - Animation components are frequently sourced from **osmo.supply**: I paste the Webflow HTML, Claude Code adapts the JS with my tweaks — procedure in `.claude/skills/osmo-in/`
 
 ---
