@@ -48,10 +48,15 @@
     <span>ViewFinder</span>
     <span class="plus" data-oa-plus data-oa-plus-trigger="hover" data-oa-plus-duration="0.6" data-oa-plus-ease="power3.out" data-oa-plus-angle="45"></span>
   </div>
-  <h2>2b · Click — 0.5s back.out(1.7), 180°</h2>
+  <h2>2b · Click open/close (alternates) — 0.5s back.out(1.7), 45°</h2>
   <button class="btn" id="demo-click">Expand
-    <span class="plus" data-oa-plus data-oa-plus-trigger="click" data-oa-plus-duration="0.5" data-oa-plus-ease="back.out(1.7)" data-oa-plus-angle="180"></span>
+    <span class="plus" data-oa-plus data-oa-plus-trigger="click" data-oa-plus-duration="0.5" data-oa-plus-ease="back.out(1.7)" data-oa-plus-angle="45"></span>
   </button>
+  <h2>2c · Click open/close (follows aria-expanded; Escape closes) — 0.4s power2.inOut, 135°</h2>
+  <button class="btn" id="demo-aria" aria-expanded="false" aria-controls="demo-panel">Details
+    <span class="plus" data-oa-plus data-oa-plus-trigger="click" data-oa-plus-duration="0.4" data-oa-plus-ease="power2.inOut" data-oa-plus-angle="135"></span>
+  </button>
+  <div id="demo-panel" hidden>Panel content.</div>
 </section>
 
 <section>
@@ -71,6 +76,11 @@
 
 <script>
   document.querySelectorAll('.plus').forEach((el) => el.append(document.getElementById('plus-art').content.cloneNode(true)));
+  // Stand-in for an accordion that owns aria-expanded (as oa-legal-toc.js does).
+  const aria = document.getElementById('demo-aria'), panel = document.getElementById('demo-panel');
+  const setOpen = (o) => { aria.setAttribute('aria-expanded', String(o)); panel.hidden = !o; };
+  aria.addEventListener('click', () => setOpen(aria.getAttribute('aria-expanded') !== 'true'));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
 <script src="../src/js/oa-slider.js"></script>

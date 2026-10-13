@@ -24,13 +24,16 @@
             nearest [data-oa-plus-scope], else the nearest a/button,
             else the host — so a plus in a card slot answers the
             whole card when the card carries data-oa-plus-scope.
-     click  adds one step per click on the same element.
+     click  open/close: turns to the angle on open, back to 0 on
+            close. If that element carries aria-expanded it follows
+            that state (so any close turns it back); otherwise each
+            click alternates.
      slide  adds a step per next slide, takes one per previous,
             on the Lumos slider around it ([data-slider='component']).
             Swipes, keys and bullets count, not just the buttons.
 
-   The angle accumulates: a quick second click lands two steps on,
-   and a tween caught mid-way continues from where it is.
+   Slide steps accumulate, and a tween caught mid-way continues
+   from where it is.
    Reduced motion: the turn is instant.
    Needs window.gsap; without it the turn still happens, unanimated.
    Sitewide footer, after oa-slider.js. Raw-served (no build).
@@ -90,7 +93,20 @@
     const scope = host.closest('[data-oa-plus-scope]') || host.closest('a, button') || host;
 
     if (trigger === 'click') {
-      scope.addEventListener('click', () => turnTo(target + angle));
+      // Follow the opener's own state when it has one, so a close from
+      // elsewhere (Escape, another item opening) turns it back too.
+      if (scope.hasAttribute('aria-expanded')) {
+        const open = () => scope.getAttribute('aria-expanded') === 'true';
+        if (open()) { // starts open: set, don't animate
+          target = angle;
+          if (window.gsap) window.gsap.set(host, { rotation: angle });
+          else host.style.transform = 'rotate(' + angle + 'deg)';
+        }
+        new MutationObserver(() => { if ((target === angle) !== open()) turnTo(open() ? angle : 0); })
+          .observe(scope, { attributes: true, attributeFilter: ['aria-expanded'] });
+      } else {
+        scope.addEventListener('click', () => turnTo(target === angle ? 0 : angle));
+      }
       return;
     }
 
