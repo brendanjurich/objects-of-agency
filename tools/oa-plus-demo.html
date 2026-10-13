@@ -1,0 +1,79 @@
+<!doctype html>
+<!--
+  Dev-only harness for src/js/oa-plus.js — nothing in tools/ is served.
+  Open from disk: file://…/tools/oa-plus-demo.html
+  GSAP comes from jsDelivr here only because this page has no Webflow;
+  site code never loads it (window.gsap is Webflow's integration).
+  The "+" is a geometric placeholder until the Affinity export lands
+  in src/svg/ via /clean-svg.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oa-plus demo</title>
+<style>
+  body { font: 1rem/1.4 system-ui, sans-serif; margin: 2rem; background: #f4f2ee; color: #111; }
+  section { margin-bottom: 3rem; }
+  h2 { font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .plus { display: block; width: 1.375rem; height: 1.375rem; }
+  .plus svg { display: block; width: 100%; height: 100%; }
+  .btn { display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; border: 1px solid; background: none; font: inherit; cursor: pointer; }
+  .card { display: flex; justify-content: space-between; align-items: center; width: 20rem; padding: 1.5rem; background: #fff; }
+  .slider_element { width: 20rem; overflow: hidden; }
+  .slider_item { height: 10rem; display: grid; place-items: center; background: #ddd8cf; font-size: 2rem; }
+  .slider_nav { display: flex; gap: 1rem; margin-top: 1rem; }
+  .slider_nav button { padding: 0.5rem; border: 1px solid; background: none; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<template id="plus-art">
+  <svg viewBox="0 0 22 22" aria-hidden="true" focusable="false">
+    <rect x="0" y="10.25" width="22" height="1.5" fill="currentColor"/>
+    <rect x="10.25" y="0" width="1.5" height="22" fill="currentColor"/>
+  </svg>
+</template>
+
+<section>
+  <h2>1 · Button — hover, 0.35s power2.inOut, 90°</h2>
+  <button class="btn" id="demo-button">Add to brief
+    <span class="plus" data-oa-plus data-oa-plus-trigger="hover" data-oa-plus-duration="0.35" data-oa-plus-ease="power2.inOut" data-oa-plus-angle="90"></span>
+  </button>
+</section>
+
+<section>
+  <h2>2 · Slot (card scope) — hover, 0.6s power3.out, 45°</h2>
+  <div class="card" id="demo-card" data-oa-plus-scope>
+    <span>ViewFinder</span>
+    <span class="plus" data-oa-plus data-oa-plus-trigger="hover" data-oa-plus-duration="0.6" data-oa-plus-ease="power3.out" data-oa-plus-angle="45"></span>
+  </div>
+  <h2>2b · Click — 0.5s back.out(1.7), 180°</h2>
+  <button class="btn" id="demo-click">Expand
+    <span class="plus" data-oa-plus data-oa-plus-trigger="click" data-oa-plus-duration="0.5" data-oa-plus-ease="back.out(1.7)" data-oa-plus-angle="180"></span>
+  </button>
+</section>
+
+<section>
+  <h2>3 · Slider nav — slide, 1.2s expo.out, 90° (the reference timing)</h2>
+  <div data-slider="component" id="demo-slider">
+    <div class="slider_element" data-speed="600">
+      <div class="slider_list swiper-wrapper">
+        <div class="slider_item">1</div><div class="slider_item">2</div><div class="slider_item">3</div><div class="slider_item">4</div>
+      </div>
+    </div>
+    <div class="slider_nav">
+      <div data-slider="previous"><button aria-label="Previous slide"><span class="plus" data-oa-plus data-oa-plus-trigger="slide" data-oa-plus-duration="1.2" data-oa-plus-ease="expo.out"></span></button></div>
+      <div data-slider="next"><button aria-label="Next slide"><span class="plus" data-oa-plus data-oa-plus-trigger="slide" data-oa-plus-duration="1.2" data-oa-plus-ease="expo.out"></span></button></div>
+    </div>
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll('.plus').forEach((el) => el.append(document.getElementById('plus-art').content.cloneNode(true)));
+</script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="../src/js/oa-slider.js"></script>
+<script src="../src/js/oa-plus.js"></script>
+</body>
+</html>
