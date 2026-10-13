@@ -166,6 +166,27 @@ boundary. Set on `[data-legal-toc-accordion]`.
 | `data-oa-brief-drawer-exit` | `0.35` | Piece drawer slide-out. |
 | `data-oa-brief-drawer-stagger` | `0.03` | Gap between drawer rows landing. |
 
+**Copy**, also on the root. `{n}`, `{N}`, `{name}` and `{ref}` are filled in.
+Wording: `docs/brief-copy-deck.md`. Knobs marked *per branch* can take an
+audience suffix — `-client`, `-home`, `-venue`, `-looking` (e.g.
+`data-oa-brief-sent-text-looking`) — which wins over the bare one.
+
+| Attribute | Default | Controls |
+|---|---|---|
+| `data-oa-brief-progress-text` | `Question {n} of {N}` | Progress line above each step. |
+| `data-oa-brief-whole-series-text` | `The whole series` | First row of each series sheet in the piece drawer. |
+| `data-oa-brief-drawer-done-text` | `Done` | Drawer Done bar, nothing picked. |
+| `data-oa-brief-drawer-count-text` | `Done · {n}` | Drawer Done bar, pieces picked. |
+| `data-oa-brief-drawer-full-text` | `Done · {n} max` | Drawer Done bar at the piece cap. |
+| `data-oa-brief-sent-text` | `Sent. Thank you, {name}.` | Sent heading. *Per branch.* |
+| `data-oa-brief-sent-body-text` | one per audience, in file | Sent body. *Per branch.* |
+| `data-oa-brief-ref-text` | `Your reference is {ref}.` | Reference line on the sent screen (never shown to just-looking). *Per branch.* |
+| `data-oa-brief-sent-title` | `Sent — New Project Brief` | Browser tab title once sent. *Per branch.* |
+| `data-oa-brief-sent-status-text` | `Brief sent.` | Status line once sent. *Per branch.* |
+| `data-oa-brief-error-text` | copy in file | Send failed, any reason not below. |
+| `data-oa-brief-limit-text` | copy in file | Send refused: too many sends (429). |
+| `data-oa-brief-link-text` | copy in file | Send refused: a web link in a short field (400). |
+
 Step scoping (`data-oa-brief-step` / `-branch` / `-when` / `-unless`) is
 structure, not tuning — see the file header.
 
