@@ -510,7 +510,7 @@
     }
 
     // ---- placement: the modal dialog is sized onto its anchor, so the menu belongs to the
-    // card — [data-oa-brief-drawer-anchor] (the image panel) above Webflow's small breakpoint,
+    // card — [data-oa-brief-drawer-anchor] (the image panel's right-hand column) above Webflow's small breakpoint,
     // the whole brief card at and below it, where the panel is too short to scan. The dialog
     // clips (oa-brief.css), so the panel slides out of the anchor's right edge and the
     // backdrop dims only the anchor. Measured with the page scroll locked, so the box holds;
