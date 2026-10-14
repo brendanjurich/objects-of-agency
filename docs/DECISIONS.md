@@ -1611,3 +1611,41 @@ outside the box lands on `::backdrop`, whose target is the dialog itself — tha
   instances). Designer edits go on the page elements; the canvas-preview Embed lives on
   the page dialog and pins itself to the anchor with CSS anchor positioning.
 
+
+## 2026-10-14 — Saved configuration has one owner: `window.oaSaved`
+
+Partly reverses 2026-05-27 "Configurator hardcoding is intentional". That call covered
+one file. By October the option-group list sat in five places (configurator ×2, Saved
+Items, `items.ts`, a header comment), the identity key in two (`idOf`, `configKey`),
+and the brief read both Saved Items storage keys raw. The quote form would have been a
+fourth reader.
+
+### What changed
+
+`oa-saved-items.js` owns the saved configuration and exposes `window.oaSaved`:
+`current()`, `forRequest('saved'|'product')`, `sameConfig()`, `editHref()`,
+`parseCfg()`. The brief and the configurator's `?cfg=` restore go through it; neither
+reads a storage key or a link format any more. It is set at parse time in sitewide
+footer code, so every page-level script sees it. The brief fails soft without it
+(nothing carried over).
+
+### What stayed
+
+- `fixRadioIds()` and `initSummaryUpdater()` keep their hardcoded lists — the
+  2026-05-27 reasoning still holds for them.
+- `items.ts` keeps its own `GROUPS` (separate runtime, no build step).
+
+### Option-group order is append-only
+
+Share links (`?l=` short links and old `?s=` links) store each group as its **index**
+in `GROUPS`. Inserting a group anywhere but the end would decode every stored link
+(kept 12 months) to the wrong options, silently. A new group goes last, in Saved
+Items' `SUMMARY` and in `items.ts`. `tests/saved-items.test.mjs` pins the order and
+decodes a server-encoded (`compact()`) list on the page, so the two can't drift.
+
+### First test suite for `src/`
+
+`npm test` (Node's runner + Playwright 1.62.1, exact-pinned devDependency) drives the
+raw script in Chromium against fixture pages served at `http://oa.test/…`. The repo is
+now `"type": "module"` so Node imports the Edge Function `.ts` files directly — nothing
+under `src/` runs in Node, so the switch touches no served file.

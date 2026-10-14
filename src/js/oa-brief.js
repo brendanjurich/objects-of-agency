@@ -22,12 +22,12 @@
 //
 // ?from=saved-items (the Saved Items page's brief link): the visitor's saved pieces arrive
 // as piece tags, the quantity question is pre-set from their total, and each saved
-// configuration still tagged at send goes out as items[] — read from oa-saved-items.js's
-// localStorage store. Price is never read. The list's project name rides along as
+// configuration still tagged at send goes out as items[] — from window.oaSaved
+// (oa-saved-items.js), which never hands over a price. The list's project name rides along as
 // `project`, captured on arrival — removing piece tags never changes it.
 //
 // ?from=product (a product page's Create Brief link): that page's configuration arrives as
-// a piece tag, read from the oa-brief-piece:v1 key oa-saved-items.js writes on click, and
+// a piece tag, handed over through window.oaSaved.forRequest('product'), and
 // goes out in items[] the same way. Kept in the draft, so several pieces can gather.
 
 (function () {
@@ -103,40 +103,34 @@
   state.pieces = state.pieces || [];
   const params = new URLSearchParams(location.search);
   if (params.get('piece')) { state.after = ['seen']; state.skipWhat = true; const p = params.get('piece'); if (state.pieces.indexOf(p) < 0) state.pieces.push(p); }
-  function savedItems() {
-    try {
-      const list = JSON.parse(localStorage.getItem('oa-saved-items:v1') || 'null');
-      return list && Array.isArray(list.items) ? list.items.filter(e => e && e.slug && e.name) : [];
-    } catch (e) { return []; }
-  }
+  // Saved configurations come through oa-saved-items.js (sitewide, loaded first). Without
+  // it the brief still works, just with nothing carried over.
+  const saved = window.oaSaved;
+  const forRequest = source => saved ? saved.forRequest(source) : { project: '', items: [] };
+  const sameConfig = (a, b) => saved ? saved.sameConfig(a, b) : a === b;
+  const savedItems = () => forRequest('saved').items;
   if (params.get('from') === 'saved-items') {
-    const saved = savedItems();
-    if (saved.length) {
+    const list = forRequest('saved');
+    if (list.items.length) {
       state.fromSaved = true; state.after = ['seen']; state.skipWhat = true;
-      try { state.project = (JSON.parse(localStorage.getItem('oa-saved-items:v1')).project || '').trim().slice(0, 120); } catch (e) {}
-      saved.forEach(e => { if (state.pieces.indexOf(e.name) < 0) state.pieces.push(e.name); });
-      const n = saved.reduce((sum, e) => sum + (e.qty || 1), 0);
+      state.project = list.project.trim().slice(0, 120);
+      list.items.forEach(e => { if (state.pieces.indexOf(e.name) < 0) state.pieces.push(e.name); });
+      const n = list.items.reduce((sum, e) => sum + e.qty, 0);
       if (!state.quantity) state.quantity = n >= 10 ? 'ten-plus' : n > 1 ? 'few' : 'one';
     }
   }
-  const configKey = e => e.slug + '|' + Object.keys(e.options || {}).sort().map(k => k + ':' + e.options[k]).join(',');
   if (params.get('from') === 'product') {
-    let piece = null;
-    try { piece = JSON.parse(localStorage.getItem('oa-brief-piece:v1') || 'null'); } catch (e) {}
-    if (piece && piece.slug && piece.name) {
+    const piece = forRequest('product').items[0];
+    if (piece) {
       state.after = ['seen']; state.skipWhat = true;
       if (state.pieces.indexOf(piece.name) < 0) state.pieces.push(piece.name);
-      state.configs = (state.configs || []).filter(e => configKey(e) !== configKey(piece)).concat([piece]).slice(-12);
+      state.configs = (state.configs || []).filter(e => !sameConfig(e, piece)).concat([piece]).slice(-12);
       if (!state.quantity) state.quantity = 'one';
     }
   }
   // Removing a piece's tag drops its configurations too
   const items = () => (state.fromSaved ? savedItems() : []).concat(state.configs || [])
-    .filter((e, i, all) => state.pieces.indexOf(e.name) >= 0 && all.findIndex(x => configKey(x) === configKey(e)) === i).slice(0, 12)
-    .map(e => {
-      const labels = {}; Object.keys(e.labels || {}).forEach(k => { if (e.labels[k]) labels[k] = e.labels[k]; });
-      return { slug: e.slug, name: e.name, options: e.options || {}, labels: labels, qty: e.qty || 1 };
-    });
+    .filter((e, i, all) => state.pieces.indexOf(e.name) >= 0 && all.findIndex(x => sameConfig(x, e)) === i).slice(0, 12);
   const startedAt = Date.now();
 
   // ---- values (inner-group scoping only; a step being hidden never hides its answers)

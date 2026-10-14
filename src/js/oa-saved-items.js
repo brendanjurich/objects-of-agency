@@ -73,8 +73,10 @@
   const KEY = 'oa-saved-items:v1';
   const CAP = 12;
   // Radio name → the configurator's summary element, which already holds the
-  // human label (swatch radios carry no text of their own). Same list as
-  // initSummaryUpdater() in oa-configurator.js.
+  // human label (swatch radios carry no text of their own). The option-group list other
+  // files read, through window.oaSaved. Its order is the group index in share links, so
+  // it is APPEND-ONLY: a new group goes last, here and in GROUPS in
+  // supabase/functions/_shared/items.ts (tests/saved-items.test.mjs pins both).
   const SUMMARY = {
     'Sizes': 'summary-size',
     'Top-Material': 'summary-top-material',
@@ -320,8 +322,21 @@
     const edit = row.querySelector('[data-oa-saved-edit]');
     if (!shared) setHidden(edit, !keys.length);
     const editLink = edit && edit.querySelector('a');
-    if (editLink) editLink.setAttribute('href', '/product/' + entry.slug + '?cfg=' +
-      keys.map(function (k) { return k + ':' + entry.options[k]; }).join(','));
+    if (editLink) editLink.setAttribute('href', editHref(entry));
+  }
+
+  // ?cfg=Sizes:700mm-diameter,Timber:oak — the edit link, read by oa-configurator.js
+  function editHref(entry) {
+    return '/product/' + entry.slug + '?cfg=' +
+      Object.keys(entry.options).map(function (k) { return k + ':' + entry.options[k]; }).join(',');
+  }
+  function parseCfg(search) {
+    const options = {};
+    (new URLSearchParams(search).get('cfg') || '').split(',').forEach(function (pair) {
+      const parts = pair.split(':');
+      if (SUMMARY[parts[0]] && SLUG.test(parts[1] || '')) options[parts[0]] = parts[1];
+    });
+    return options;
   }
 
   function renderPage() {
@@ -475,6 +490,36 @@
     list.project = project.value.slice(0, 120);
     write(list);
   });
+
+  // ---- the interface other files use (oa-brief.js, oa-configurator.js, the quote form).
+  // Storage keys, group names and link formats stay in this file. Set at parse time:
+  // this is sitewide footer code, ahead of every page-level script.
+  //   current()           this product page's configuration {slug, options, labels}, or null
+  //   forRequest(source)  {project, items[]} for an intake request, in the shape items.ts
+  //                       accepts, never a price. 'saved': the list; 'product': the piece
+  //                       a product page's Create Brief handed over
+  //   sameConfig(a, b)    same piece, same options
+  //   editHref(entry), parseCfg(location.search)   the ?cfg= edit link, both ways
+  window.oaSaved = {
+    current: function () {
+      if (!slug) return null;
+      const entry = readConfig();
+      delete entry.price;
+      return entry;
+    },
+    forRequest: function (source) {
+      if (source === 'saved') {
+        const list = load();
+        return { project: list.project || '', items: payload(list).items };
+      }
+      let piece = null;
+      try { piece = JSON.parse(localStorage.getItem('oa-brief-piece:v1') || 'null'); } catch (e) {}
+      return { project: '', items: piece && piece.slug && piece.name ? payload({ items: [piece] }).items : [] };
+    },
+    sameConfig: function (a, b) { return idOf(a) === idOf(b); },
+    editHref: editHref,
+    parseCfg: parseCfg,
+  };
 
   if (sharePriceInput) sharePriceInput.addEventListener('change', function () {
     const list = load();

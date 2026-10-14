@@ -1,8 +1,10 @@
 // Saved configurations from the Saved Items page (oa-saved-items.js), posted as items[] by
 // oa-brief.js (brief-intake) and by "Email me this list" (selection-intake). Strict on purpose: an unknown
 // key anywhere — a price above all (W07) — rejects the whole brief. No Deno APIs here, so
-// Node can test it — import a .mts copy (the repo isn't "type": "module").
+// Node imports it as is (tests/).
 
+// APPEND-ONLY: a share link stores each group as its index here, and oa-saved-items.js
+// decodes it with the same list. A new group goes last in both; tests/ pins the order.
 export const GROUPS = ["Sizes", "Top-Material", "Timber", "Anodised-Finish"];
 const KEYS = ["slug", "name", "options", "labels", "qty"];
 const SLUG = /^[a-z0-9-]{1,100}$/;
