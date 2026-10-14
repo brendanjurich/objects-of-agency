@@ -442,7 +442,9 @@
       .filter(function (el) { return !el.closest('.w-condition-invisible'); })[0];
     const entry = readConfig();
     delete entry.price;
-    entry.name = title ? title.textContent.trim() : '';
+    // The title sits in a text-reveal block: during its scramble textContent is noise, but
+    // SplitText (aria:'auto') keeps the real text in aria-label throughout
+    entry.name = title ? (title.getAttribute('aria-label') || title.textContent).trim() : '';
     entry.qty = 1;
     try { localStorage.setItem('oa-brief-piece:v1', JSON.stringify(entry)); } catch (err) {}
   }, true);
