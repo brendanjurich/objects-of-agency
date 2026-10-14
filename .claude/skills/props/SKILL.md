@@ -13,7 +13,7 @@ useful if it is never stale, so it moves in the **same commit** as the code.
 | Kind | Example | In PROPS.md? |
 |---|---|---|
 | **Knob** — a value the Designer sets to tune behaviour, timing, easing, copy, a URL, a key | `data-oa-plus-duration="0.6"`, `data-loop="true"` | **Yes** |
-| Marker hook — presence only says *this element is the X* | `data-oa-saved-row`, `data-legal-toc-panel` | No — file header |
+| Marker hook — presence only says *this element is the X* | `data-oa-saved-row`, `data-legal-toc-panel` | No — file header, and the page's manifest in `tools/contracts/` (same commit) |
 | State the script writes back | `data-whatsapp-status`, `aria-expanded`, a cached label | No |
 
 Test: *would Brendan ever type a different value into it?* Yes → knob.

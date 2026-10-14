@@ -8,27 +8,16 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { compact, type Item, parseItems } from "../_shared/items.ts";
 import { clientIp, hasLink, underLimit } from "../_shared/guard.ts";
+import { cors, json as http, ORIGINS } from "../_shared/http.ts";
 import { createShare, existing, ID } from "../_shared/share.ts";
 
-const ORIGINS = new Set([
-  "https://objects.agency",
-  "https://www.objects.agency",
-  "https://oa-v5.webflow.io",
-]);
-
-const cors = (origin: string) => ({
-  "Access-Control-Allow-Origin": origin,
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "content-type",
-  "Vary": "Origin",
-});
-const json = (status: number, body: unknown, origin: string) =>
-  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...cors(origin) } });
+const METHODS = "GET, POST, OPTIONS";
+const json = (status: number, body: unknown, origin: string) => http(status, body, origin, METHODS);
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin") ?? "";
   if (!ORIGINS.has(origin)) return new Response("forbidden", { status: 403 });
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(origin) });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(origin, METHODS) });
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   if (req.method === "GET") {

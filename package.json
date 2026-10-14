@@ -5,6 +5,10 @@
   "directories": {
     "doc": "docs"
   },
+  "scripts": {
+    "test": "node --test 'tests/*.test.mjs'",
+    "typecheck": "npx -y deno@2.5.6 check supabase/functions/*/index.ts"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brendanjurich/objects-of-agency.git"
@@ -12,9 +16,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/brendanjurich/objects-of-agency/issues"
   },
-  "homepage": "https://github.com/brendanjurich/objects-of-agency#readme"
+  "homepage": "https://github.com/brendanjurich/objects-of-agency#readme",
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
 }

@@ -1,0 +1,75 @@
+// The Designer hook contract check (tools/contract.mjs) against captured staging pages:
+// a capture gives its known result, and removing any one hook fails, naming that hook.
+// Recapture a fixture after a deliberate Designer change (see the header of each).
+//   node --test tests/
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { checkPage, loadManifest, PAGES } from '../tools/contract.mjs';
+
+const fixture = page => readFileSync(new URL(`./fixtures/contract/${page}.html`, import.meta.url), 'utf8');
+const failed = r => r.fail.map(l => l.replace(/ — .*/, ''));
+
+// What each capture fails today. /contact's drawer has no [data-oa-brief-drawer-backdrop]
+// on staging (14-10-2026) — a live Designer gap, not a checker fault.
+const KNOWN = { contact: ['drawer backdrop'], 'saved-items': [], product: [], legal: [] };
+
+for (const page of PAGES) {
+  test(`${page}: the capture gives its known result`, async () => {
+    const r = await checkPage(await loadManifest(page), fixture(page));
+    assert.deepEqual(failed(r), KNOWN[page]);
+    assert.ok(r.ok.length > 5);
+  });
+
+  test(`${page}: removing any one declared hook fails, naming it`, async () => {
+    const m = await loadManifest(page);
+    const html = fixture(page);
+    for (const [label, attr] of m.attrs) {
+      if (KNOWN[page].includes(label)) continue;
+      const r = await checkPage(m, html.replaceAll(attr + '="', 'data-removed="'));
+      assert.ok(failed(r).includes(label), `${page}: removing [${attr}] should fail "${label}"`);
+    }
+    for (const n of m.inputs || []) {
+      const r = await checkPage(m, html.replaceAll(`name="${n}"`, 'name="renamed"'));
+      assert.ok(failed(r).includes(`input name="${n}"`), `${page}: renaming input ${n} should fail`);
+    }
+  });
+
+  test(`${page}: an older engine tag fails`, async () => {
+    const m = await loadManifest(page);
+    const r = await checkPage(m, fixture(page).replace(/v1\.0\.\d+(\/src\/js\/)/g, 'v1.0.1$1'));
+    for (const file of Object.keys(m.engines)) assert.ok(failed(r).includes(`${file} >= v1.0.${m.engines[file]}`));
+  });
+}
+
+test('saved-items: one row missing its config line fails', async () => {
+  const m = await loadManifest('saved-items');
+  const r = await checkPage(m, fixture('saved-items').replace('data-oa-saved-line="Timber"', 'data-removed="Timber"'));
+  assert.ok(failed(r).includes('every row has a Timber line'));
+});
+
+test('contact: a honeypot named "website" fails', async () => {
+  const m = await loadManifest('contact');
+  const html = fixture('contact').replace(/<input[^>]*data-oa-brief-honeypot[^>]*>/, tag => tag.replace(/\bname="[^"]*"/, 'name="website"'));
+  assert.ok(failed(await checkPage(m, html)).includes('honeypot name autofill ignores'));
+});
+
+test('contact: a step block lost from the published markup fails its pair', async () => {
+  const m = await loadManifest('contact');
+  const r = await checkPage(m, fixture('contact').replace('data-oa-brief-step="when"', 'data-removed="when"'));
+  assert.ok(failed(r).includes('step pair: when'));
+});
+
+test('a commit-SHA script URL (the cached-404 unblock) passes the engine check', async () => {
+  const m = await loadManifest('product');
+  const sha = 'a'.repeat(40);
+  const r = await checkPage(m, fixture('product').replace(/v1\.0\.\d+(\/src\/js\/oa-saved-items\.js)/, sha + '$1'));
+  assert.deepEqual(failed(r), []);
+});
+
+test('contact: an empty or non-https endpoint fails', async () => {
+  const m = await loadManifest('contact');
+  const r = await checkPage(m, fixture('contact').replace(/data-oa-brief-endpoint="[^"]*"/, 'data-oa-brief-endpoint=""'));
+  assert.ok(failed(r).includes('endpoint knob is an https URL'));
+});
