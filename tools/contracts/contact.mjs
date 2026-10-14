@@ -5,7 +5,8 @@ export default {
   url: 'https://oa-v5.webflow.io/contact',
   // v1.0.250: the brief reads saved configurations through window.oaSaved — both or neither.
   // v1.0.252: a piece tag paired with its Edit link in a wrapper is cloned whole.
-  engines: { 'oa-brief.js': 252, 'oa-saved-items.js': 250 },
+  // v1.0.254: removing a tag drops its configurations; Create Brief's name survives the scramble.
+  engines: { 'oa-brief.js': 254, 'oa-saved-items.js': 254 },
   attrs: [
     ['endpoint knob', 'data-oa-brief-endpoint'],
     // controls and regions
