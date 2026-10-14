@@ -124,6 +124,7 @@
       state.fromSaved = true; state.after = ['seen']; state.skipWhat = true;
       state.project = list.project.trim().slice(0, 120);
       list.items.forEach(e => { if (state.pieces.indexOf(e.name) < 0) state.pieces.push(e.name); });
+      state.dropped = (state.dropped || []).filter(d => !list.items.some(e => sameConfig(d, e)));
       const n = list.items.reduce((sum, e) => sum + e.qty, 0);
       if (!state.quantity) state.quantity = n >= 10 ? 'ten-plus' : n > 1 ? 'few' : 'one';
     }
@@ -745,6 +746,9 @@
     state.pieces.forEach((p, i) => {
       const remove = e => {
         if (e && e.target.closest('[data-oa-brief-piece-edit]')) return; // the edit link navigates instead
+        // Its configurations go with it, or picking the piece again from the drawer revives them
+        state.dropped = (state.dropped || []).concat(items().filter(c => c.name === p).map(c => ({ slug: c.slug, options: c.options })));
+        state.configs = (state.configs || []).filter(c => c.name !== p);
         state.pieces.splice(i, 1); renderPieces(); save();
       };
       let b;

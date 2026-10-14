@@ -1718,3 +1718,11 @@ any child in it, such as `.brief_tag_piece-name`, with it). The accessible name 
 the links: a label on a plain wrapper div is ignored. A return through Create Brief now
 reopens the brief on the step the link was clicked from, not on question one, with one
 history entry per earlier step so Back walks the route.
+
+**Settled 14-10-2026 (Brendan), v1.0.254.** The Edit link shows on every piece that carries
+a configuration, not only after the summary's Change: a link that depends on how the visitor
+arrived would come and go with Back, a refresh or a return from the product page, and it is
+the only sign on that screen that a configuration rides with the piece. Pieces picked from
+the drawer get no Edit (no "Configure" either) — configuring belongs on the product page.
+Removing a tag now drops its configurations, so picking the piece again from the drawer
+can't revive one; arriving from Saved Items again brings them back.
