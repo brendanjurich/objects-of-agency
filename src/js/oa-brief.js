@@ -699,7 +699,7 @@
   // sit inside [data-oa-brief-pieces]; the wipe below detaches it, so it goes back first.
   const tagLabel = $('[data-oa-brief-pieces-label]');
   // Every render rebuilds every tag, so only a piece that wasn't shown last time fades in
-  // (and the label, when the first one lands). data-oa-brief-tag-fade (0.25; 0 = off).
+  // (and the whole box, when the first one lands). data-oa-brief-tag-fade (0.25; 0 = off).
   // Enters: power2.out. Removal pops: fading out would hold the rebuild until it ends.
   const TAG_FADE = knob('tag-fade', 0.25);
   let shownTags = [];
@@ -731,10 +731,16 @@
   window.addEventListener('pageshow', e => { if (e.persisted && state.editing) { delete state.editing; save(); } });
   function renderPieces() {
     syncDrawer();
-    const labelWasShown = tagLabel && !tagLabel.hidden;
+    const w = tagWrap;
+    // The tags box is hidden while empty too, or its Designer background shows as a bare strip.
+    // When the first piece lands the box fades in whole, so its tags and label don't fade again.
+    const appearing = state.pieces.length && [w, tagLabel].filter(el => el && el.hidden)
+      .filter((el, i, all) => !all.some(o => o !== el && o.contains(el)));
+    setHidden(w, !state.pieces.length);
     setHidden(tagLabel, !state.pieces.length);
-    if (!labelWasShown && state.pieces.length) fadeIn(tagLabel);
-    const w = tagWrap; if (!w) return; w.innerHTML = '';
+    (appearing || []).forEach(fadeIn);
+    if (!w) return; w.innerHTML = '';
+    const boxFading = !!appearing && appearing.indexOf(w) >= 0;
     if (tagLabel && !tagLabel.isConnected) w.appendChild(tagLabel);
     state.pieces.forEach((p, i) => {
       const remove = e => {
@@ -759,11 +765,11 @@
           if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('[data-oa-brief-piece-edit]')) { e.preventDefault(); remove(); }
         });
         w.appendChild(unit);
-        if (shownTags.indexOf(p) < 0) fadeIn(unit);
+        if (shownTags.indexOf(p) < 0 && !boxFading) fadeIn(unit);
       } else {
         b = document.createElement('button'); b.type = 'button'; b.className = 'brief_tag'; b.textContent = p;
         w.appendChild(b);
-        if (shownTags.indexOf(p) < 0) fadeIn(b);
+        if (shownTags.indexOf(p) < 0 && !boxFading) fadeIn(b);
       }
       b.setAttribute('aria-label', 'Remove ' + p);
       b.addEventListener('click', remove);

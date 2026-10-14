@@ -3,8 +3,9 @@
 
 export default {
   url: 'https://oa-v5.webflow.io/contact',
-  // v1.0.250: the brief reads saved configurations through window.oaSaved — both or neither
-  engines: { 'oa-brief.js': 250, 'oa-saved-items.js': 250 },
+  // v1.0.250: the brief reads saved configurations through window.oaSaved — both or neither.
+  // v1.0.252: a piece tag paired with its Edit link in a wrapper is cloned whole.
+  engines: { 'oa-brief.js': 252, 'oa-saved-items.js': 250 },
   attrs: [
     ['endpoint knob', 'data-oa-brief-endpoint'],
     // controls and regions
@@ -48,6 +49,8 @@ export default {
     // Name is one field or a first/last pair; the engine composes either into `name`.
     check('name field (name, or first_name + last_name)', names.has('name') || (names.has('first_name') && names.has('last_name')));
 
+    // aria-hidden on the opener hides the only way to name a piece from a screen reader
+    check('drawer opener not aria-hidden', !/<[^>]*aria-hidden="true"[^>]*data-oa-brief-piece-open|<[^>]*data-oa-brief-piece-open[^>]*aria-hidden="true"/.test(html));
     check('drawer root is a <dialog>', /<dialog[^>]*\sdata-oa-brief-drawer(?:="[^"]*")?[\s>]/.test(html), 'showModal() needs a real dialog');
     // Webflow turns a custom-tag button into a Link (<a>), which can't be disabled or pressed.
     check('drawer rows are real <button>s', !/<a[^>]*data-oa-brief-drawer-(?:pick|done|back|edge|other)/.test(html));
