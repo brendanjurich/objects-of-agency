@@ -12,7 +12,7 @@ const ROW = [
 
 export default {
   url: 'https://oa-v5.webflow.io/saved-items',
-  engines: { 'oa-saved-items.js': 236 },
+  engines: { 'oa-saved-items.js': 250 },
   attrs: [
     ['row template', 'data-oa-saved-row'], ['nav count badge', 'data-oa-saved-count'],
     ['empty state', 'data-oa-saved-empty'], ['list section', 'data-oa-saved-wrap'],

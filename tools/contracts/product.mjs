@@ -11,7 +11,8 @@ const SUMMARY = Object.fromEntries([...source.match(/const SUMMARY = \{([^}]*)\}
 
 export default {
   url: 'https://oa-v5.webflow.io/product/viewfinder-xen',
-  engines: { 'oa-configurator.js': 235, 'oa-saved-items.js': 236 },
+  // v1.0.250: ?cfg= restore reads the link through window.oaSaved — both or neither
+  engines: { 'oa-configurator.js': 250, 'oa-saved-items.js': 250 },
   attrs: [
     ['Save button', 'data-oa-save'], ['Create brief button', 'data-oa-create-brief'], ['nav count badge', 'data-oa-saved-count'],
     ['option slug on option items', 'data-option'], ['option price', 'data-price'],

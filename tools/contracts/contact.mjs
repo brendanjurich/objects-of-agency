@@ -3,7 +3,8 @@
 
 export default {
   url: 'https://oa-v5.webflow.io/contact',
-  engines: { 'oa-brief.js': 190 }, // Designer-reachable copy knobs
+  // v1.0.250: the brief reads saved configurations through window.oaSaved — both or neither
+  engines: { 'oa-brief.js': 250, 'oa-saved-items.js': 250 },
   attrs: [
     ['endpoint knob', 'data-oa-brief-endpoint'],
     // controls and regions
