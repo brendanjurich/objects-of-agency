@@ -1,11 +1,13 @@
 // /product/{slug} — the configurator (oa-configurator.js) and Save / Create brief
 // (oa-saved-items.js). Default page is a configured piece; a static piece has no radios.
 
+import { readFileSync } from 'node:fs';
 import { GROUPS } from '../../supabase/functions/_shared/items.ts';
 
-// Option group → the configurator's summary element (SUMMARY in oa-saved-items.js), which
-// holds the label a saved configuration carries
-const SUMMARY = { 'Sizes': 'summary-size', 'Top-Material': 'summary-top-material', 'Timber': 'summary-timber', 'Anodised-Finish': 'summary-anodising' };
+// Option group → the configurator's summary element, which holds the label a saved
+// configuration carries. Read from SUMMARY in oa-saved-items.js, its one owner.
+const source = readFileSync(new URL('../../src/js/oa-saved-items.js', import.meta.url), 'utf8');
+const SUMMARY = Object.fromEntries([...source.match(/const SUMMARY = \{([^}]*)\}/)[1].matchAll(/'([^']+)': '([^']+)'/g)].map(m => [m[1], m[2]]));
 
 export default {
   url: 'https://oa-v5.webflow.io/product/viewfinder-xen',

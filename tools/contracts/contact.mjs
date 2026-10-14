@@ -26,6 +26,7 @@ export default {
   inputs: ['audience', 'after', 'bespoke', 'setting', 'quantity', 'timing', 'timing_date', 'budget', 'materials', 'interest', 'note', 'email', 'practice'],
 
   async checks(html, { has, count, names, check, note, css }) {
+    check('endpoint knob is an https URL', has(/data-oa-brief-endpoint="https:\/\//));
     check('exactly one [data-oa-brief] root', count(/data-oa-brief=""/g) === 1, count(/data-oa-brief=""/g) + ' found');
 
     // step pairs — every step id must appear twice (question + answers)

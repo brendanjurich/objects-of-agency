@@ -74,7 +74,7 @@ export function intake<Row, S extends Stored>(def: Definition<Row, S>, deps: Dep
     // A broken counter must not cost a lead: Turnstile still gates
     let allowed = true;
     try { allowed = await deps.underLimit(def.name, def.email(row), ip); }
-    catch (e) { console.error("rate limit check failed; allowing", e); }
+    catch (e) { console.error("rate limit check threw; allowing", e); }
     if (!allowed) { console.log("rejected: rate limit"); return json(429, { error: "limit" }, origin); }
 
     let stored: S;

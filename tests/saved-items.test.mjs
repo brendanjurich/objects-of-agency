@@ -174,3 +174,13 @@ test('an old ?s= link (captured format, with prices) still decodes', async () =>
   assert.deepEqual(await lines(page), EXPECTED);
   await context.close();
 });
+
+test("forRequest('saved') skips malformed stored entries instead of throwing", async () => {
+  const { page, context } = await open('/contact', '', { init: seed({ v: 1, project: 42, items: [
+    null, { name: 'No slug', options: {}, labels: {} }, { slug: 'vesper-bed', name: 'Vesper Bed', options: {}, labels: {}, qty: 1 },
+  ] }) });
+  assert.deepEqual(await page.evaluate(() => window.oaSaved.forRequest('saved')), {
+    project: '', items: [{ slug: 'vesper-bed', name: 'Vesper Bed', options: {}, labels: {}, qty: 1 }],
+  });
+  await context.close();
+});

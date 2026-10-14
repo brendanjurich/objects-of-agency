@@ -60,3 +60,16 @@ test('contact: a step block lost from the published markup fails its pair', asyn
   const r = await checkPage(m, fixture('contact').replace('data-oa-brief-step="when"', 'data-removed="when"'));
   assert.ok(failed(r).includes('step pair: when'));
 });
+
+test('a commit-SHA script URL (the cached-404 unblock) passes the engine check', async () => {
+  const m = await loadManifest('product');
+  const sha = 'a'.repeat(40);
+  const r = await checkPage(m, fixture('product').replace(/v1\.0\.\d+(\/src\/js\/oa-saved-items\.js)/, sha + '$1'));
+  assert.deepEqual(failed(r), []);
+});
+
+test('contact: an empty or non-https endpoint fails', async () => {
+  const m = await loadManifest('contact');
+  const r = await checkPage(m, fixture('contact').replace(/data-oa-brief-endpoint="[^"]*"/, 'data-oa-brief-endpoint=""'));
+  assert.ok(failed(r).includes('endpoint knob is an https URL'));
+});

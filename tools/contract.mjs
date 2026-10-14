@@ -33,10 +33,13 @@ export async function checkPage(manifest, html, { css = false } = {}) {
   const check = (label, cond, detail = '') => (cond ? ok : fail).push(label + (detail ? ' — ' + detail : ''));
   const note = text => notes.push(text);
 
-  const tags = [...new Set([...html.matchAll(/objects-of-agency@(v1\.0\.\d+)\/src\/((?:js|css)\/[a-z-]+\.(?:js|css))/g)].map(m => m[2] + ' @' + m[1]))].sort();
+  const tags = [...new Set([...html.matchAll(/objects-of-agency@(v1\.0\.\d+|[0-9a-f]{40})\/src\/((?:js|css)\/[a-z-]+\.(?:js|css))/g)].map(m => m[2] + ' @' + m[1]))].sort();
   for (const [file, min] of Object.entries(manifest.engines || {})) {
-    const ver = Number(((html.match(new RegExp('v1\\.0\\.(\\d+)/src/js/' + file.replace('.', '\\.'))) || [])[1]) || 0);
-    check(`${file} >= v1.0.${min}`, ver >= min, ver ? 'page loads v1.0.' + ver : 'not loaded');
+    const at = (html.match(new RegExp('objects-of-agency@([^/]+)/src/js/' + file.replace('.', '\\.'))) || [])[1] || '';
+    const ver = Number((at.match(/^v1\.0\.(\d+)$/) || [])[1] || 0);
+    // A commit-SHA URL (the documented unblock for a cached tag 404) can't be compared
+    if (/^[0-9a-f]{40}$/.test(at)) { check(`${file} >= v1.0.${min}`, true, 'pinned to commit ' + at.slice(0, 7) + ', tag not compared'); continue; }
+    check(`${file} >= v1.0.${min}`, ver >= min, ver ? 'page loads v1.0.' + ver : at ? 'page loads @' + at : 'not loaded');
   }
   for (const [label, attr] of manifest.attrs || [])
     check(label, has(new RegExp(attr + '="')), has(new RegExp(attr + '="')) ? '' : `[${attr}] ABSENT from served DOM`);

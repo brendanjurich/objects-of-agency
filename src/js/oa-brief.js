@@ -101,6 +101,8 @@
   // ---- state
   let state; try { state = JSON.parse(sessionStorage.getItem(STORE) || '{}'); } catch (e) { state = {}; }
   state.pieces = state.pieces || [];
+  // A draft from an older oa-brief.js may hold configurations in an older shape
+  state.configs = (state.configs || []).filter(e => e && e.slug && e.name && e.options && e.labels);
   const params = new URLSearchParams(location.search);
   if (params.get('piece')) { state.after = ['seen']; state.skipWhat = true; const p = params.get('piece'); if (state.pieces.indexOf(p) < 0) state.pieces.push(p); }
   // Saved configurations come through oa-saved-items.js (sitewide, loaded first). Without

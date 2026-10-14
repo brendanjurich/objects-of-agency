@@ -144,8 +144,9 @@
   }
 
   function idOf(entry) {
-    return entry.slug + '|' + Object.keys(entry.options).sort()
-      .map(function (k) { return k + ':' + entry.options[k]; }).join(',');
+    const options = entry.options || {};
+    return entry.slug + '|' + Object.keys(options).sort()
+      .map(function (k) { return k + ':' + options[k]; }).join(',');
   }
 
   // ---- shared list. Item = [slug, qty, [[group index, option slug, label], …], price?] —
@@ -510,7 +511,7 @@
     forRequest: function (source) {
       if (source === 'saved') {
         const list = load();
-        return { project: list.project || '', items: payload(list).items };
+        return { project: typeof list.project === 'string' ? list.project : '', items: payload(list).items };
       }
       let piece = null;
       try { piece = JSON.parse(localStorage.getItem('oa-brief-piece:v1') || 'null'); } catch (e) {}
@@ -551,7 +552,7 @@
   // What both server calls send: named entries only (the server needs the CMS name), no
   // price. The share link's #p= prices follow the same order.
   function payload(list) {
-    const entries = list.items.filter(function (e) { return e.name; });
+    const entries = list.items.filter(function (e) { return e && e.slug && e.name; });
     const items = entries.map(function (e) {
       const labels = {};
       Object.keys(e.labels || {}).forEach(function (k) { if (e.labels[k]) labels[k] = e.labels[k]; });
