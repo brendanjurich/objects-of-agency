@@ -30,7 +30,8 @@
 // a piece tag, handed over through window.oaSaved.forRequest('product'), and
 // goes out in items[] the same way. Kept in the draft, so several pieces can gather.
 //
-// Edit configuration: [data-oa-brief-piece-edit] inside the piece tag template (optional) is
+// Edit configuration: [data-oa-brief-piece-edit] in the piece tag template — inside the tag, or
+// beside it in a wrapper that is then cloned whole (optional) — is
 // shown once per configuration that piece carries, linking to the product page on those
 // options. Coming back through that page's Create Brief replaces the edited configuration
 // (one from Saved Items is dropped from this brief only; the saved list is never touched).
@@ -127,14 +128,17 @@
       if (!state.quantity) state.quantity = n >= 10 ? 'ten-plus' : n > 1 ? 'few' : 'one';
     }
   }
+  let resumeAt = null;
   if (params.get('from') === 'product') {
     const piece = forRequest('product').items[0];
     if (piece) {
-      // Back from a tag's Edit configuration link: the new configuration replaces the edited one
+      // Back from a tag's Edit configuration link: the new configuration replaces the edited one,
+      // and the brief reopens on the step the link was clicked from
       const was = state.editing;
       if (was && was.slug === piece.slug) {
         state.configs = state.configs.filter(e => !sameConfig(e, was));
-        state.dropped = (state.dropped || []).concat([was]);
+        state.dropped = (state.dropped || []).concat([{ slug: was.slug, options: was.options }]);
+        resumeAt = was.step;
       }
       state.dropped = (state.dropped || []).filter(d => !sameConfig(d, piece));
       state.after = ['seen']; state.skipWhat = true;
@@ -684,10 +688,13 @@
   // the styling on the canvas is the styling that ships. Without one it falls back to
   // the bare generated button, which is why a Designer-built tag styled but never
   // attribute-marked lost its padding — innerHTML wipes it before it is ever seen.
+  // The template is the whole per-piece unit: the tag itself, or the wrapper around it when the
+  // Designer pairs the tag with its Edit configuration link as siblings (no link inside the
+  // tag's button) — the child of [data-oa-brief-pieces] that holds the tag.
   const tagWrap = $('[data-oa-brief-pieces]');
-  const tagTplSrc = tagWrap && $('[data-oa-brief-piece-tag]', tagWrap);
+  let tagTplSrc = tagWrap && $('[data-oa-brief-piece-tag]', tagWrap);
+  while (tagTplSrc && tagTplSrc.parentElement !== tagWrap) tagTplSrc = tagTplSrc.parentElement;
   const tagTpl = tagTplSrc && tagTplSrc.cloneNode(true);
-  if (tagTpl) tagTpl.removeAttribute('data-oa-brief-piece-tag');
   // [data-oa-brief-pieces-label] ("Selections:") shows only while there are tags. It may
   // sit inside [data-oa-brief-pieces]; the wipe below detaches it, so it goes back first.
   const tagLabel = $('[data-oa-brief-pieces-label]');
@@ -711,9 +718,10 @@
       const links = el.matches('a') ? [el] : $$('a', el);
       links.forEach(a => a.setAttribute('href', href));
       const config = Object.keys(c.labels).map(k => c.labels[k]).join(' · ');
-      el.setAttribute('aria-label', 'Edit configuration: ' + (config ? piece + ' — ' + config : piece));
+      // On the links: a label on a plain wrapper div is ignored by most screen readers
+      (links.length ? links : [el]).forEach(a => a.setAttribute('aria-label', 'Edit configuration: ' + (config ? piece + ' — ' + config : piece)));
       el.addEventListener('click', () => {
-        state.editing = { slug: c.slug, options: c.options }; save();
+        state.editing = { slug: c.slug, options: c.options, step: route()[idx].id }; save();
         if (!links.length) location.href = href;
       });
       return el;
@@ -737,22 +745,28 @@
       if (tagTpl) {
         // The generated button carried the remove affordance; a cloned div has to be
         // given it back, or the tag is unremovable by keyboard and silent to a reader.
-        b = tagTpl.cloneNode(true);
-        const edit = $('[data-oa-brief-piece-edit]', b);
+        const unit = tagTpl.cloneNode(true);
+        b = unit.matches('[data-oa-brief-piece-tag]') ? unit : $('[data-oa-brief-piece-tag]', unit);
+        b.removeAttribute('data-oa-brief-piece-tag');
+        const edit = $('[data-oa-brief-piece-edit]', unit);
         const mark = edit && document.createComment('');
         if (edit) edit.replaceWith(mark); // out of the way of setText, which takes the first <p>
-        setText(b, p);
+        // [data-oa-brief-piece-name] is the text slot; without one the tag's own text is replaced
+        setText($('[data-oa-brief-piece-name]', b) || b, p);
         if (mark) mark.replaceWith(...editLinks(edit, p));
         if (b.tagName !== 'BUTTON') { b.setAttribute('role', 'button'); b.setAttribute('tabindex', '0'); }
         b.addEventListener('keydown', e => {
           if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('[data-oa-brief-piece-edit]')) { e.preventDefault(); remove(); }
         });
+        w.appendChild(unit);
+        if (shownTags.indexOf(p) < 0) fadeIn(unit);
       } else {
         b = document.createElement('button'); b.type = 'button'; b.className = 'brief_tag'; b.textContent = p;
+        w.appendChild(b);
+        if (shownTags.indexOf(p) < 0) fadeIn(b);
       }
       b.setAttribute('aria-label', 'Remove ' + p);
-      b.addEventListener('click', remove); w.appendChild(b);
-      if (shownTags.indexOf(p) < 0) fadeIn(b);
+      b.addEventListener('click', remove);
     });
     shownTags = state.pieces.slice();
   }
@@ -933,7 +947,10 @@
   setHidden($('[data-oa-brief-error]'), true);
   restore();
   history.replaceState({ oaBrief: 0 }, '');
-  show(0, false);
+  // Resuming after an edit: one history entry per step before it, so Back walks the route as usual
+  const at = resumeAt ? route().findIndex(s => s.id === resumeAt) : -1;
+  for (let i = 1; i <= at; i++) history.pushState({ oaBrief: i }, '');
+  show(Math.max(at, 0), false);
   // Releases the pre-hide in oa-styles.css. From here the engine owns visibility.
   root.setAttribute('data-oa-brief-ready', '');
 })();
