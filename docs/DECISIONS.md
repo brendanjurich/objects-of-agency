@@ -1649,3 +1649,22 @@ decodes a server-encoded (`compact()`) list on the page, so the two can't drift.
 raw script in Chromium against fixture pages served at `http://oa.test/…`. The repo is
 now `"type": "module"` so Node imports the Edge Function `.ts` files directly — nothing
 under `src/` runs in Node, so the switch touches no served file.
+
+## 2026-10-14 — Intake guard chain has one home: `_shared/intake.ts`
+
+`brief-intake` and `selection-intake` each carried the same ~40-line chain (origin →
+CORS → size → JSON → honeypot log → min-time → Turnstile → parse → links → rate limit →
+store → mail), plus copies of the origin list, CORS, `esc`, `emailOk`, the ref maker and
+the Resend sender. The 04-10-2026 honeypot fix had to land twice.
+
+Now `intake(definition, deps)` runs the chain. A definition (`brief.ts`,
+`selection.ts`) holds only the function's own fields, echoed text, store and mail;
+`index.ts` wires the real Supabase, Turnstile and Resend in as deps. Definitions import
+nothing Deno- or npm-specific at load, so `tests/intake.test.mjs` runs the whole chain
+in Node with fakes. `share-list` shares only `http.ts` — its rules differ on purpose.
+
+Behaviour is unchanged, with two small exceptions:
+- A rate-limiter call that **throws** (not just returns an error) now lets the send
+  through, logged. Before, it escaped the handler as a 500. Same rule as
+  `underLimit`'s own error path: a broken counter must not cost a lead.
+- The link-rejection log line is one wording for both: `rejected: link in echoed text`.

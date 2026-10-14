@@ -6,7 +6,8 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node --test 'tests/*.test.mjs'"
+    "test": "node --test 'tests/*.test.mjs'",
+    "typecheck": "npx -y deno@2.5.6 check supabase/functions/*/index.ts"
   },
   "repository": {
     "type": "git",
