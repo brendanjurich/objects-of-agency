@@ -29,6 +29,12 @@
 // ?from=product (a product page's Create Brief link): that page's configuration arrives as
 // a piece tag, handed over through window.oaSaved.forRequest('product'), and
 // goes out in items[] the same way. Kept in the draft, so several pieces can gather.
+//
+// Edit configuration: [data-oa-brief-piece-edit] inside the piece tag template (optional) is
+// shown once per configuration that piece carries, linking to the product page on those
+// options. Coming back through that page's Create Brief replaces the edited configuration
+// (one from Saved Items is dropped from this brief only; the saved list is never touched).
+// A second variant of a piece goes through Saved Items, not here.
 
 (function () {
   const root = document.querySelector('[data-oa-brief]');
@@ -124,15 +130,24 @@
   if (params.get('from') === 'product') {
     const piece = forRequest('product').items[0];
     if (piece) {
+      // Back from a tag's Edit configuration link: the new configuration replaces the edited one
+      const was = state.editing;
+      if (was && was.slug === piece.slug) {
+        state.configs = state.configs.filter(e => !sameConfig(e, was));
+        state.dropped = (state.dropped || []).concat([was]);
+      }
+      state.dropped = (state.dropped || []).filter(d => !sameConfig(d, piece));
       state.after = ['seen']; state.skipWhat = true;
       if (state.pieces.indexOf(piece.name) < 0) state.pieces.push(piece.name);
       state.configs = (state.configs || []).filter(e => !sameConfig(e, piece)).concat([piece]).slice(-12);
       if (!state.quantity) state.quantity = 'one';
     }
   }
+  delete state.editing;
   // Removing a piece's tag drops its configurations too
   const items = () => (state.fromSaved ? savedItems() : []).concat(state.configs || [])
-    .filter((e, i, all) => state.pieces.indexOf(e.name) >= 0 && all.findIndex(x => sameConfig(x, e)) === i).slice(0, 12);
+    .filter((e, i, all) => state.pieces.indexOf(e.name) >= 0 && all.findIndex(x => sameConfig(x, e)) === i &&
+      !(state.dropped || []).some(d => sameConfig(d, e))).slice(0, 12);
   const startedAt = Date.now();
 
   // ---- values (inner-group scoping only; a step being hidden never hides its answers)
@@ -275,12 +290,12 @@
   }
   const firstName = () => (val('first_name') || val('name') || '').trim().split(' ')[0];
   function save() {
-    const s = {}; KEYS.forEach(k => { s[k] = val(k); }); s.pieces = state.pieces; s.skipWhat = state.skipWhat; s.fromSaved = state.fromSaved; s.configs = state.configs; s.project = state.project;
+    const s = {}; KEYS.forEach(k => { s[k] = val(k); }); s.pieces = state.pieces; s.skipWhat = state.skipWhat; s.fromSaved = state.fromSaved; s.configs = state.configs; s.project = state.project; s.editing = state.editing; s.dropped = state.dropped;
     try { sessionStorage.setItem(STORE, JSON.stringify(s)); } catch (e) {}
   }
   function restore() {
     Object.keys(state).forEach(k => {
-      if (k === 'pieces' || k === 'skipWhat' || k === 'fromSaved' || k === 'configs' || k === 'project') return; const v = state[k];
+      if (['pieces', 'skipWhat', 'fromSaved', 'configs', 'project', 'editing', 'dropped'].indexOf(k) >= 0) return; const v = state[k];
       inputs(k).forEach(e => { if (e.type === 'checkbox') e.checked = Array.isArray(v) && v.indexOf(e.value) >= 0; else if (e.type === 'radio') e.checked = e.value === v; else if (typeof v === 'string') e.value = v; });
     });
   }
@@ -685,6 +700,27 @@
     if (reduce || !window.gsap || TAG_FADE <= 0) return;
     window.gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: TAG_FADE, ease: 'power2.out', clearProps: 'opacity' });
   };
+  // One Edit configuration link per configuration the piece carries; none without one. The
+  // Designer's copy stays; the accessible name says which configuration. The click records
+  // which one is being edited, so Create Brief on the product page replaces it.
+  function editLinks(tpl, piece) {
+    if (!saved) return [];
+    return items().filter(c => c.name === piece).map(c => {
+      const el = tpl.cloneNode(true);
+      const href = saved.editHref(c);
+      const links = el.matches('a') ? [el] : $$('a', el);
+      links.forEach(a => a.setAttribute('href', href));
+      const config = Object.keys(c.labels).map(k => c.labels[k]).join(' · ');
+      el.setAttribute('aria-label', 'Edit configuration: ' + (config ? piece + ' — ' + config : piece));
+      el.addEventListener('click', () => {
+        state.editing = { slug: c.slug, options: c.options }; save();
+        if (!links.length) location.href = href;
+      });
+      return el;
+    });
+  }
+  // Back to the brief without Create Brief (the back button): nothing was edited
+  window.addEventListener('pageshow', e => { if (e.persisted && state.editing) { delete state.editing; save(); } });
   function renderPieces() {
     syncDrawer();
     const labelWasShown = tagLabel && !tagLabel.hidden;
@@ -693,15 +729,23 @@
     const w = tagWrap; if (!w) return; w.innerHTML = '';
     if (tagLabel && !tagLabel.isConnected) w.appendChild(tagLabel);
     state.pieces.forEach((p, i) => {
-      const remove = () => { state.pieces.splice(i, 1); renderPieces(); save(); };
+      const remove = e => {
+        if (e && e.target.closest('[data-oa-brief-piece-edit]')) return; // the edit link navigates instead
+        state.pieces.splice(i, 1); renderPieces(); save();
+      };
       let b;
       if (tagTpl) {
         // The generated button carried the remove affordance; a cloned div has to be
         // given it back, or the tag is unremovable by keyboard and silent to a reader.
-        b = tagTpl.cloneNode(true); setText(b, p);
+        b = tagTpl.cloneNode(true);
+        const edit = $('[data-oa-brief-piece-edit]', b);
+        const mark = edit && document.createComment('');
+        if (edit) edit.replaceWith(mark); // out of the way of setText, which takes the first <p>
+        setText(b, p);
+        if (mark) mark.replaceWith(...editLinks(edit, p));
         if (b.tagName !== 'BUTTON') { b.setAttribute('role', 'button'); b.setAttribute('tabindex', '0'); }
         b.addEventListener('keydown', e => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); remove(); }
+          if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('[data-oa-brief-piece-edit]')) { e.preventDefault(); remove(); }
         });
       } else {
         b = document.createElement('button'); b.type = 'button'; b.className = 'brief_tag'; b.textContent = p;
