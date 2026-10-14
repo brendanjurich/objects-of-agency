@@ -1707,3 +1707,14 @@ record. Two variants of one piece is the Saved Items path, by decision (Brendan,
 The link is lifted out before the tag's name is written (`setText` takes the first `<p>`)
 and put back per configuration; the tag's remove handler ignores clicks from inside it,
 so the link navigates with the normal page-leave fade.
+
+**Revised 14-10-2026 (v1.0.252), after the Designer build.** The Designer put the Edit link
+*beside* the tag, both in a `.brief_tags-wrap`, not inside it — which also removes the
+link-inside-a-button problem. v1.0.251 cloned only the tag, so the wrapper and the link
+were wiped on render. The template is now the child of `[data-oa-brief-pieces]` that holds
+the tag (the tag itself when it sits there directly), cloned whole. The name goes into an
+optional `[data-oa-brief-piece-name]` slot; without one, the tag's own text is replaced (and
+any child in it, such as `.brief_tag_piece-name`, with it). The accessible name moved onto
+the links: a label on a plain wrapper div is ignored. A return through Create Brief now
+reopens the brief on the step the link was clicked from, not on question one, with one
+history entry per earlier step so Back walks the route.

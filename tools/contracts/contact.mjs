@@ -62,6 +62,11 @@ export default {
     // Designer but never attribute-marked is wiped before anyone sees it.
     if (has(/data-oa-brief-pieces="/) && !has(/data-oa-brief-piece-tag="/))
       note('no [data-oa-brief-piece-tag] — engine generates a bare button.brief_tag; any Designer-built tag inside [data-oa-brief-pieces] is wiped unmarked');
+    // Edit configuration (optional): it must sit in the same child of [data-oa-brief-pieces] as
+    // the tag — inside it or beside it — or it is wiped with everything else on render.
+    const tags = (html.match(/data-oa-brief-pieces="[\s\S]{0,8000}/) || [''])[0];
+    if (!/data-oa-brief-piece-edit/.test(tags)) note('no [data-oa-brief-piece-edit] in the piece tags — no Edit configuration link');
+    else check('Edit configuration link has a link inside', /data-oa-brief-piece-edit[\s\S]{0,1500}?<a /.test(tags));
 
     // sent-state elements must live inside the sent step, not another step
     const sentBlock = (html.match(/data-oa-brief-step="sent"[^>]*class="brief_answers_step"[\s\S]{0,4000}/) || [''])[0];
