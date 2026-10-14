@@ -1689,3 +1689,21 @@ needed. `tests/contract.test.mjs` runs each manifest against a staging capture i
 deliberate Designer change.
 
 Open on staging at 14-10-2026: /contact has no `[data-oa-brief-drawer-backdrop]`.
+
+## 2026-10-14 — Brief: Edit configuration from a piece tag, replace on return
+
+From the summary's Change, a visitor lands back on the piece tags with no way to adjust a
+configured piece. `[data-oa-brief-piece-edit]` (optional, inside the tag template) now
+shows once per configuration the piece carries and links to the product page on those
+options (`window.oaSaved.editHref`).
+
+Coming back through that page's Create Brief **replaces** the edited configuration rather
+than adding a second: the click records it (`state.editing`), and the return drops it
+(`state.dropped` also covers one that came from Saved Items — the saved list itself is
+never touched). Only a return for the same piece replaces; back-button returns clear the
+record. Two variants of one piece is the Saved Items path, by decision (Brendan,
+14-10-2026).
+
+The link is lifted out before the tag's name is written (`setText` takes the first `<p>`)
+and put back per configuration; the tag's remove handler ignores clicks from inside it,
+so the link navigates with the normal page-leave fade.
