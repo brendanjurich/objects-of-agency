@@ -1668,3 +1668,24 @@ Behaviour is unchanged, with two small exceptions:
   through, logged. Before, it escaped the handler as a 500. Same rule as
   `underLimit`'s own error path: a broken counter must not cost a lead.
 - The link-rejection log line is one wording for both: `rejected: link in echoed text`.
+
+## 2026-10-14 — One hook contract check for every scripted page
+
+`tools/brief-contract.mjs` checked /contact only. The Designer-to-script handoff breaks
+more often than anything else on this site (renamed Form Input props, hidden elements
+dropped from the markup, Rich Text pastes stripping attributes), and Saved Items, the
+product configurator and the legal index had no check at all.
+
+`tools/contract.mjs [page|all] [url]` reads a manifest per page from `tools/contracts/`
+(`contact`, `saved-items`, `product`, `legal`): minimum engine tag, required attributes,
+input names, and page-specific checks as small functions. The /contact checks moved
+across unchanged (parity on staging: 71 pass, 1 fail, both versions). The old command
+is an alias. Saved Items and product manifests import `GROUPS` from `items.ts`, so a new
+option group without its config line in the Designer fails here.
+
+Served HTML only, as before — runtime DOM checks with a browser are a later step if
+needed. `tests/contract.test.mjs` runs each manifest against a staging capture in
+`tests/fixtures/contract/` (inline script/style bodies stripped); recapture after a
+deliberate Designer change.
+
+Open on staging at 14-10-2026: /contact has no `[data-oa-brief-drawer-backdrop]`.
