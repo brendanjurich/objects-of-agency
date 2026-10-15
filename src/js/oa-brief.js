@@ -359,7 +359,10 @@
   //   [data-oa-brief-piece-open]          the field-styled button that opens the drawer
   //   [data-oa-brief-drawer]              the <dialog>
   //   [data-oa-brief-drawer-anchor]       the box the drawer opens over (above 767px; below, the card)
-  //   [data-oa-brief-drawer-backdrop]     the dim layer; a tap closes
+  //   [data-oa-brief-drawer-box]          the image box holding the anchor (above 767px it grows to
+  //                                       fit the open level; optional)
+  //   [data-oa-brief-drawer-backdrop]     the dim layer, anywhere in the brief (inside the box, it
+  //                                       dims the whole image); a tap closes
   //   [data-oa-brief-drawer-panel]        level one: the series rows
   //   [data-oa-brief-drawer-list="series"] where the series rows go
   //   [data-oa-brief-drawer-pick="value"] a row that toggles that value (Custom Cabinetry is one)
@@ -400,7 +403,7 @@
     if (!dlg || typeof dlg.showModal !== 'function' || !panel || !sheetTpl || !seriesTpl || !pieceTpl || !seriesList) {
       console.warn('[oa-brief] piece drawer markup incomplete — skipping'); return;
     }
-    const backdrop = $('[' + D + '-backdrop]', dlg);
+    const backdrop = $('[' + D + '-backdrop]');
     const doneText = $('[' + D + '-done-text]', dlg);
     // The count is the only feedback a reader gets that a tap landed, and the only word on why
     // rows went disabled at the cap, so it announces.
@@ -502,6 +505,7 @@
       vis(sheet, true);
       const edge = own(parent, '[' + D + '-edge]');
       vis(edge, true);
+      fit(sheet, ENTER_D, 'power3.out');
       if (animate()) {
         // Enters: power3.out — a full-height panel crossing the drawer, settling softly.
         g.fromTo(sheet, { xPercent: 100 }, { xPercent: 0, duration: ENTER_D, ease: 'power3.out' });
@@ -515,6 +519,7 @@
       const i = stack.indexOf(level);
       if (i < 0 || i === stack.length - 1) return;
       const closing = stack.splice(i + 1); updateLevels();
+      fit(level, EXIT_D, 'power2.in');
       const edge = own(level, '[' + D + '-edge]');
       const done = () => { const gone = closing.filter(s => stack.indexOf(s) < 0); vis(gone, false); if (g) g.set(gone, { clearProps: 'transform' }); };
       if (animate()) {
@@ -529,7 +534,7 @@
     // card — [data-oa-brief-drawer-anchor] (the image panel's right-hand column) above Webflow's small breakpoint,
     // the whole brief card at and below it, where the panel is too short to scan. The dialog
     // clips (oa-brief.css), so the panel slides out of the anchor's right edge and the
-    // backdrop dims only the anchor. Measured with the page scroll locked, so the box holds;
+    // backdrop, in the image box, dims only that box. Measured with the page scroll locked, so the box holds;
     // re-measured on resize. No anchor: the dialog keeps its full-viewport fallback.
     const anchor = $('[' + D + '-anchor]');
     const small = window.matchMedia('(max-width: 767px)');
@@ -553,7 +558,58 @@
       dlg.style.setProperty('--oa-drawer-width', r.width + 'px');
       dlg.style.setProperty('--oa-drawer-height', Math.max(bottom - top, 0) + 'px');
     }
-    window.addEventListener('resize', () => { if (open) place(); });
+    window.addEventListener('resize', () => { if (open) { fit(stack[stack.length - 1], 0); place(); } });
+
+    // ---- fit: above 767px the box ([data-oa-brief-drawer-box]) grows to the open level, so the
+    // list never scrolls. Its aspect-ratio (Designer) is the landing height and the floor; the
+    // engine only sets min-height, capped at the viewport less 16px each side, and past the cap
+    // the level scrolls in itself. Each change runs with the slide it belongs to, re-placing the
+    // dialog every frame and scrolling the page along when the box grows past the screen.
+    const box = $('[' + D + '-box]');
+    const MARGIN = 16;
+    const fitTo = { h: 0 };
+    // The level's own height: its content unclamped (Designer's height: 100% set aside for one
+    // read), plus the Done bar riding over the bottom, plus whatever the box adds round the anchor.
+    function natural(level) {
+      const content = level && Array.prototype.find.call(level.children, c => !c.matches('[' + D + '-edge], ' + LEVEL + ', [' + D + '-done]'));
+      if (!content || !anchor) return 0;
+      const was = content.style.height;
+      content.style.height = 'auto';
+      const h = content.getBoundingClientRect().height;
+      content.style.height = was;
+      return h + (doneBar ? doneBar.getBoundingClientRect().height : 0) + box.getBoundingClientRect().height - anchor.getBoundingClientRect().height;
+    }
+    function landing() {
+      const was = box.style.minHeight;
+      box.style.minHeight = '';
+      const h = box.getBoundingClientRect().height;
+      box.style.minHeight = was;
+      return h;
+    }
+    function follow() {
+      const r = box.getBoundingClientRect();
+      const by = Math.min(r.bottom - (innerHeight - MARGIN), r.top - MARGIN);
+      if (by <= 0) return;
+      if (window.lenis) window.lenis.scrollTo(scrollY + by, { immediate: true, force: true });
+      else window.scrollTo(0, scrollY + by);
+    }
+    // level: the one to fit, or null for the landing height. dur 0 (or no motion): at once.
+    function fit(level, dur, ease) {
+      if (!box) return;
+      if (g) g.killTweensOf(fitTo);
+      const floor = landing();
+      const to = small.matches || !level ? floor : Math.max(floor, Math.min(Math.ceil(natural(level)), innerHeight - 2 * MARGIN));
+      const set = () => {
+        if (fitTo.h <= floor + 0.5) box.style.removeProperty('min-height');
+        else box.style.minHeight = fitTo.h + 'px';
+        if (dlg.open) { follow(); place(); } // the dialog follows the box out on close too
+      };
+      fitTo.h = box.getBoundingClientRect().height;
+      if (Math.abs(to - fitTo.h) < 1) return;
+      if (!dur || !animate()) { fitTo.h = to; return set(); }
+      g.to(fitTo, { h: to, duration: dur, ease: ease, onUpdate: set });
+    }
+    const refit = (dur, ease) => { if (open) fit(stack[stack.length - 1], dur, ease); };
     // The box is fixed where the card was, so the page must not scroll under it. Lenis when it
     // runs; without it (reduced motion skips Lenis, or its CDN failed) the root's overflow.
     function lockScroll(on) {
@@ -573,6 +629,7 @@
       lockScroll(true);
       place();
       vis([panel, backdrop], true);
+      fit(panel, ENTER_D, 'power3.out');
       if (animate()) {
         // Enters: power3.out — answers the tap at once, lands softly.
         g.fromTo(panel, { xPercent: 100 }, { xPercent: 0, duration: ENTER_D, ease: 'power3.out' });
@@ -588,9 +645,11 @@
         if (open) return; // reopened mid-exit
         dlg.close(); resetLevels();
         if (g) g.set(panel, { clearProps: 'transform' });
+        vis(backdrop, false); fit(null, 0);
         lockScroll(false);
         control().focus({ preventScroll: true });
       };
+      fit(null, EXIT_D, 'power2.in');
       if (!animate()) return done();
       // Leaves: power2.in, ~0.7× the entrance.
       g.to(panel, { xPercent: 100, duration: EXIT_D, ease: 'power2.in' });
@@ -618,12 +677,13 @@
     if (otherToggle && otherInput) {
       setHidden(other, true);
       otherToggle.setAttribute('aria-expanded', 'false');
-      const shut = () => { setHidden(other, true); otherToggle.setAttribute('aria-expanded', 'false'); };
+      const shut = () => { setHidden(other, true); otherToggle.setAttribute('aria-expanded', 'false'); refit(EXIT_D, 'power2.in'); };
       const add = () => { addPiece(otherInput.value); otherInput.value = ''; shut(); otherToggle.focus({ preventScroll: true }); };
       otherToggle.addEventListener('click', e => {
         e.preventDefault();
         if (!other.hidden) return shut();
         setHidden(other, false); otherToggle.setAttribute('aria-expanded', 'true'); otherInput.focus();
+        refit(ENTER_D, 'power3.out');
       });
       otherInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
       const addBtn = $('[' + D + '-other-add]', other);
@@ -682,7 +742,7 @@
       stepBack();
     });
     dlg.addEventListener('cancel', e => { e.preventDefault(); if (!escTaken) stepBack(); });
-    resetLevels();
+    resetLevels(); vis(backdrop, false);
   })();
   // Same template rule as the summary rows and the piece options: if the Designer
   // marks one tag inside [data-oa-brief-pieces], the engine clones it per piece and

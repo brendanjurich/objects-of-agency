@@ -6,7 +6,8 @@ export default {
   // v1.0.250: the brief reads saved configurations through window.oaSaved — both or neither.
   // v1.0.252: a piece tag paired with its Edit link in a wrapper is cloned whole.
   // v1.0.254: removing a tag drops its configurations; Create Brief's name survives the scramble.
-  engines: { 'oa-brief.js': 254, 'oa-saved-items.js': 254 },
+  // v1.0.255: the image box grows to the open drawer level; the backdrop may sit in the box.
+  engines: { 'oa-brief.js': 255, 'oa-saved-items.js': 254 },
   attrs: [
     ['endpoint knob', 'data-oa-brief-endpoint'],
     // controls and regions
@@ -25,6 +26,7 @@ export default {
     ['piece row template', 'data-oa-brief-drawer-piece-row'], ['row text slot', 'data-oa-brief-drawer-text'],
     ['Done bar', 'data-oa-brief-drawer-done'], ['"Something else" row', 'data-oa-brief-drawer-other-toggle'],
     ['drawer anchor (the box it opens over)', 'data-oa-brief-drawer-anchor'],
+    ['drawer image box (grows to the open level)', 'data-oa-brief-drawer-box'],
   ],
   inputs: ['audience', 'after', 'bespoke', 'setting', 'quantity', 'timing', 'timing_date', 'budget', 'materials', 'interest', 'note', 'email', 'practice'],
 
