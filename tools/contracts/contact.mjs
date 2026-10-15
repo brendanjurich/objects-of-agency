@@ -7,7 +7,8 @@ export default {
   // v1.0.252: a piece tag paired with its Edit link in a wrapper is cloned whole.
   // v1.0.254: removing a tag drops its configurations; Create Brief's name survives the scramble.
   // v1.0.255: the image box grows to the open drawer level; the backdrop may sit in the box.
-  engines: { 'oa-brief.js': 255, 'oa-saved-items.js': 254 },
+  // v1.0.256: backdrop fades to its Designer opacity; rows clear the Done bar; no ring on focused headings.
+  engines: { 'oa-brief.js': 256, 'oa-saved-items.js': 254 },
   attrs: [
     ['endpoint knob', 'data-oa-brief-endpoint'],
     // controls and regions

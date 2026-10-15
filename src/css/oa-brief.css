@@ -58,12 +58,12 @@ dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
 }
 
 /* Hidden until the drawer opens: outside the dialog it would otherwise dim the image and
-   cover the piece tags. The engine shows and fades it inline. */
+   cover the piece tags. The engine shows it and fades it up to its opacity, which is the
+   Designer's — so no opacity here. */
 [data-oa-brief-drawer-backdrop] {
   position: absolute;
   inset: 0;
   visibility: hidden;
-  opacity: 0;
 }
 
 /* Levels slide on xPercent against these boxes. Width: Designer. */
@@ -105,6 +105,20 @@ dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
   bottom: 0;
   left: 0;
   z-index: 3;
+}
+
+/* Each level's content ends in the Done bar's height (--oa-drawer-done, set by the engine),
+   so its last row scrolls clear of the bar instead of ending underneath it. */
+[data-oa-brief-drawer-level] > :not([data-oa-brief-drawer-edge]):not([data-oa-brief-drawer-level]):not([data-oa-brief-drawer-done])::after {
+  content: "";
+  flex: none;
+  height: var(--oa-drawer-done, 0px);
+}
+
+/* The engine focuses a heading (tabindex="-1") so a screen reader hears where it landed. It is
+   not a control, and iOS Safari counts that focus as :focus-visible after a tap, so no ring. */
+[data-oa-brief] [tabindex="-1"]:focus-visible {
+  outline: none;
 }
 
 /* A long level scrolls inside itself and never chains to the page. */

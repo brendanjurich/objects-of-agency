@@ -557,6 +557,9 @@
       dlg.style.setProperty('--oa-drawer-left', r.left + 'px');
       dlg.style.setProperty('--oa-drawer-width', r.width + 'px');
       dlg.style.setProperty('--oa-drawer-height', Math.max(bottom - top, 0) + 'px');
+      // The Done bar rides over the bottom of every level; oa-brief.css ends each level's
+      // content this much lower, so the last row scrolls clear of it.
+      if (doneBar) dlg.style.setProperty('--oa-drawer-done', doneBar.offsetHeight + 'px');
     }
     window.addEventListener('resize', () => { if (open) { fit(stack[stack.length - 1], 0); place(); } });
 
@@ -569,7 +572,7 @@
     const MARGIN = 16;
     const fitTo = { h: 0 };
     // The level's own height: its content unclamped (Designer's height: 100% set aside for one
-    // read), plus the Done bar riding over the bottom, plus whatever the box adds round the anchor.
+    // read; it already ends in the Done bar's clearance), plus whatever the box adds round the anchor.
     function natural(level) {
       const content = level && Array.prototype.find.call(level.children, c => !c.matches('[' + D + '-edge], ' + LEVEL + ', [' + D + '-done]'));
       if (!content || !anchor) return 0;
@@ -577,7 +580,7 @@
       content.style.height = 'auto';
       const h = content.getBoundingClientRect().height;
       content.style.height = was;
-      return h + (doneBar ? doneBar.getBoundingClientRect().height : 0) + box.getBoundingClientRect().height - anchor.getBoundingClientRect().height;
+      return h + box.getBoundingClientRect().height - anchor.getBoundingClientRect().height;
     }
     function landing() {
       const was = box.style.minHeight;
@@ -628,12 +631,16 @@
       controls.forEach(c => c.setAttribute('aria-expanded', 'true'));
       lockScroll(true);
       place();
+      // The backdrop fades to its own opacity (Designer), read with the inline one cleared.
+      if (backdrop) backdrop.style.removeProperty('opacity');
+      const dim = backdrop ? parseFloat(getComputedStyle(backdrop).opacity) : 1;
       vis([panel, backdrop], true);
+      if (backdrop) backdrop.style.opacity = String(dim);
       fit(panel, ENTER_D, 'power3.out');
       if (animate()) {
         // Enters: power3.out — answers the tap at once, lands softly.
         g.fromTo(panel, { xPercent: 100 }, { xPercent: 0, duration: ENTER_D, ease: 'power3.out' });
-        if (backdrop) g.fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: ENTER_D, ease: 'power2.out' });
+        if (backdrop) g.fromTo(backdrop, { opacity: 0 }, { opacity: dim, duration: ENTER_D, ease: 'power2.out' });
         reveal(panel, 0.1);
       }
       focusLevel(panel);
