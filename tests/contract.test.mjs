@@ -11,8 +11,8 @@ import { checkPage, loadManifest, PAGES } from '../tools/contract.mjs';
 const fixture = page => readFileSync(new URL(`./fixtures/contract/${page}.html`, import.meta.url), 'utf8');
 const failed = r => r.fail.map(l => l.replace(/ — .*/, ''));
 
-// What each capture fails today. The /contact capture predates the v1.0.256 swap; recapture after it.
-const KNOWN = { contact: ['oa-brief.js >= v1.0.256'], 'saved-items': [], product: [], legal: [] };
+// What each capture fails today.
+const KNOWN = { contact: [], 'saved-items': [], product: [], legal: [] };
 
 for (const page of PAGES) {
   test(`${page}: the capture gives its known result`, async () => {
