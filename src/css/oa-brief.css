@@ -44,8 +44,9 @@ dialog[data-oa-brief-drawer][open] {
   overflow: hidden;
 }
 
-/* Only the anchor's box dims, through [data-oa-brief-drawer-backdrop], which the engine
-   fades. The page outside stays as it is, though it is inert while the drawer is open. */
+/* Only the brief dims, through [data-oa-brief-drawer-backdrop] (inside the image box, so
+   both columns), which the engine fades. The page outside stays as it is, though it is
+   inert while the drawer is open. */
 dialog[data-oa-brief-drawer]::backdrop {
   background-color: transparent;
 }
@@ -56,9 +57,13 @@ dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
   cursor: pointer;
 }
 
+/* Hidden until the drawer opens: outside the dialog it would otherwise dim the image and
+   cover the piece tags. The engine shows and fades it inline. */
 [data-oa-brief-drawer-backdrop] {
   position: absolute;
   inset: 0;
+  visibility: hidden;
+  opacity: 0;
 }
 
 /* Levels slide on xPercent against these boxes. Width: Designer. */
