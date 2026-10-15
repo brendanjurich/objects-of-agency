@@ -11,10 +11,8 @@ import { checkPage, loadManifest, PAGES } from '../tools/contract.mjs';
 const fixture = page => readFileSync(new URL(`./fixtures/contract/${page}.html`, import.meta.url), 'utf8');
 const failed = r => r.fail.map(l => l.replace(/ — .*/, ''));
 
-// What each capture fails today. /contact's drawer has no [data-oa-brief-drawer-backdrop]
-// on staging (14-10-2026) — a live Designer gap, not a checker fault. The capture also
-// predates v1.0.255 and its [data-oa-brief-drawer-box] (15-10-2026); recapture after the swap.
-const KNOWN = { contact: ['oa-brief.js >= v1.0.255', 'drawer backdrop', 'drawer image box (grows to the open level)'], 'saved-items': [], product: [], legal: [] };
+// What each capture fails today.
+const KNOWN = { contact: [], 'saved-items': [], product: [], legal: [] };
 
 for (const page of PAGES) {
   test(`${page}: the capture gives its known result`, async () => {
