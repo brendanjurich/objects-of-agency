@@ -8,7 +8,8 @@ export default {
   // v1.0.254: removing a tag drops its configurations; Create Brief's name survives the scramble.
   // v1.0.255: the image box grows to the open drawer level; the backdrop may sit in the box.
   // v1.0.256: backdrop fades to its Designer opacity; rows clear the Done bar; no ring on focused headings.
-  engines: { 'oa-brief.js': 256, 'oa-saved-items.js': 254 },
+  // v1.0.257: the drawer goes category-first — map, branch row, list="categories", cat + tags slots.
+  engines: { 'oa-brief.js': 257, 'oa-saved-items.js': 254 },
   attrs: [
     ['endpoint knob', 'data-oa-brief-endpoint'],
     // controls and regions
@@ -22,8 +23,12 @@ export default {
     // the piece drawer. Every part is a hook the engine walks; a missing one makes it
     // warn and skip, and the visitor has no way to name a piece.
     ['drawer <dialog>', 'data-oa-brief-drawer'], ['drawer backdrop', 'data-oa-brief-drawer-backdrop'],
-    ['drawer panel', 'data-oa-brief-drawer-panel'], ['series list', 'data-oa-brief-drawer-list'],
-    ['sheet template', 'data-oa-brief-drawer-sheet'], ['series row template', 'data-oa-brief-drawer-series-row'],
+    ['drawer panel', 'data-oa-brief-drawer-panel'], ['category list', 'data-oa-brief-drawer-list'],
+    ['sheet template', 'data-oa-brief-drawer-sheet'], ['branch row template', 'data-oa-brief-drawer-branch-row'],
+    ['category map', 'data-oa-brief-drawer-map'], ['map category', 'data-oa-brief-drawer-category'],
+    ['map category label', 'data-oa-brief-drawer-label'],
+    ['CMS item category slug (nested Categories list)', 'data-oa-brief-drawer-cat'],
+    ['CMS item Filter Tags', 'data-oa-brief-drawer-tags'],
     ['piece row template', 'data-oa-brief-drawer-piece-row'], ['row text slot', 'data-oa-brief-drawer-text'],
     ['Done bar', 'data-oa-brief-drawer-done'], ['"Something else" row', 'data-oa-brief-drawer-other-toggle'],
     ['drawer anchor (the box it opens over)', 'data-oa-brief-drawer-anchor'],
@@ -63,6 +68,17 @@ export default {
     check('CMS items carry a name and a series', items.length > 0 && items.every(m => m[1].trim() && m[2].trim()),
       items.length + ' item(s)' + (items.some(m => !m[1].trim() || !m[2].trim()) ? ', some unbound' : ''));
     check('Residential filtered out of the drawer', !items.some(m => m[2].trim() === 'Residential'));
+    check('level-one list is list="categories"', has(/data-oa-brief-drawer-list="categories"/));
+    // The map's keys must meet the CMS: a category slug no item carries, or a type no item's
+    // Filter Tags hold, gets no row (by design), so it is a note, not a failure.
+    const slugs = new Set([...html.matchAll(/data-oa-brief-drawer-cat="[^"]*"[^>]*>([^<]*)</g)].map(m => m[1].trim()));
+    const filterTags = new Set([...html.matchAll(/data-oa-brief-drawer-tags="[^"]*"[^>]*>([^<]*)</g)].flatMap(m => m[1].trim().toLowerCase().split(/\s+/)));
+    const mapCats = [...html.matchAll(/data-oa-brief-drawer-category="([^"]+)"/g)].map(m => m[1].trim());
+    const mapTypes = [...html.matchAll(/data-oa-brief-drawer-type="([^"]+)"/g)].map(m => m[1].trim().toLowerCase());
+    check('map names at least one category', mapCats.length > 0, mapCats.length + ' found');
+    check('CMS items carry category slugs', slugs.size > 0, slugs.size + ' distinct');
+    mapCats.filter(c => !slugs.has(c)).forEach(c => note('map category "' + c + '" matches no item\'s Categories slug — no row'));
+    mapTypes.filter(t => !filterTags.has(t)).forEach(t => note('map type "' + t + '" matches no item\'s Filter Tags — no row'));
 
     // The piece tag has the same template rule, and the same silent failure: renderPieces()
     // clears [data-oa-brief-pieces] on every change, so a tag built and styled in the

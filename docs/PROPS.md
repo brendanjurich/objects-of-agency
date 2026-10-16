@@ -174,7 +174,6 @@ audience suffix — `-client`, `-home`, `-venue`, `-looking` (e.g.
 | Attribute | Default | Controls |
 |---|---|---|
 | `data-oa-brief-progress-text` | `Question {n} of {N}` | Progress line above each step. |
-| `data-oa-brief-whole-series-text` | `The whole series` | First row of each series sheet in the piece drawer. |
 | `data-oa-brief-drawer-done-text` | `Done` | Drawer Done bar, nothing picked. |
 | `data-oa-brief-drawer-count-text` | `Done · {n}` | Drawer Done bar, pieces picked. |
 | `data-oa-brief-drawer-full-text` | `Done · {n} max` | Drawer Done bar at the piece cap. |
