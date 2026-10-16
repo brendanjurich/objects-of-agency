@@ -64,6 +64,10 @@ The ease is a named house curve, deliberately not a knob.
 
 Tile slides in from the side the pointer entered. Set on the list container.
 
+Consumers: the nav dropdown (class hooks), the `/about` awards list, and the brief's month
+select on `/contact` (`data-type="y"` on the select; `oa-brief.js` writes each month's item
+hook and tile).
+
 | Attribute | Default | Controls |
 |---|---|---|
 | `data-type` | `all` | Axis: `y` (stacked list), `x`, or `all`. |

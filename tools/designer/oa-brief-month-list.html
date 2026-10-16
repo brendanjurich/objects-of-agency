@@ -1,0 +1,25 @@
+<style>
+/* --- CONTROLS: brief month list ------------------------------------------
+   Desktop, in browsers that style the open list (Chrome/Edge, Safari 27).
+   Elsewhere the browser's own list shows. The hover tile's colour is the
+   .directional-list__hover-tile class (same as /about and the nav). */
+@supports (appearance: base-select) {
+  @media (hover: hover) and (pointer: fine) {
+    [data-oa-brief] select[name="timing_date"]::picker(select) {
+      background: var(--swatch--light-100);   /* panel */
+      color: var(--swatch--dark-900);         /* text */
+      border: none;                           /* panel edge */
+      box-shadow: none;                       /* panel shadow */
+      padding: 0;                             /* panel inset */
+      max-block-size: 20rem;                  /* list height before it scrolls */
+    }
+    [data-oa-brief] select[name="timing_date"] option {
+      font-size: var(--_typography---font-size--text-main);
+      padding: var(--_spacing---space--2) var(--_spacing---space--3);  /* row: top/bottom, sides */
+    }
+    [data-oa-brief] select[name="timing_date"] option::checkmark {
+      display: none;                          /* tick beside the picked month */
+    }
+  }
+}
+</style>

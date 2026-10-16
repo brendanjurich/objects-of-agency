@@ -10,7 +10,8 @@ export default {
   // v1.0.256: backdrop fades to its Designer opacity; rows clear the Done bar; no ring on focused headings.
   // v1.0.257: the drawer goes category-first — map, branch row, list="categories", cat + tags slots.
   // v1.0.259: the month field is a Select the engine fills; the old month input is free text in Safari.
-  engines: { 'oa-brief.js': 259, 'oa-saved-items.js': 254 },
+  // v1.0.260: the month select's open list is styled, with the directional hover tile.
+  engines: { 'oa-brief.js': 260, 'oa-saved-items.js': 254 },
   attrs: [
     ['endpoint knob', 'data-oa-brief-endpoint'],
     // controls and regions
@@ -118,6 +119,11 @@ export default {
     // Safari and Firefox desktop have no month picker: type="month" falls back to free text,
     // which brief-intake drops. The engine fills a Select instead.
     check('month field is a <select>', has(/<select[^>]*\bname="timing_date"/));
+    // The open list's hover tile binds through the select's container hooks; without
+    // data-lenis-prevent the wheel scrolls the page under the open list.
+    const month = (html.match(/<select[^>]*\bname="timing_date"[^>]*>/) || [''])[0];
+    check('month select: directional hover hooks (data-directional-hover, data-type="y")', /data-directional-hover(=""|\s|>)/.test(month) && /data-type="y"/.test(month));
+    check('month select: data-lenis-prevent', /data-lenis-prevent/.test(month));
     check('note suppression (unless after=bespoke)', has(/data-oa-brief-unless="after=bespoke"/));
 
     // Informational: a class that sets `display` on a step block outranks the UA
