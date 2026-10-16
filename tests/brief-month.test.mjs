@@ -26,7 +26,7 @@ async function open(field, draft) {
     : route.abort());
   const page = await context.newPage();
   await page.goto('http://oa.test/contact');
-  const options = () => page.$$eval('select[name="timing_date"] option', os => os.map(o => ({ value: o.value, text: o.textContent, disabled: o.disabled })));
+  const options = () => page.$$eval('select[name="timing_date"] option', os => os.map(o => ({ value: o.value, text: o.text, disabled: o.disabled, hidden: o.hidden })));
   return { page, context, options };
 }
 
@@ -34,10 +34,10 @@ test('the select lists a placeholder, then 24 months from next month', async () 
   const { context, options } = await open(SELECT());
   const os = await options();
   assert.equal(os.length, 25);
-  assert.deepEqual(os[0], { value: '', text: 'Choose a month', disabled: true });
-  assert.deepEqual(os[1], { value: '2026-11', text: 'November 2026', disabled: false });
-  assert.deepEqual(os[3], { value: '2027-01', text: 'January 2027', disabled: false });
-  assert.deepEqual(os[24], { value: '2028-10', text: 'October 2028', disabled: false });
+  assert.deepEqual(os[0], { value: '', text: 'Choose a month', disabled: true, hidden: true });
+  assert.deepEqual(os[1], { value: '2026-11', text: 'November 2026', disabled: false, hidden: false });
+  assert.deepEqual(os[3], { value: '2027-01', text: 'January 2027', disabled: false, hidden: false });
+  assert.deepEqual(os[24], { value: '2028-10', text: 'October 2028', disabled: false, hidden: false });
   await context.close();
 });
 
@@ -67,4 +67,17 @@ test('a saved month outside the window, or old free text, falls back to the plac
     assert.equal(await page.$eval('select[name="timing_date"]', s => s.selectedIndex), 0, v);
     await context.close();
   }
+});
+
+test('every month carries the directional hover item and tile; the placeholder does not', async () => {
+  const { page, context } = await open(SELECT());
+  const rows = await page.$$eval('select[name="timing_date"] option', os => os.map(o => ({
+    item: o.hasAttribute('data-directional-hover-item'),
+    tile: !!o.querySelector('[data-directional-hover-tile].directional-list__hover-tile'),
+    text: o.text,
+  })));
+  assert.deepEqual(rows[0], { item: false, tile: false, text: 'Choose a month' });
+  assert.ok(rows.slice(1).every(r => r.item && r.tile), 'every month has its item hook and tile');
+  assert.equal(rows[1].text, 'November 2026');
+  await context.close();
 });

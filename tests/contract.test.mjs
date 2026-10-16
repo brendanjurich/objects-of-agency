@@ -12,7 +12,8 @@ const fixture = page => readFileSync(new URL(`./fixtures/contract/${page}.html`,
 const failed = r => r.fail.map(l => l.replace(/ — .*/, ''));
 
 // What each capture fails today.
-const KNOWN = { contact: [], 'saved-items': [], product: [], legal: [] };
+// contact: until the v1.0.260 swap (month select hooks + embed) and its recapture.
+const KNOWN = { contact: ['oa-brief.js >= v1.0.260', 'month select: directional hover hooks (data-directional-hover, data-type="y")', 'month select: data-lenis-prevent'], 'saved-items': [], product: [], legal: [] };
 
 for (const page of PAGES) {
   test(`${page}: the capture gives its known result`, async () => {

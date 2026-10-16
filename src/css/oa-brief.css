@@ -155,3 +155,36 @@ dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
   -webkit-appearance: none;
   appearance: none;
 }
+
+/* Its open list, where the browser lets it be styled (Chrome/Edge 135+, Safari 27), on a
+   mouse only: touch keeps the phone's own picker. Structure only — the hover is the
+   directional tile (oa-global.js, colour from the Designer's .directional-list__hover-tile),
+   layered under the text; the list's look is the Embed in the brief's month group. */
+@supports (appearance: base-select) {
+  @media (hover: hover) and (pointer: fine) {
+    [data-oa-brief] select[name="timing_date"],
+    [data-oa-brief] select[name="timing_date"]::picker(select) {
+      appearance: base-select;
+    }
+    /* base-select drops the native control's vertical centring of the closed value */
+    [data-oa-brief] select[name="timing_date"] {
+      display: flex;
+      align-items: center;
+    }
+    [data-oa-brief] select[name="timing_date"]::picker-icon {
+      display: none;
+    }
+    [data-oa-brief] select[name="timing_date"] option {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    /* The tile is the only hover: no browser fill on hover, focus or the picked month */
+    [data-oa-brief] select[name="timing_date"] option:is(:hover, :focus, :focus-visible, :checked) {
+      background: transparent;
+    }
+    [data-oa-brief] select[name="timing_date"] option [data-directional-hover-tile] {
+      z-index: -1;
+    }
+  }
+}

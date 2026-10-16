@@ -926,7 +926,7 @@
     return new Date(+m[1], +m[2] - 1, 1).toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
   }
   // The month field is a Webflow Select, which holds only typed-in options, so the window is
-  // written here: a disabled placeholder, then data-oa-brief-months (default 24) months from
+  // written here: a hidden placeholder, then data-oa-brief-months (default 24) months from
   // next month. Values stay ISO. The old month input is left alone — Safari and Firefox
   // render it as free text, which brief-intake drops.
   function fillMonths() {
@@ -935,11 +935,19 @@
       const now = new Date();
       sel.innerHTML = '';
       sel.add(new Option(copy('month-placeholder', 'Choose a month'), '', true, true));
-      sel.options[0].disabled = true;
+      sel.options[0].disabled = sel.options[0].hidden = true; // shows closed, never in the open list
       for (let i = 1; i <= n; i++) {
         const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
         const v = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-        sel.add(new Option(monthName(v), v));
+        const o = new Option(monthName(v), v);
+        // The directional hover tile (oa-global.js), as on the /about awards list: it binds on
+        // DOMContentLoaded, after this runs. The class carries the Designer's tile colour.
+        const tile = document.createElement('span');
+        tile.className = 'directional-list__hover-tile';
+        tile.setAttribute('data-directional-hover-tile', '');
+        o.setAttribute('data-directional-hover-item', '');
+        o.appendChild(tile);
+        sel.add(o);
       }
     });
   }

@@ -12,6 +12,23 @@ tell Claude the old and new value first.
 
 ---
 
+## Brief month select — `/contact`, `oa-brief.js` + `oa-brief.css`
+
+The open month list (desktop; Chrome/Edge, Safari 27) uses the directional hover tile.
+`oa-brief.js` gives each month a `span.directional-list__hover-tile`; its look is an Embed
+`<style>` in the brief's month group (source: `tools/designer/oa-brief-month-list.html`;
+the Embed is the live copy — paste changes back here).
+
+| CMS / Designer edit | Effect on the list | Action | Status |
+|---|---|---|---|
+| Change `.directional-list__hover-tile`'s colour | Month hover follows (as /about) | None | Safe |
+| Rename class `.directional-list__hover-tile` | Month hover tile has no colour | Update `fillMonths()` in `oa-brief.js` and re-tag | Coordinate |
+| Remove `data-directional-hover` / `data-type="y"` from the select | No hover tile | Put them back | Coordinate |
+| Remove `data-lenis-prevent` from the select | Wheel scrolls the page, not the open list | Put it back | Coordinate |
+| Edit the Embed's CONTROLS | List follows on publish | None | Safe |
+
+---
+
 ## Brief piece drawer — `/contact`, `oa-brief.js`
 
 The drawer's structure lives in a hidden map in the Designer
