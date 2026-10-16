@@ -1,5 +1,5 @@
-// The brief's month select (oa-brief.js), in a real browser on the captured /contact page with
-// the month field swapped for a Webflow Select. The clock is pinned to 16-10-2026.
+// The brief's month select (oa-brief.js), in a real browser on the captured /contact page, its
+// month select swapped for one per test. The clock is pinned to 16-10-2026.
 //   node --test tests/
 
 import { test, before, after } from 'node:test';
@@ -10,7 +10,7 @@ import { chromium } from 'playwright';
 const SCRIPT = readFileSync(new URL('../src/js/oa-brief.js', import.meta.url), 'utf8');
 const PAGE = readFileSync(new URL('./fixtures/contract/contact.html', import.meta.url), 'utf8')
   .replace(/<script[\s\S]*?<\/script>/g, '');
-const INPUT = /<input name="timing_date"[^>]*>/;
+const FIELD = /<select name="timing_date"[\s\S]*?<\/select>/;
 const SELECT = (attrs = '') => `<select name="timing_date" class="form_field is-select"${attrs}><option value="">Select one...</option></select>`;
 
 let browser;
@@ -22,7 +22,7 @@ async function open(field, draft) {
   await context.clock.setFixedTime(new Date(2026, 9, 16, 12));
   if (draft) await context.addInitScript(d => sessionStorage.setItem('oa-brief', d), JSON.stringify(draft));
   await context.route('**/*', route => route.request().url().startsWith('http://oa.test/')
-    ? route.fulfill({ contentType: 'text/html', body: PAGE.replace(INPUT, () => field).replace('</body>', () => `<script>${SCRIPT}</script></body>`) })
+    ? route.fulfill({ contentType: 'text/html', body: PAGE.replace(FIELD, () => field).replace('</body>', () => `<script>${SCRIPT}</script></body>`) })
     : route.abort());
   const page = await context.newPage();
   await page.goto('http://oa.test/contact');
@@ -67,10 +67,4 @@ test('a saved month outside the window, or old free text, falls back to the plac
     assert.equal(await page.$eval('select[name="timing_date"]', s => s.selectedIndex), 0, v);
     await context.close();
   }
-});
-
-test('the old month input is left alone until the Designer swap', async () => {
-  const { page, context } = await open('<input name="timing_date" type="month" class="form_field" value="">');
-  assert.equal(await page.$eval('[name="timing_date"]', e => e.tagName), 'INPUT');
-  await context.close();
 });
