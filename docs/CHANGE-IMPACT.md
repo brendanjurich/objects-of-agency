@@ -29,6 +29,9 @@ Labels in the map are Designer copy, not CMS names.
 | Add a table type | No row until the map has one | Add a `piece-drawer_map-type` Text Block under `tables`: key = the tag, text = the label | Coordinate |
 | Add a drawer category | No row until the map has one | Add a `piece-drawer_map-<slug>` Div with a `piece-drawer_map-label` | Coordinate |
 | Remove a category's or type's last piece | Row hides itself | None | Safe |
+| Rename class `.piece-drawer_row_wrap` | Rows lose their hover and selected colours | Update `oa-brief.css` (row colour states) and re-tag | Coordinate |
+| Rename swatch `--swatch--oa-umber` | Hover/selected colour is lost | Update `oa-brief.css` and re-tag. Changing the swatch's *value* is safe | Coordinate |
+| Add a `:hover` colour back on `.piece-drawer_row_wrap` in the Designer | Hover sticks after a tap on phones, so an un-selected row looks selected | Leave hover to `oa-brief.css` | Coordinate |
 
 **The contract won't fail on a broken match.** A map key with no matching
 piece is reported as a *note* ("matches no item — no row"), because an empty
