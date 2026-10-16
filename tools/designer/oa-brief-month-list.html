@@ -9,9 +9,11 @@
       background: var(--swatch--light-100);   /* panel */
       color: var(--swatch--dark-900);         /* text */
       border: none;                           /* panel edge */
-      box-shadow: none;                       /* panel shadow */
+      box-shadow: 0 2px 5px #0003;            /* panel shadow — same as the brief card and nav */
       padding: 0;                             /* panel inset */
-      max-block-size: 20rem;                  /* list height before it scrolls */
+      max-block-size: 20rem;                  /* list height before it scrolls; shorter opens below more often */
+      border-radius: var(--radius--card);     /* panel corners */
+      margin-block: var(--_spacing---space--1);   /* gap to the field, above or below */
     }
     [data-oa-brief] select[name="timing_date"] option {
       font-size: var(--_typography---font-size--text-main);
@@ -19,6 +21,9 @@
     }
     [data-oa-brief] select[name="timing_date"] option::checkmark {
       display: none;                          /* tick beside the picked month */
+    }
+    [data-oa-brief] select[name="timing_date"] option:checked {
+      font-weight: var(--_typography---font--primary-medium);   /* the picked month, shown when the list reopens */
     }
   }
 }
