@@ -241,3 +241,55 @@ JS-controlled · `config_base_price` hidden CMS number), then
   (List Nest fetches each item's template page by URL). Fix: DevTools → "Empty
   Cache and Hard Reload" (hard refresh alone won't do it); `fs-list-cache="false"`
   during active CMS dev; check the offending item for a duplicate slug.
+
+---
+
+## Background video (hero, homepage + /about)
+
+> Moved from CLAUDE.md 16-10-2026. Reasoning: DECISIONS 2026-08-14, 2026-08-15, 2026-08-19.
+
+All hero video is direct MP4 from **Bunny storage** — no hls.js, no Bunny Stream, no
+third-party player. One naming convention across both pages: **`-main` is the HEVC
+encode, `-fallback` is H.264.** The homepage carries four, as Designer attributes on
+`[data-bunny-background-init]`:
+
+| Attribute | File |
+|---|---|
+| `data-player-src` | H.264 2048×1024 landscape — **the only required one** |
+| `data-player-src-hevc` | HEVC 2048×1024 landscape |
+| `data-player-src-mobile` | H.264 720×1280 portrait |
+| `data-player-src-hevc-mobile` | HEVC 720×1280 portrait |
+
+The mobile pair is a **9:16 portrait reframe, not a downscale**, so selection is
+gated on `(max-width: 767px) and (orientation: portrait)`: a portrait file in a
+landscape viewport crops to a ~26% sliver, worse than just serving the landscape
+file.
+
+Each optional attribute degrades on its own: clear `-hevc` and everything takes
+H.264; clear either `-mobile` and that codec serves the landscape file to phones.
+Chosen **once at attach** (`data-player-mobile-max` moves the threshold) and never
+re-evaluated — a src swap on rotate restarts and re-downloads the clip, so a phone
+rotated after load keeps whichever file it opened with.
+
+**Re-encoding means re-reading the codec string out of the file** (`hvcC`), never
+off the encoder preset, and updating `HEVC_CODEC` in `oa-homepage.js` *and*
+`oa-intro.js` — currently `hvc1.2.4.L120.90` (Main10, Main tier, L4.0). Claiming a
+profile the file does not use is the one failure with no recovery: the codec is
+picked up front, so a device that says "probably" and then can't decode gets a black
+hero. Understating is safe (drops to H.264). Reasoning: DECISIONS.md 2026-08-15 and
+2026-08-19.
+
+```
+python3 tools/codec-string.py <file-or-url> [more...]
+```
+
+Reads the string straight out of the container and prints what the repo currently
+pins beside it, so the two can be compared by eye. Takes a local export or a URL
+(range-requested, ~1.5MB, not the whole video). `tools/` is dev-only — nothing in
+there is served.
+
+`/about` runs the same main/fallback pair on a plain `<video>`: HEVC in `src`, H.264
+in `data-oa_intro_video-fallback` on `[data-oa_intro-hero]` — the `• oa Intro Hero`
+component's section root, not the wrap, because Webflow only binds an attribute
+value to a component prop on a **DOM** element and the section is the only one in
+that tree. `oa-intro.js` swaps at parse time.

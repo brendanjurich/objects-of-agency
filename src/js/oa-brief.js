@@ -14,6 +14,10 @@
 //   data-oa-brief-response       response promise text, default "two working days"
 //   data-oa-brief-{error|limit|link}-text  send failure: generic, rate limit (429), link in a
 //                                short field (400)
+//   data-oa-brief-month-placeholder  month select's first line, default "Choose a month"
+//
+// On the month field (select[name="timing_date"]):
+//   data-oa-brief-months         how many months it lists from next month, default 24
 //
 // Honeypot: [data-oa-brief-honeypot] (the input, or a wrapper holding it), falling back to
 // name="website". Give it a name autofill doesn't know — autofill ignores autocomplete="off",
@@ -301,7 +305,7 @@
   function restore() {
     Object.keys(state).forEach(k => {
       if (['pieces', 'skipWhat', 'fromSaved', 'configs', 'project', 'editing', 'dropped'].indexOf(k) >= 0) return; const v = state[k];
-      inputs(k).forEach(e => { if (e.type === 'checkbox') e.checked = Array.isArray(v) && v.indexOf(e.value) >= 0; else if (e.type === 'radio') e.checked = e.value === v; else if (typeof v === 'string') e.value = v; });
+      inputs(k).forEach(e => { if (e.type === 'checkbox') e.checked = Array.isArray(v) && v.indexOf(e.value) >= 0; else if (e.type === 'radio') e.checked = e.value === v; else if (typeof v === 'string') { e.value = v; if (e.tagName === 'SELECT' && e.selectedIndex < 0) e.selectedIndex = 0; } });
     });
   }
 
@@ -921,6 +925,24 @@
     const m = /^(\d{4})-(\d{2})$/.exec(v || ''); if (!m) return v;
     return new Date(+m[1], +m[2] - 1, 1).toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
   }
+  // The month field is a Webflow Select, which holds only typed-in options, so the window is
+  // written here: a disabled placeholder, then data-oa-brief-months (default 24) months from
+  // next month. Values stay ISO. The old month input is left alone — Safari and Firefox
+  // render it as free text, which brief-intake drops.
+  function fillMonths() {
+    inputs('timing_date').filter(e => e.tagName === 'SELECT').forEach(sel => {
+      const n = parseInt(sel.getAttribute('data-oa-brief-months'), 10) || 24;
+      const now = new Date();
+      sel.innerHTML = '';
+      sel.add(new Option(copy('month-placeholder', 'Choose a month'), '', true, true));
+      sel.options[0].disabled = true;
+      for (let i = 1; i <= n; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const v = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        sel.add(new Option(monthName(v), v));
+      }
+    });
+  }
   function renderSummary() {
     const dl = $('[data-oa-brief-summary]'); if (!dl) return; dl.innerHTML = '';
     const rows = [];
@@ -936,7 +958,7 @@
     add('bespoke', 'Bespoke', (val('bespoke') || []).map(v => label('bespoke', v)));
     add('where', 'Setting', (val('setting') || []).map(v => label('setting', v)));
     add(branch() === 'client' ? 'when' : 'where', 'How many', val('quantity') && label('quantity', val('quantity')));
-    add('when', 'When', val('timing') && (val('timing') === 'date' ? 'By ' + monthName(val('timing_date')) : label('timing', val('timing'))));
+    add('when', 'When', val('timing') && (val('timing') === 'date' && val('timing_date') ? 'By ' + monthName(val('timing_date')) : label('timing', val('timing'))));
     add('when', 'Budget', val('budget') && label('budget', val('budget')));
     add('when', 'Materials', (val('materials') || []).map(v => label('materials', v)));
     add(has('after=bespoke') ? 'bespoke' : 'when', 'Note', val('note'));
@@ -1062,6 +1084,7 @@
 
   // ---- init
   setHidden($('[data-oa-brief-error]'), true);
+  fillMonths();
   restore();
   history.replaceState({ oaBrief: 0 }, '');
   // Resuming after an edit: one history entry per step before it, so Back walks the route as usual

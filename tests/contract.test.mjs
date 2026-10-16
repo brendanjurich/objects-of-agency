@@ -12,7 +12,8 @@ const fixture = page => readFileSync(new URL(`./fixtures/contract/${page}.html`,
 const failed = r => r.fail.map(l => l.replace(/ — .*/, ''));
 
 // What each capture fails today.
-const KNOWN = { contact: [], 'saved-items': [], product: [], legal: [] };
+// contact: until the v1.0.259 swap (month input → Select) and its recapture.
+const KNOWN = { contact: ['oa-brief.js >= v1.0.259', 'month field is a <select>'], 'saved-items': [], product: [], legal: [] };
 
 for (const page of PAGES) {
   test(`${page}: the capture gives its known result`, async () => {
@@ -67,8 +68,38 @@ test('a commit-SHA script URL (the cached-404 unblock) passes the engine check',
   assert.deepEqual(failed(r), []);
 });
 
+test('contact: the month field swapped for a Select passes the month check', async () => {
+  const m = await loadManifest('contact');
+  const r = await checkPage(m, fixture('contact').replace(/<input name="timing_date"[^>]*>/, () => '<select name="timing_date" class="form_field is-select"></select>'));
+  assert.ok(!failed(r).includes('month field is a <select>'));
+});
+
 test('contact: an empty or non-https endpoint fails', async () => {
   const m = await loadManifest('contact');
   const r = await checkPage(m, fixture('contact').replace(/data-oa-brief-endpoint="[^"]*"/, 'data-oa-brief-endpoint=""'));
   assert.ok(failed(r).includes('endpoint knob is an https URL'));
+});
+
+test('any page: visible Webflow placeholder text fails; inside w-condition-invisible it is only noted', async () => {
+  const m = await loadManifest('contact');
+  const shown = await checkPage(m, fixture('contact').replace('>Tables<', '>This is some text inside of a div block.<'));
+  assert.ok(failed(shown).includes('no Webflow placeholder text'));
+  const hidden = await checkPage(m, fixture('contact').replace('</body>', '<div class="x w-condition-invisible"><div>Heading</div></div></body>'));
+  assert.ok(!failed(hidden).includes('no Webflow placeholder text'));
+  assert.ok(hidden.notes.some(n => n.startsWith('placeholder text inside w-condition-invisible')));
+});
+
+test('contact: a map category the CMS no longer carries fails; empty-ok downgrades it to a note', async () => {
+  const m = await loadManifest('contact');
+  const renamed = fixture('contact').replace('data-oa-brief-drawer-category="seating"', 'data-oa-brief-drawer-category="seats"');
+  assert.ok(failed(await checkPage(m, renamed)).some(l => l.startsWith('map category "seats"')));
+  const staged = await checkPage(m, renamed.replace('data-oa-brief-drawer-category="seats"', 'data-oa-brief-drawer-category="seats" data-oa-brief-drawer-empty-ok=""'));
+  assert.ok(!failed(staged).some(l => l.startsWith('map category "seats"')));
+  assert.ok(staged.notes.some(n => n.includes('"seats" is empty (empty-ok)')));
+});
+
+test('contact: a Filter Tags value no item holds fails its map type', async () => {
+  const m = await loadManifest('contact');
+  const r = await checkPage(m, fixture('contact').replaceAll('data-oa-brief-drawer-tags="" class="piece_drawer_item-tags">side<', 'data-oa-brief-drawer-tags="" class="piece_drawer_item-tags">side-table<'));
+  assert.ok(failed(r).some(l => l.startsWith('map type "side"')));
 });

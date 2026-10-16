@@ -9,11 +9,17 @@
    slides levels against, and the Done bar's stacking above the sheets.
    The canvas preview (data-preview="true" | "sheet" on the dialog) is
    an Embed inside the drawer, because site custom code never reaches
-   the Designer canvas (DECISIONS 2026-08-17).
+   the Designer canvas (DECISIONS 2026-08-17). Its source is
+   tools/designer/oa-brief-preview.css: change the anchoring there with the
+   engine's, then write it into the Embed.
    Deliberately NOT set here, because they are Designer knobs:
    panel width, edge-strip width (and the sheet's left offset, which
    must match it), padding, gaps, type, colours, borders, shadow, the
    tick, the Done bar's look and height, row touch-target size.
+   One exception: the row hover/selected colour states at the end, because
+   the Designer can't scope :hover to pointer devices. They read the
+   Designer's swatch variable, so the colour value stays a Designer knob.
+   Also here: the month select's arrow reset, which the Designer has no control for.
    Hidden/shown states and all motion are the engine's (inline).
    Page-level (/contact). Raw-served (no build).
    ============================================================ */
@@ -124,4 +130,28 @@ dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
 /* A long level scrolls inside itself and never chains to the page. */
 [data-oa-brief-drawer] [data-oa-brief-drawer-list] {
   overscroll-behavior: contain;
+}
+
+/* Row colour states. Hover only where a pointer can hover: a Designer :hover sticks after a
+   tap on touch screens, so an un-selected row stayed in the hover colour and read as still
+   selected. Selected (aria-pressed="true", written by the engine) holds the colour until the
+   row is tapped again; the text and the tick (Lumos u-path, stroke: currentColor) follow the
+   row's colour together. The colours are the Designer's swatch variables, so their values
+   stay Designer knobs; the swatch names and the row class are the dependency here
+   (docs/CHANGE-IMPACT.md). */
+@media (hover: hover) {
+  [data-oa-brief-drawer] .piece-drawer_row_wrap:hover {
+    color: var(--swatch--oa-umber);
+  }
+}
+[data-oa-brief-drawer] .piece-drawer_row_wrap[aria-pressed="true"] {
+  color: var(--swatch--oa-umber);
+}
+
+/* Month select (step "when"). The browser draws its own arrow, and the Designer has no
+   `appearance` control to remove it. The arrow is a Designer element beside the select;
+   every other part of the look stays on the Designer's form_field is-select classes. */
+[data-oa-brief] select[name="timing_date"] {
+  -webkit-appearance: none;
+  appearance: none;
 }

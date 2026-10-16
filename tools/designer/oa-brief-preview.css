@@ -1,0 +1,16 @@
+/* SOURCE for the Designer Embed inside the /contact piece drawer (the <dialog>'s HtmlEmbed),
+   pasted there between <style></style>. Never served: site custom code doesn't reach the
+   Designer canvas, so the canvas preview lives in the Embed (DECISIONS 2026-08-17).
+   data-preview on the dialog: "true" shows the first level, "sheet" adds the sheet template.
+   Anchoring tracks oa-brief.js: over [data-oa-brief-drawer-anchor] above 767px, over the
+   whole brief card ([data-oa-brief]) at and below it. Change both together, then paste this
+   file into the Embed (or ask Claude to write it over MCP) and read it back. */
+html.wf-design-mode [data-oa-brief-drawer-anchor]{anchor-name:--oa-brief-drawer}
+@media (max-width:767px){html.wf-design-mode [data-oa-brief-drawer-anchor]{anchor-name:none}html.wf-design-mode [data-oa-brief]{anchor-name:--oa-brief-drawer}}
+html.wf-design-mode [data-oa-brief-drawer]:is([data-preview="true"],[data-preview="sheet"]){display:block;position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background-color:transparent;z-index:1000;overflow:hidden}
+@supports (anchor-name:--a){html.wf-design-mode [data-oa-brief-drawer]:is([data-preview="true"],[data-preview="sheet"]){position-anchor:--oa-brief-drawer;inset:auto;top:anchor(top);left:anchor(left);width:anchor-size(width);height:anchor-size(height)}}
+html.wf-design-mode [data-oa-brief-drawer]:is([data-preview="true"],[data-preview="sheet"]) [data-oa-brief-drawer-panel]{position:absolute;top:0;right:0;bottom:0;visibility:visible}
+html.wf-design-mode [data-oa-brief-drawer]:is([data-preview="true"],[data-preview="sheet"]) [data-oa-brief-drawer-done]{position:absolute;right:0;bottom:0;left:0;z-index:3}
+html.wf-design-mode [data-oa-brief-drawer][data-preview="sheet"] [data-oa-brief-drawer-templates]{display:block;position:absolute;top:0;right:0;bottom:0;width:30rem;max-width:100%;z-index:2}
+html.wf-design-mode [data-oa-brief-drawer][data-preview="sheet"] [data-oa-brief-drawer-sheet]{position:absolute;top:0;right:0;bottom:0;visibility:visible}
+html.wf-design-mode [data-oa-brief-drawer][data-preview="sheet"] [data-oa-brief-drawer-edge]{position:absolute;top:0;bottom:0;left:0;visibility:visible;opacity:1}

@@ -185,6 +185,13 @@ audience suffix — `-client`, `-home`, `-venue`, `-looking` (e.g.
 | `data-oa-brief-error-text` | copy in file | Send failed, any reason not below. |
 | `data-oa-brief-limit-text` | copy in file | Send refused: too many sends (429). |
 | `data-oa-brief-link-text` | copy in file | Send refused: a web link in a short field (400). |
+| `data-oa-brief-month-placeholder` | `Choose a month` | Month select's first line, before a month is picked. |
+
+**On the month select** (`select[name="timing_date"]`, step `when`):
+
+| Attribute | Default | Controls |
+|---|---|---|
+| `data-oa-brief-months` | `24` | How many months it lists, from next month. |
 
 Step scoping (`data-oa-brief-step` / `-branch` / `-when` / `-unless`) is
 structure, not tuning — see the file header.
