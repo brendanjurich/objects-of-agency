@@ -76,6 +76,10 @@ export default {
     const mapCats = [...html.matchAll(/data-oa-brief-drawer-category="([^"]+)"/g)].map(m => m[1].trim());
     const mapTypes = [...html.matchAll(/data-oa-brief-drawer-type="([^"]+)"/g)].map(m => m[1].trim().toLowerCase());
     check('map names at least one category', mapCats.length > 0, mapCats.length + ' found');
+    // A Text Block built over the MCP keeps Webflow's placeholder unless the text goes on its
+    // String child (16-10-2026: every row read "This is some text inside of a div block.").
+    const map = (html.match(/data-oa-brief-drawer-map="[\s\S]*?(?=<\/dialog>)/) || [''])[0];
+    check('map labels are real copy, not Webflow placeholder', !/This is some text inside of a div block/.test(map));
     check('CMS items carry category slugs', slugs.size > 0, slugs.size + ' distinct');
     mapCats.filter(c => !slugs.has(c)).forEach(c => note('map category "' + c + '" matches no item\'s Categories slug — no row'));
     mapTypes.filter(t => !filterTags.has(t)).forEach(t => note('map type "' + t + '" matches no item\'s Filter Tags — no row'));
