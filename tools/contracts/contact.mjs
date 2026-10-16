@@ -9,7 +9,8 @@ export default {
   // v1.0.255: the image box grows to the open drawer level; the backdrop may sit in the box.
   // v1.0.256: backdrop fades to its Designer opacity; rows clear the Done bar; no ring on focused headings.
   // v1.0.257: the drawer goes category-first — map, branch row, list="categories", cat + tags slots.
-  engines: { 'oa-brief.js': 257, 'oa-saved-items.js': 254 },
+  // v1.0.259: the month field is a Select the engine fills; the old month input is free text in Safari.
+  engines: { 'oa-brief.js': 259, 'oa-saved-items.js': 254 },
   attrs: [
     ['endpoint knob', 'data-oa-brief-endpoint'],
     // controls and regions
@@ -114,6 +115,9 @@ export default {
 
     // conditional groups
     check('month reveal group (timing=date)', has(/data-oa-brief-when="timing=date"/));
+    // Safari and Firefox desktop have no month picker: type="month" falls back to free text,
+    // which brief-intake drops. The engine fills a Select instead.
+    check('month field is a <select>', has(/<select[^>]*\bname="timing_date"/));
     check('note suppression (unless after=bespoke)', has(/data-oa-brief-unless="after=bespoke"/));
 
     // Informational: a class that sets `display` on a step block outranks the UA

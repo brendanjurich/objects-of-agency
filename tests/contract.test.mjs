@@ -12,7 +12,8 @@ const fixture = page => readFileSync(new URL(`./fixtures/contract/${page}.html`,
 const failed = r => r.fail.map(l => l.replace(/ — .*/, ''));
 
 // What each capture fails today.
-const KNOWN = { contact: [], 'saved-items': [], product: [], legal: [] };
+// contact: until the v1.0.259 swap (month input → Select) and its recapture.
+const KNOWN = { contact: ['oa-brief.js >= v1.0.259', 'month field is a <select>'], 'saved-items': [], product: [], legal: [] };
 
 for (const page of PAGES) {
   test(`${page}: the capture gives its known result`, async () => {
@@ -65,6 +66,12 @@ test('a commit-SHA script URL (the cached-404 unblock) passes the engine check',
   const sha = 'a'.repeat(40);
   const r = await checkPage(m, fixture('product').replace(/v1\.0\.\d+(\/src\/js\/oa-saved-items\.js)/, sha + '$1'));
   assert.deepEqual(failed(r), []);
+});
+
+test('contact: the month field swapped for a Select passes the month check', async () => {
+  const m = await loadManifest('contact');
+  const r = await checkPage(m, fixture('contact').replace(/<input name="timing_date"[^>]*>/, () => '<select name="timing_date" class="form_field is-select"></select>'));
+  assert.ok(!failed(r).includes('month field is a <select>'));
 });
 
 test('contact: an empty or non-https endpoint fails', async () => {

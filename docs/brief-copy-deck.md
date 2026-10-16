@@ -184,7 +184,7 @@ Chips (single):
 - No date yet
 - This year
 - Within six months
-- By a date → reveals a month picker, label "Which month?"
+- By a date → reveals a month select, label "Which month?", first line "Choose a month", then the next 24 months ("November 2026")
 
 **Quantity (client branch only, since screen 4 is skipped):** How many?
 - One piece

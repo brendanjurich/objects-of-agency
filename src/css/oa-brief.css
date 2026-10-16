@@ -19,6 +19,7 @@
    One exception: the row hover/selected colour states at the end, because
    the Designer can't scope :hover to pointer devices. They read the
    Designer's swatch variable, so the colour value stays a Designer knob.
+   Also here: the month select's arrow reset, which the Designer has no control for.
    Hidden/shown states and all motion are the engine's (inline).
    Page-level (/contact). Raw-served (no build).
    ============================================================ */
@@ -145,4 +146,12 @@ dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
 }
 [data-oa-brief-drawer] .piece-drawer_row_wrap[aria-pressed="true"] {
   color: var(--swatch--oa-umber);
+}
+
+/* Month select (step "when"). The browser draws its own arrow, and the Designer has no
+   `appearance` control to remove it. The arrow is a Designer element beside the select;
+   every other part of the look stays on the Designer's form_field is-select classes. */
+[data-oa-brief] select[name="timing_date"] {
+  -webkit-appearance: none;
+  appearance: none;
 }
