@@ -11,14 +11,8 @@ import { checkPage, loadManifest, PAGES } from '../tools/contract.mjs';
 const fixture = page => readFileSync(new URL(`./fixtures/contract/${page}.html`, import.meta.url), 'utf8');
 const failed = r => r.fail.map(l => l.replace(/ — .*/, ''));
 
-// What each capture fails today. The /contact capture predates the v1.0.257 Designer build and
-// swap (category-first drawer); recapture after it.
-const KNOWN = {
-  contact: ['oa-brief.js >= v1.0.257', 'branch row template', 'category map', 'map category', 'map category label',
-    'CMS item category slug (nested Categories list)', 'CMS item Filter Tags', 'level-one list is list="categories"',
-    'map names at least one category', 'CMS items carry category slugs'],
-  'saved-items': [], product: [], legal: [],
-};
+// What each capture fails today.
+const KNOWN = { contact: [], 'saved-items': [], product: [], legal: [] };
 
 for (const page of PAGES) {
   test(`${page}: the capture gives its known result`, async () => {
