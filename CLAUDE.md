@@ -99,19 +99,14 @@ ScrollTrigger consumers (e.g. `oa-text-reveal.js`) run through the Lenis↔Scrol
 
 `oa-slider.js` **must** load before any page-level embed that calls `window.oaLoadSwiper` (currently `oa-homepage.js`). Webflow appends page-level footer code after sitewide footer code, so this holds automatically — just never move `oa-slider.js` out of the sitewide footer.
 
-**There is no `hls.js` anywhere** — hero video is direct MP4 (see Background video). Don't reintroduce HLS without re-reading DECISIONS.md 2026-08-15.
-
-**Page-level embeds** (load after the sitewide footer):
-- `oa-homepage.js` — homepage (needs `window.oaLoadSwiper` from `oa-slider.js`)
-- `oa-all-products.js` + `oa-all-products.css` — /all-products
-- `oa-configurator.js` — product template (the configurator markup is on every product page; every step no-ops when its markup is absent, so any other page that renders it needs its own embed)
-- `oa-infinite-grid.js` + `oa-infinite-grid.css` — product template (the grid section ships per-product via a CMS toggle; the script no-ops when it's absent)
-- `oa-brief.js` — /contact only; page-level embed after the sitewide footer. Needs `window.gsap` for the step reveal (fails open without it).
-- `oa-brief.css` — /contact, `<link>` in the page head. Ship with `oa-brief.js` on the same tag: without it the drawer opens unpositioned, as a bare dialog.
-- `oa-cursor.js` + `oa-cursor.css` — /contact (the piece tags). Page-level embed, no ordering constraint beyond the sitewide footer; it reads `window.gsap`, which Webflow injects ahead of footer code. No-ops on any page without `[data-cursor-init]`, so promoting it sitewide later is moving the markup and the embed, not a rewrite.
-- `oa-whatsapp.js` + `oa-whatsapp.css` — /contact. Page-level embed, no ordering constraint beyond the sitewide footer.
-- `oa-legal-toc.js` + `oa-legal-toc.css` — the legal pages (`/legal/*`). Page-level embed, after the sitewide footer so `oa-global.js` has created Lenis and the anchor handler first.
-- `oa-intro.js` — every page carrying the `• oa Intro Hero` component (/about only); page-level embed, no ordering constraint beyond the sitewide footer. Its readiness gate is its own, not `oa-global.js`'s loader gate — those pages carry no `[data-load-wrap]`. Needs **ScrambleTextPlugin**, which is enabled in the site's GSAP integration (core + ScrollTrigger + SplitText + CustomEase + ScrambleText) and so arrives ahead of footer code like the rest of GSAP. Turning that toggle off does not break the page — the title falls back to a plain fade.
+**Page-level embeds** (after the sitewide footer; each no-ops without its markup):
+- `oa-homepage.js` — homepage (needs `window.oaLoadSwiper`)
+- `oa-all-products.js` + `.css` — /all-products
+- `oa-configurator.js`, `oa-infinite-grid.js` + `.css` — product template (any other page rendering the configurator needs its own embed)
+- `oa-brief.js`; `oa-brief.css` as a head `<link>` — /contact. **Ship both on the same tag:** without the CSS the drawer opens as a bare dialog.
+- `oa-cursor.js` + `.css`, `oa-whatsapp.js` + `.css` — /contact
+- `oa-legal-toc.js` + `.css` — `/legal/*` (after `oa-global.js`, which creates Lenis and the anchor handler)
+- `oa-intro.js` — pages with `• oa Intro Hero` (/about). Its own readiness gate, not the loader's (no `[data-load-wrap]` there).
 
 ---
 
@@ -138,7 +133,7 @@ ScrollTrigger consumers (e.g. `oa-text-reveal.js`) run through the Lenis↔Scrol
 
 ## Supabase (backend for the brief; later the quote pipeline)
 
-`supabase/` holds migrations, tests and Edge Functions (`brief-intake`, `selection-intake`, `share-list`, `ping`; `functions/_shared/items.ts` is the saved-configuration validator all three list functions use; `functions/_shared/intake.ts` is the guard chain `brief-intake` and `selection-intake` both run — the order lives only there, each function supplies a definition (`brief.ts`, `selection.ts`: fields, echoed text, store, mail) and its `index.ts` only wires Supabase, Turnstile and Resend in; `functions/_shared/guard.ts` holds the hardening helpers the chain calls; `functions/_shared/http.ts` the origin allowlist and CORS for all three; `functions/_shared/mail.ts` the Resend sender; `functions/_shared/share.ts` makes the short Saved Items links, stored in `shares`, 12 months from last shared). `share-list` has no Turnstile — it sends no mail and collects no email — and counts the per-IP limit (as intake `share`) only when it stores a new list; the repo is linked to project `nleekoypvxoagnwiqtzz` (Free tier, Sydney). Before deploying: `npm test` (the chain with fakes) and `npm run typecheck` (Deno, via npx). Deploy with `supabase db push --linked` and `supabase functions deploy <name> --project-ref nleekoypvxoagnwiqtzz --no-verify-jwt` (functions gate themselves: origin allowlist, min-time, Turnstile — which fails closed, a 503, if `TURNSTILE_SECRET` is unset — then a link check and rate limits; the honeypot is logged only). Rate limits: 10 sends per email per hour and 20 per IP per day, per intake, counted by `intake_allow()` in `intake_hits` (keyed hashes, pruned after a day); over the limit is an honest 429, never a silent "Sent". Free text echoed into the visitor's email (name, pieces, project, item names/labels) is rejected with a 400 if it holds a URL or bare domain; the brief note is kept and sent to the studio in full, and only left out of the visitor's copy. Both front ends show their generic "didn't send, email us directly" line for any of these. "Automatically expose new tables" is **off** on the project, so every new table needs an explicit `grant … to service_role` — see `20260909000100_briefs_service_role.sql`. Secrets (`RESEND_API_KEY`, `TURNSTILE_SECRET`) live in function secrets, never in the repo or Webflow. `.github/workflows/keepalive.yml` pings the `ping` function every third day so the Free project never pauses. It is a bare `curl` with no header: GitHub refuses to register any workflow file in this repo that contains an `apikey:`-style header string, with or without secrets (bisected 09-09-2026), and the function needs none because it deploys with JWT verification off.
+`supabase/` holds the Edge Functions (`brief-intake`, `selection-intake`, `share-list`, `ping`), migrations and tests. **Read `supabase/README.md` before any function change or deploy:** guard chain, deploy commands, front-end contracts, and the gotchas (table grants, keepalive header). Claude runs deploys.
 
 ## Dependencies & Constraints
 
@@ -156,13 +151,11 @@ GSAP is provided by Webflow's **native GSAP integration** (Site Settings → GSA
 
 ### Lumos
 
-Version: **v2.2.1** — a **build-time clone**, baked into the Webflow project at the version downloaded. **There is no Lumos runtime**: nothing loads from a Lumos CDN, and its CSS/classes are frozen in the published file. Unlike GSAP above (which Webflow genuinely auto-updates on publish), Lumos does **not** auto-update — Timothy Ricks cannot change anything already in your project. The *only* way Lumos changes the live site is if **you** re-clone / re-import its components in the Designer yourself.
-
-**`oa-slider.js` owns the slider init outright.** There are no Lumos inline init embeds in the Designer, and `oa-global.js` does not touch sliders. Per-slider config is read from Designer data-attributes (`data-speed`, `data-speed-touch`, `data-loop`, `data-parallax`, `data-slides-per-view`); `oa-slider.js` is the source of truth for the defaults. Re-test slider behaviour only if **you** re-import the Lumos sliders and their DOM or class names change — *not* on every publish.
+Version **v2.2.1**, a build-time clone with **no runtime**: it never auto-updates, and changes only if you re-import its components in the Designer. **`oa-slider.js` owns the slider init** (no Lumos init embeds; per-slider config from `data-speed`, `data-speed-touch`, `data-loop`, `data-parallax`, `data-slides-per-view`, defaults in the file); re-test sliders only after re-importing them.
 
 **Lumos ≠ Osmo — never conflate.**
 
-- **Lumos** (v2.2.1, Timothy Ricks' Webflow framework) owns the build system: the `u-` utility classes, the `--_…---` / `--site--` variables, the type clamps / root font-size, and the **sliders** (`[data-slider='component']`, `.slider_element` / `.slider_list`, Swiper 8 — "Lumos-initialized Swipers"). CSS written inside Lumos embeds is wiped if you re-clone/re-import the embed.
+- **Lumos** (Timothy Ricks' Webflow framework) owns the build system: the `u-` utility classes, the `--_…---` / `--site--` variables, the type clamps / root font-size, and the **sliders** (`[data-slider='component']`, `.slider_element` / `.slider_list`). CSS written inside Lumos embeds is wiped if you re-import the embed.
 - **Osmo** (osmo.supply) is a vault of individual components I paste in and adapt — e.g. the Glass CTA (Button 097/046 + Glass Effect), the all-products multi-match filter, and the easing curve now named **`--ease-oa`** (Osmo-derived, renamed to signal it's ours — the *slider* curve, not a house default). Osmo does **not** own the sliders; only the slider *easing* is Osmo-derived.
 
 The product/home sliders are **Lumos**. Don't call them Osmo.
@@ -173,7 +166,7 @@ The product/home sliders are **Lumos**. Don't call them Osmo.
 <script defer src="https://cdn.jsdelivr.net/npm/@finsweet/attributes-listnest@1/listnest.js"></script>
 ```
 
-Major-pinned (`@1`). `oa-styles.css` assumes Finsweet injects swatch dots (search for the swatch-dot rules; add a `/* FINSWEET: swatch dots */` marker if one isn't present). A Finsweet major version bump requires re-testing swatch display on the All Products page.
+Major-pinned (`@1`). The swatch dots on /all-products depend on it (`/* FINSWEET: swatch dots */` in `oa-all-products.css`); a major bump means re-testing them.
 
 ### Lenis
 
@@ -191,64 +184,15 @@ feel, menu open/close lock, page transitions, back/forward restore.
 
 ### Background video (no dependency)
 
-All hero video is direct MP4 from **Bunny storage** — no hls.js, no Bunny Stream, no
-third-party player. One naming convention across both pages: **`-main` is the HEVC
-encode, `-fallback` is H.264.** The homepage carries four, as Designer attributes on
-`[data-bunny-background-init]`:
-
-| Attribute | File |
-|---|---|
-| `data-player-src` | H.264 2048×1024 landscape — **the only required one** |
-| `data-player-src-hevc` | HEVC 2048×1024 landscape |
-| `data-player-src-mobile` | H.264 720×1280 portrait |
-| `data-player-src-hevc-mobile` | HEVC 720×1280 portrait |
-
-The mobile pair is a **9:16 portrait reframe, not a downscale**, so selection is
-gated on `(max-width: 767px) and (orientation: portrait)`: a portrait file in a
-landscape viewport crops to a ~26% sliver, worse than just serving the landscape
-file.
-
-Each optional attribute degrades on its own: clear `-hevc` and everything takes
-H.264; clear either `-mobile` and that codec serves the landscape file to phones.
-Chosen **once at attach** (`data-player-mobile-max` moves the threshold) and never
-re-evaluated — a src swap on rotate restarts and re-downloads the clip, so a phone
-rotated after load keeps whichever file it opened with.
-
-**Re-encoding means re-reading the codec string out of the file** (`hvcC`), never
-off the encoder preset, and updating `HEVC_CODEC` in `oa-homepage.js` *and*
-`oa-intro.js` — currently `hvc1.2.4.L120.90` (Main10, Main tier, L4.0). Claiming a
-profile the file does not use is the one failure with no recovery: the codec is
-picked up front, so a device that says "probably" and then can't decode gets a black
-hero. Understating is safe (drops to H.264). Reasoning: DECISIONS.md 2026-08-15 and
-2026-08-19.
-
-```
-python3 tools/codec-string.py <file-or-url> [more...]
-```
-
-Reads the string straight out of the container and prints what the repo currently
-pins beside it, so the two can be compared by eye. Takes a local export or a URL
-(range-requested, ~1.5MB, not the whole video). `tools/` is dev-only — nothing in
-there is served.
-
-`/about` runs the same main/fallback pair on a plain `<video>`: HEVC in `src`, H.264
-in `data-oa_intro_video-fallback` on `[data-oa_intro-hero]` — the `• oa Intro Hero`
-component's section root, not the wrap, because Webflow only binds an attribute
-value to a component prop on a **DOM** element and the section is the only one in
-that tree. `oa-intro.js` swaps at parse time.
+Hero video is direct MP4 from Bunny storage (`-main` HEVC, `-fallback` H.264); no hls.js (reintroducing it: DECISIONS 2026-08-15 first). **Before re-encoding or swapping a file, read `docs/REFERENCE.md` → Background video:** a codec string that claims a profile the file doesn't use gives a black hero with no recovery.
 
 ### Swiper
 
-**One source sitewide:** `oa-slider.js` injects the `swiper-bundle@12.2.0` JS+CSS
-from jsDelivr (version constant at the top of that file) and exposes the loader as
-`window.oaLoadSwiper`. The homepage hero carousels consume the same loader —
-never re-introduce a second Swiper copy or version. Bumping the version requires
-re-testing every slider: product, homepage menu, both hero feeds. (See Key
-Patterns for the custom class-name convention.)
+One source sitewide: `oa-slider.js` (version constant at its top, loader `window.oaLoadSwiper`). Never add a second copy or version. A bump means re-testing every slider: product, homepage menu, both hero feeds.
 
 ### Greeting Animation
 
-The greeting rotation in `oa-styles.css` is hardcoded for exactly **9 greetings** (`nth-child` 1–9, 36s total cycle). It is **not data-driven**. If the CMS greeting count changes, the keyframes must be updated manually (search for the greeting `nth-child` rules; add a `/* GREETINGS: hardcoded 9-item, 36s cycle */` marker).
+Hardcoded for exactly 9 greetings, not data-driven — see `/* GREETINGS */` in `oa-styles.css` before changing the CMS greeting count.
 
 ---
 
@@ -259,6 +203,6 @@ this section carries only what is specific to this repo.
 
 - **Surgical changes, especially here:** jsDelivr serves these files by path and
   Webflow pins exact tags, so an unrequested edit can ship straight to the live site.
-- **Verification here is visual/behavioural** on staging or the published site, plus the deploy checklist for shipped changes. `npm test` (`tests/`, Node's runner + Playwright) covers the saved configuration module and the Edge Function shared code; run it after touching either. The brief drawer's behavioural check is `node tools/brief-walk.mjs [chromium|webkit] [w] [h] [--local]` (header lists what to read).
+- **Verification here is visual/behavioural** on staging or the published site, plus the deploy checklist for shipped changes. `npm test` (`tests/`, Node's runner + Playwright) covers the saved configuration module, the Edge Function shared code and the contract checks against fixtures; pre-commit runs it. The brief drawer's behavioural check is `node tools/brief-walk.mjs [chromium|webkit] [w] [h] [--local]` (header lists what to read).
 - **Designer hook contract:** `node tools/contract.mjs [contact|saved-items|product|legal|all]` checks the published staging page for every hook its script reads, and fails any page showing Webflow placeholder text. Add `--capture` to rewrite that page's test fixture after a deliberate Designer change. Run it after any Designer change to a scripted page, before and after publishing. Each page's hooks are a manifest in `tools/contracts/`: a script that gains or loses a marker hook updates its manifest in the same commit.
 - **Guard hooks have tests:** `.claude/hooks/test_guards.py` covers all three guards (tags, clean-svg, osmo-in). `.githooks/pre-commit` runs it and `npm test`, and blocks the commit on a failure. A `SessionStart` hook in `.claude/settings.json` sets `core.hooksPath` on any clone where it is unset. Editing a guard means adding its new case there.
