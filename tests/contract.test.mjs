@@ -72,3 +72,27 @@ test('contact: an empty or non-https endpoint fails', async () => {
   const r = await checkPage(m, fixture('contact').replace(/data-oa-brief-endpoint="[^"]*"/, 'data-oa-brief-endpoint=""'));
   assert.ok(failed(r).includes('endpoint knob is an https URL'));
 });
+
+test('any page: visible Webflow placeholder text fails; inside w-condition-invisible it is only noted', async () => {
+  const m = await loadManifest('contact');
+  const shown = await checkPage(m, fixture('contact').replace('>Tables<', '>This is some text inside of a div block.<'));
+  assert.ok(failed(shown).includes('no Webflow placeholder text'));
+  const hidden = await checkPage(m, fixture('contact').replace('</body>', '<div class="x w-condition-invisible"><div>Heading</div></div></body>'));
+  assert.ok(!failed(hidden).includes('no Webflow placeholder text'));
+  assert.ok(hidden.notes.some(n => n.startsWith('placeholder text inside w-condition-invisible')));
+});
+
+test('contact: a map category the CMS no longer carries fails; empty-ok downgrades it to a note', async () => {
+  const m = await loadManifest('contact');
+  const renamed = fixture('contact').replace('data-oa-brief-drawer-category="seating"', 'data-oa-brief-drawer-category="seats"');
+  assert.ok(failed(await checkPage(m, renamed)).some(l => l.startsWith('map category "seats"')));
+  const staged = await checkPage(m, renamed.replace('data-oa-brief-drawer-category="seats"', 'data-oa-brief-drawer-category="seats" data-oa-brief-drawer-empty-ok=""'));
+  assert.ok(!failed(staged).some(l => l.startsWith('map category "seats"')));
+  assert.ok(staged.notes.some(n => n.includes('"seats" is empty (empty-ok)')));
+});
+
+test('contact: a Filter Tags value no item holds fails its map type', async () => {
+  const m = await loadManifest('contact');
+  const r = await checkPage(m, fixture('contact').replaceAll('data-oa-brief-drawer-tags="" class="piece_drawer_item-tags">side<', 'data-oa-brief-drawer-tags="" class="piece_drawer_item-tags">side-table<'));
+  assert.ok(failed(r).some(l => l.startsWith('map type "side"')));
+});

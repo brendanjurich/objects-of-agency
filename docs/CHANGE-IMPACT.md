@@ -33,8 +33,10 @@ Labels in the map are Designer copy, not CMS names.
 | Rename swatch `--swatch--oa-umber` | Hover/selected colour is lost | Update `oa-brief.css` and re-tag. Changing the swatch's *value* is safe | Coordinate |
 | Add a `:hover` colour back on `.piece-drawer_row_wrap` in the Designer | Hover sticks after a tap on phones, so an un-selected row looks selected | Leave hover to `oa-brief.css` | Coordinate |
 
-**The contract won't fail on a broken match.** A map key with no matching
-piece is reported as a *note* ("matches no item — no row"), because an empty
-branch is allowed to hide. A renamed slug or tag passes quietly. After any CMS
-pass that touches slugs or Filter Tags, run `node tools/contract.mjs contact`
-and read the notes, not just the PASS/FAIL count.
+**The contract fails on a broken match.** A map key no piece carries fails
+`node tools/contract.mjs contact` ("renamed in the CMS?"), though the live
+drawer only hides the row. To stage a category or type empty on purpose, add
+`data-oa-brief-drawer-empty-ok` to its map entry; it is then only noted. The
+contract runs when someone runs it, so after any CMS pass that touches slugs or
+Filter Tags, run it against staging. It also fails if `.piece-drawer_row_wrap`
+is gone from the page or `--swatch--oa-umber` from the site CSS.

@@ -1,6 +1,7 @@
 #!/bin/sh
-# Blocks the commit if a guard hook test fails. Enable once per clone:
+# Blocks the commit if a guard hook test or npm test fails. Enable once per clone:
 #   git config core.hooksPath .githooks
-python3 .claude/hooks/test_guards.py >/dev/null 2>&1 && exit 0
-python3 .claude/hooks/test_guards.py 2>&1 | tail -20
-exit 1
+# npm test is offline (contract checks run against captured fixtures) and takes ~2s.
+python3 .claude/hooks/test_guards.py >/dev/null 2>&1 || { python3 .claude/hooks/test_guards.py 2>&1 | tail -20; exit 1; }
+npm test >/dev/null 2>&1 || { npm test 2>&1 | grep -E "✖|AssertionError" | head -30; echo "pre-commit: npm test failed"; exit 1; }
+exit 0

@@ -69,20 +69,25 @@ export default {
       items.length + ' item(s)' + (items.some(m => !m[1].trim() || !m[2].trim()) ? ', some unbound' : ''));
     check('Residential filtered out of the drawer', !items.some(m => m[2].trim() === 'Residential'));
     check('level-one list is list="categories"', has(/data-oa-brief-drawer-list="categories"/));
-    // The map's keys must meet the CMS: a category slug no item carries, or a type no item's
-    // Filter Tags hold, gets no row (by design), so it is a note, not a failure.
+    // The map's keys must meet the CMS. A key no item carries is a renamed slug or tag until
+    // proved otherwise (the live drawer just hides the row), so it fails; a branch staged empty
+    // on purpose carries data-oa-brief-drawer-empty-ok on its map entry and is only noted.
     const slugs = new Set([...html.matchAll(/data-oa-brief-drawer-cat="[^"]*"[^>]*>([^<]*)</g)].map(m => m[1].trim()));
     const filterTags = new Set([...html.matchAll(/data-oa-brief-drawer-tags="[^"]*"[^>]*>([^<]*)</g)].flatMap(m => m[1].trim().toLowerCase().split(/\s+/)));
-    const mapCats = [...html.matchAll(/data-oa-brief-drawer-category="([^"]+)"/g)].map(m => m[1].trim());
-    const mapTypes = [...html.matchAll(/data-oa-brief-drawer-type="([^"]+)"/g)].map(m => m[1].trim().toLowerCase());
+    const entries = attr => [...html.matchAll(new RegExp('<[^>]*data-oa-brief-drawer-' + attr + '="([^"]+)"[^>]*>', 'g'))]
+      .map(m => ({ key: m[1].trim().toLowerCase(), emptyOk: /data-oa-brief-drawer-empty-ok/.test(m[0]) }));
+    const mapCats = entries('category'), mapTypes = entries('type');
     check('map names at least one category', mapCats.length > 0, mapCats.length + ' found');
-    // A Text Block built over the MCP keeps Webflow's placeholder unless the text goes on its
-    // String child (16-10-2026: every row read "This is some text inside of a div block.").
-    const map = (html.match(/data-oa-brief-drawer-map="[\s\S]*?(?=<\/dialog>)/) || [''])[0];
-    check('map labels are real copy, not Webflow placeholder', !/This is some text inside of a div block/.test(map));
+    // oa-brief.css colours rows by this class and swatch (docs/CHANGE-IMPACT.md).
+    check('row class .piece-drawer_row_wrap present (oa-brief.css row colours)', /class="[^"]*\bpiece-drawer_row_wrap\b/.test(html));
     check('CMS items carry category slugs', slugs.size > 0, slugs.size + ' distinct');
-    mapCats.filter(c => !slugs.has(c)).forEach(c => note('map category "' + c + '" matches no item\'s Categories slug — no row'));
-    mapTypes.filter(t => !filterTags.has(t)).forEach(t => note('map type "' + t + '" matches no item\'s Filter Tags — no row'));
+    for (const [list, found, what] of [[mapCats, slugs, 'Categories slug'], [mapTypes, filterTags, 'Filter Tags']])
+      for (const e of list) {
+        if (found.has(e.key)) continue;
+        const kind = list === mapCats ? 'category' : 'type';
+        if (e.emptyOk) note(`map ${kind} "${e.key}" is empty (empty-ok) — no row`);
+        else check(`map ${kind} "${e.key}" matches an item's ${what}`, false, 'renamed in the CMS? update the map key, or mark data-oa-brief-drawer-empty-ok');
+      }
 
     // The piece tag has the same template rule, and the same silent failure: renderPieces()
     // clears [data-oa-brief-pieces] on every change, so a tag built and styled in the
@@ -117,6 +122,7 @@ export default {
       const cssHref = (html.match(/https:\/\/cdn\.prod\.website-files\.com\/[^"']+\.css/) || [])[0];
       if (cssHref) {
         const text = await (await fetch(cssHref)).text();
+        check('swatch --swatch--oa-umber defined (oa-brief.css row colours)', /--swatch--oa-umber\s*:/.test(text));
         for (const cls of ['brief_answers_step', 'brief_question'])
           if (new RegExp('\\.' + cls + '[^{]*\\{[^}]*display\\s*:', 'i').test(text))
             note('.' + cls + ' sets `display` — engine overrides it inline; do not rely on [hidden] alone');

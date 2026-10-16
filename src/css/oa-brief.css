@@ -9,7 +9,9 @@
    slides levels against, and the Done bar's stacking above the sheets.
    The canvas preview (data-preview="true" | "sheet" on the dialog) is
    an Embed inside the drawer, because site custom code never reaches
-   the Designer canvas (DECISIONS 2026-08-17).
+   the Designer canvas (DECISIONS 2026-08-17). Its source is
+   tools/designer/oa-brief-preview.css: change the anchoring there with the
+   engine's, then write it into the Embed.
    Deliberately NOT set here, because they are Designer knobs:
    panel width, edge-strip width (and the sheet's left offset, which
    must match it), padding, gaps, type, colours, borders, shadow, the
