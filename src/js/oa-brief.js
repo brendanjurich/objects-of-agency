@@ -332,10 +332,12 @@
        • A picker, not a nav — rows toggle pieces into state.pieces
          (aria-pressed) instead of linking; the drawer stays open
          until Done, Esc or the backdrop. Capped at MAX_PIECES.
-       • Rows come from the CMS — a flat Products Collection List in
-         the drawer, grouped into one sheet per Series (A–Z) here, cloned
-         from one sheet template. Each sheet opens with a "whole
-         series" row that submits the series name.
+       • Category-first, like the main nav. A hidden map in the
+         Designer names the categories, their order and any types
+         under one (Tables); the pieces come from a flat Products
+         Collection List in the drawer. One sheet per category, and
+         per type a sheet nested inside its category's sheet, all
+         cloned from one sheet template.
        • The root is a <dialog> opened with showModal(): the step
          tween leaves a transform on the step, which would trap a
          position:fixed drawer, and the top layer makes the page
@@ -363,8 +365,8 @@
   //                                       fit the open level; optional)
   //   [data-oa-brief-drawer-backdrop]     the dim layer, anywhere in the brief (inside the box, it
   //                                       dims the whole image); a tap closes
-  //   [data-oa-brief-drawer-panel]        level one: the series rows
-  //   [data-oa-brief-drawer-list="series"] where the series rows go
+  //   [data-oa-brief-drawer-panel]        level one: the category rows
+  //   [data-oa-brief-drawer-list="categories"] where the category rows go
   //   [data-oa-brief-drawer-pick="value"] a row that toggles that value (Custom Cabinetry is one)
   //   [data-oa-brief-drawer-other-toggle] the "Something else" row; [data-oa-brief-drawer-other] holds
   //                                       its field and [data-oa-brief-drawer-other-add]
@@ -372,12 +374,18 @@
   //   Per level: [data-oa-brief-drawer-edge], [data-oa-brief-drawer-back],
   //   [data-oa-brief-drawer-title], [data-oa-brief-drawer-list]
   //   Templates (inside a u-display-none wrapper, so they still publish):
-  //   [data-oa-brief-drawer-sheet], [data-oa-brief-drawer-series-row], [data-oa-brief-drawer-piece-row],
-  //   each row holding a [data-oa-brief-drawer-text] slot
-  //   CMS source: [data-oa-brief-drawer-item], holding [data-oa-brief-drawer-name] and
-  //   [data-oa-brief-drawer-series]
+  //   [data-oa-brief-drawer-sheet], [data-oa-brief-drawer-branch-row] (a row that opens a sheet:
+  //   a category or a type), [data-oa-brief-drawer-piece-row], each row holding a
+  //   [data-oa-brief-drawer-text] slot. A [data-oa-brief-drawer-text] in the sheet's back control
+  //   takes the parent's title on a type sheet; elsewhere the back label is Designer text.
+  //   Map (hidden): [data-oa-brief-drawer-map], holding one [data-oa-brief-drawer-category="slug"]
+  //   per category in drawer order, each with a [data-oa-brief-drawer-label] and, for a category
+  //   split by type, [data-oa-brief-drawer-type="filter-tag"] elements whose text is the label
+  //   CMS source: [data-oa-brief-drawer-item], holding [data-oa-brief-drawer-name], one
+  //   [data-oa-brief-drawer-cat] per category (its slug, from a nested Categories list) and
+  //   [data-oa-brief-drawer-tags] (Filter Tags)
   // Knobs on the root, in seconds: data-oa-brief-drawer-enter (0.5), -exit (0.35), -stagger (0.03).
-  // Copy knobs: data-oa-brief-whole-series-text, -drawer-done-text, -drawer-count-text, -drawer-full-text.
+  // Copy knobs: data-oa-brief-drawer-done-text, -drawer-count-text, -drawer-full-text.
   const MAX_PIECES = 12; // brief-intake keeps the first 12
   function addPiece(v) {
     v = (v || '').trim();
@@ -397,10 +405,11 @@
     const dlg = $('[' + D + ']');
     const panel = dlg && $('[' + D + '-panel]', dlg);
     const sheetTpl = dlg && $('[' + D + '-sheet]', dlg);
-    const seriesTpl = dlg && $('[' + D + '-series-row]', dlg);
+    const branchTpl = dlg && $('[' + D + '-branch-row]', dlg);
     const pieceTpl = dlg && $('[' + D + '-piece-row]', dlg);
-    const seriesList = panel && $('[' + D + '-list="series"]', panel);
-    if (!dlg || typeof dlg.showModal !== 'function' || !panel || !sheetTpl || !seriesTpl || !pieceTpl || !seriesList) {
+    const categoryList = panel && $('[' + D + '-list="categories"]', panel);
+    const map = dlg && $('[' + D + '-map]', dlg);
+    if (!dlg || typeof dlg.showModal !== 'function' || !panel || !sheetTpl || !branchTpl || !pieceTpl || !categoryList || !map) {
       console.warn('[oa-brief] piece drawer markup incomplete — skipping'); return;
     }
     const backdrop = $('[' + D + '-backdrop]');
@@ -423,40 +432,65 @@
     const slot = (row, s) => setText($('[' + D + '-text]', row) || row, s);
     const button = row => row.matches('button, a') ? row : $('button, a', row);
 
-    // ---- build: CMS items → series → one sheet each. Series run A–Z (Webflow can't sort a
-    // Collection List by a referenced item's name); pieces keep the list's own sort.
-    const groups = new Map();
+    // ---- build: the map gives the categories, their order and the types under one; the CMS
+    // items give the pieces. A piece joins a category by its Categories slugs and a type by its
+    // Filter Tags, so a CMS rename never breaks the match. Pieces keep the list's own sort. A
+    // category or type with no pieces gets no row; a piece in a split category that matches no
+    // type is listed after the type rows, so no piece is unreachable.
+    const pieces = [];
     $$('[' + D + '-item]', dlg).forEach(it => {
-      const name = text(it, '[' + D + '-name]'), series = text(it, '[' + D + '-series]');
-      if (!name || !series) return;
-      if (!groups.has(series)) groups.set(series, []);
-      if (groups.get(series).indexOf(name) < 0) groups.get(series).push(name);
+      const name = text(it, '[' + D + '-name]');
+      if (!name || pieces.some(p => p.name === name)) return;
+      pieces.push({
+        name: name,
+        cats: $$('[' + D + '-cat]', it).map(el => el.textContent.trim()),
+        tags: text(it, '[' + D + '-tags]').toLowerCase().split(/\s+/)
+      });
     });
     const LEVEL = '[' + D + '-level]';
     panel.setAttribute(D + '-level', '');
     const sheets = [], parentOf = new Map(), triggerOf = new Map();
-    const pieceRow = (label, value) => {
-      const row = clone(pieceTpl, D + '-piece-row'); slot(row, label);
-      const b = button(row); b.setAttribute(D + '-pick', value);
-      if (label !== value) b.setAttribute('aria-label', label + ': ' + value);
+    const listOf = sheet => $('[' + D + '-list]', sheet); // its own list precedes any nested sheet
+    const pieceRow = name => {
+      const row = clone(pieceTpl, D + '-piece-row'); slot(row, name);
+      button(row).setAttribute(D + '-pick', name);
       return row;
     };
-    Array.from(groups.keys()).sort((a, b) => a.localeCompare(b)).forEach(series => {
-      const names = groups.get(series);
+    // One sheet, nested in `parent`, opened by a branch row added to `list`. `back`: the parent's
+    // title, for a type sheet's back label.
+    function addBranch(label, list, parent, back) {
       const sheet = clone(sheetTpl, D + '-sheet');
       sheet.setAttribute(D + '-level', '');
       sheet.id = 'oa-brief-drawer-sheet-' + sheets.length;
-      setText($('[' + D + '-title]', sheet), series);
-      const list = $('[' + D + '-list]', sheet);
-      list.appendChild(pieceRow(copy('whole-series-text', 'The whole series'), series));
-      names.forEach(n => list.appendChild(pieceRow(n, n)));
-      const row = clone(seriesTpl, D + '-series-row'); slot(row, series);
+      setText($('[' + D + '-title]', sheet), label);
+      const backText = back && $('[' + D + '-back] [' + D + '-text]', sheet);
+      if (backText) setText(backText, back);
+      const row = clone(branchTpl, D + '-branch-row'); slot(row, label);
       const trigger = button(row);
       trigger.setAttribute('aria-controls', sheet.id); trigger.setAttribute('aria-expanded', 'false');
       trigger.addEventListener('click', e => { e.preventDefault(); openSheet(sheet); });
-      seriesList.appendChild(row);
-      panel.appendChild(sheet);
-      sheets.push(sheet); parentOf.set(sheet, panel); triggerOf.set(sheet, trigger);
+      list.appendChild(row);
+      parent.appendChild(sheet);
+      sheets.push(sheet); parentOf.set(sheet, parent); triggerOf.set(sheet, trigger);
+      return sheet;
+    }
+    $$('[' + D + '-category]', map).forEach(cat => {
+      const key = cat.getAttribute(D + '-category').trim();
+      const label = text(cat, '[' + D + '-label]');
+      const inCat = pieces.filter(p => p.cats.indexOf(key) >= 0);
+      if (!key || !label || !inCat.length) return;
+      const types = $$('[' + D + '-type]', cat).map(t => {
+        const tag = t.getAttribute(D + '-type').trim().toLowerCase();
+        return { label: t.textContent.trim(), names: inCat.filter(p => p.tags.indexOf(tag) >= 0).map(p => p.name) };
+      }).filter(t => t.label && t.names.length);
+      const sheet = addBranch(label, categoryList, panel);
+      const list = listOf(sheet);
+      types.forEach(t => {
+        const typeSheet = addBranch(t.label, list, sheet, label);
+        t.names.forEach(n => listOf(typeSheet).appendChild(pieceRow(n)));
+      });
+      inCat.filter(p => !types.some(t => t.names.indexOf(p.name) >= 0))
+        .forEach(p => list.appendChild(pieceRow(p.name)));
     });
     const levels = [panel].concat(sheets);
     const own = (level, sel) => $$(sel, level).filter(el => el.closest(LEVEL) === level);
@@ -521,7 +555,13 @@
       const closing = stack.splice(i + 1); updateLevels();
       fit(level, EXIT_D, 'power2.in');
       const edge = own(level, '[' + D + '-edge]');
-      const done = () => { const gone = closing.filter(s => stack.indexOf(s) < 0); vis(gone, false); if (g) g.set(gone, { clearProps: 'transform' }); };
+      // A closing sheet's own strip goes too: closing two levels at once (level one's strip,
+      // tapped from a type sheet) would otherwise leave the category sheet's strip showing.
+      const done = () => {
+        const gone = closing.filter(s => stack.indexOf(s) < 0);
+        vis(gone, false); vis(gone.reduce((a, s) => a.concat(own(s, '[' + D + '-edge]')), []), false);
+        if (g) g.set(gone, { clearProps: 'transform' });
+      };
       if (animate()) {
         // Leaves: power2.in, shorter than the entrance — nobody watches it go.
         g.to(closing[0], { xPercent: 100, duration: EXIT_D, ease: 'power2.in', onComplete: done });

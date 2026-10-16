@@ -107,13 +107,17 @@ Chips (multi; "not sure" clears the others):
 
 **Drawer** (12-10-2026 — replaces the typed field; Designer text unless noted):
 - Title: Choose pieces · back button: Close
-- Series rows: the CMS Series names, from the Products Collection List
-- Sheet back button: All series · sheet title: the series name (engine)
-- First row of each sheet: The whole series (`data-oa-brief-whole-series-text`; submits the series name)
+- Category rows (16-10-2026, category-first like the nav): Tables, Sideboards, Seating,
+  Office & Commercial, Edition Pieces — Designer text in the drawer map
+- Tables → type rows: Coffee, Side, Laptop, Bedside, Dining, Console, Nested (Designer text
+  in the map, matched to each piece's Filter Tags) → pieces
+- Sheet back button: All categories · on a type sheet: the category name (engine) ·
+  sheet title: the category or type name (engine)
+- No "whole series" / "whole category" row
 - Fixed rows: Custom cabinetry · Something else → field placeholder "Name the piece", button "Add"
 - Done bar: Done → Done · {n} (`data-oa-brief-drawer-count-text`) → Done · {n} max at 12 (`data-oa-brief-drawer-full-text`)
 
-Source: the Products CMS collection, Residential filtered out. Free text only via
+Source: the Products CMS collection (piece names, Categories, Filter Tags), Residential filtered out. Free text only via
 "Something else". Payload unchanged: `pieces` is a list of names.
 
 *The Sub line above still says "Start typing" — it no longer fits. Brendan's copy call.*
