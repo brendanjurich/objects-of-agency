@@ -131,6 +131,7 @@ ScrollTrigger consumers (e.g. `oa-text-reveal.js`) run through the Lenis↔Scrol
 - GSAP `CustomEase` is registered globally in `oa-global.js` before any page scripts run
 - **Easing is chosen per motion, never by reflex** — no site-wide default curve; `--ease-oa` is only the slider's. Table in `docs/REFERENCE.md` → "Easing — pick by motion".
 - **Designer knobs are listed in `docs/PROPS.md`.** Any change that adds, renames, removes or re-defaults a `data-` knob updates it in the same commit — `/props` (`.claude/skills/props/`).
+- **CMS/Designer edits that break a script's match are listed in `docs/CHANGE-IMPACT.md`.** A change that makes a script depend on a CMS slug, field value or Designer text adds its row there in the same commit.
 - Animation components are frequently sourced from **osmo.supply**: I paste the Webflow HTML, Claude Code adapts the JS with my tweaks — procedure in `.claude/skills/osmo-in/`
 
 ---
