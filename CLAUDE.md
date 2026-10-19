@@ -25,12 +25,13 @@ keys, tokens, or `.env` files.**
 | `src/js/oa-all-products.js` | Osmo multi-match filter for /all-products. Reads `?filter=` URL param via `paint()` on init. | Raw file → CDN |
 | `src/js/oa-loader-line.js` | OA line loader on `[data-oa-loader="line"]`; knobs in the file. Never `vector-effect: non-scaling-stroke` — it breaks the `pathLength` dash. Path is `02-brand/oa-logo/clean-svg/oa-logo-line.svg` (command centre), verbatim. | Raw file → CDN |
 | `src/js/oa-plus.js` | Rotating "+" icon on `[data-oa-plus]` (the element that turns — never `display:inline`). Triggers (hover, click, slide), scope and knobs: file header. Demo: `tools/oa-plus-demo.html`. | Raw file → CDN |
-| `src/css/oa-styles.css` | Global styles, FOUC prevention (incl. the Saved Items pre-hide, released by `oa-saved-items.js`), the Saved Items spinner show state (`[data-oa-saved-busy]`), nav (the closed tablet/mobile nav's `difference` blend, with the Saved Items badge pre-inverted and hidden beside the hamburger while the menu is open), hero carousel, and the homepage hero's tablet styles ported to portrait 992–1134px (iPad Pro portrait; see DECISIONS.md). | Raw file → CDN |
+| `src/css/oa-styles.css` | Global styles, FOUC prevention (incl. the Saved Items pre-hide, released by `oa-saved-items.js`), the Saved Items spinner show state (`[data-oa-saved-busy]`), nav (the closed tablet/mobile nav's `difference` blend, with the Saved Items badge pre-inverted and hidden beside the hamburger while the menu is open), hero carousel and content group feeds, and the homepage hero's tablet styles ported to portrait 992–1134px (iPad Pro portrait; see DECISIONS.md). | Raw file → CDN |
 | `src/css/oa-all-products.css` | /all-products page styles. | Raw file → CDN |
 | `src/js/oa-infinite-grid.js` | Osmo infinite draggable grid (embedded variant) for product pages. Drag + idle drift via GSAP Observer; reuses `window.gsap`/`window.Observer` (no CDN GSAP). | Raw file → CDN |
 | `src/css/oa-infinite-grid.css` | Infinite grid behavioural glue (`touch-action`, status states, Designer preview). Sizing/radius/height live in the Designer. | Raw file → CDN |
 | `src/js/oa-intro.js` | Intro hero (/about): video beat → blur crossfade → ABOUT scrambles in. Needs **ScrambleTextPlugin** (Webflow GSAP integration); degrades to a fade. Markup from `• oa Intro Hero`; knobs `data-oa_intro_*` on its section root. The container is `pointer-events:none` — anything clickable in the slot must turn it back on. No paired CSS. | Raw file → CDN |
-| `src/js/oa-whatsapp.js` | Osmo WhatsApp Modal in the `/contact` WhatsApp section; hooks in the file header. Touch devices get the plain chat link, no card. Every href is the Business short link, set in the Designer — see `docs/contact-strategy.md`. | Raw file → CDN |
+| `src/js/oa-content-group.js` | `oa Section Content Group` feeds (`.content_group_feed-images`, homepage + /contact): the hero feed's Swiper creative config, mirrored from `oa-homepage.js` — change one, change both. Autoplay holds until `oa:loader-complete`. Glue in `oa-styles.css`. | Raw file → CDN |
+| `src/js/oa-whatsapp.js` | Osmo WhatsApp Modal in `oa Section Content Group` (homepage + /contact); hooks in the file header. Touch devices get the plain chat link, no card. Every href is the Business short link, set in the Designer — see `docs/contact-strategy.md`. | Raw file → CDN |
 | `src/css/oa-whatsapp.css` | Behavioural glue for `oa-whatsapp.js`: the closed state, reduced motion. Card and button styling are Designer knobs. | Raw file → CDN |
 | `src/js/oa-brief.js` | `/contact` brief step engine and piece drawer. No `<form>`: values post as JSON to the `brief-intake` Edge Function, which validates `items[]` in `items.ts` (any unknown key rejected — a price above all). Honeypot `[data-oa-brief-honeypot]` is **logged, never a drop** (autofill fills it whatever its name); Turnstile is the gate. Hooks, knobs, carry-over and Edit configuration: file header. Copy: `docs/brief-copy-deck.md`. | Raw file → CDN |
 | `src/css/oa-brief.css` | Behavioural glue for the piece drawer: the `<dialog>` reset, level positioning, Done bar stacking, row hover/selected colours. Also the month select: arrow reset, and the open list's structure (`base-select`, desktop) — its look is an Embed on /contact. The canvas preview is a Designer Embed (source `tools/designer/oa-brief-preview.css`). Look and sizes are Designer knobs. | Raw file → CDN |
@@ -97,14 +98,15 @@ never requires a republish.
 
 ScrollTrigger consumers (e.g. `oa-text-reveal.js`) run through the Lenis↔ScrollTrigger glue in `oa-global.js` (`lenis.on('scroll', ScrollTrigger.update)`) — verify scroll-triggered starts against Lenis, not native scroll. Each must load after `oa-global.js` so Lenis exists when its triggers are created.
 
-`oa-slider.js` **must** load before any page-level embed that calls `window.oaLoadSwiper` (currently `oa-homepage.js`). Webflow appends page-level footer code after sitewide footer code, so this holds automatically — just never move `oa-slider.js` out of the sitewide footer.
+`oa-slider.js` **must** load before any page-level embed that calls `window.oaLoadSwiper` (currently `oa-homepage.js`, `oa-content-group.js`). Webflow appends page-level footer code after sitewide footer code, so this holds automatically — just never move `oa-slider.js` out of the sitewide footer.
 
 **Page-level embeds** (after the sitewide footer; each no-ops without its markup):
 - `oa-homepage.js` — homepage (needs `window.oaLoadSwiper`)
 - `oa-all-products.js` + `.css` — /all-products
 - `oa-configurator.js`, `oa-infinite-grid.js` + `.css` — product template (any other page rendering the configurator needs its own embed)
 - `oa-brief.js`; `oa-brief.css` as a head `<link>` — /contact. **Ship both on the same tag:** without the CSS the drawer opens as a bare dialog.
-- `oa-cursor.js` + `.css`, `oa-whatsapp.js` + `.css` — /contact
+- `oa-cursor.js` + `.css` — /contact
+- `oa-whatsapp.js` + `.css`, `oa-content-group.js` — homepage + /contact (wherever `oa Section Content Group` sits)
 - `oa-legal-toc.js` + `.css` — `/legal/*` (after `oa-global.js`, which creates Lenis and the anchor handler)
 - `oa-intro.js` — pages with `• oa Intro Hero` (/about). Its own readiness gate, not the loader's (no `[data-load-wrap]` there).
 
@@ -188,7 +190,7 @@ Hero video is direct MP4 from Bunny storage (`-main` HEVC, `-fallback` H.264); n
 
 ### Swiper
 
-One source sitewide: `oa-slider.js` (version constant at its top, loader `window.oaLoadSwiper`). Never add a second copy or version. A bump means re-testing every slider: product, homepage menu, both hero feeds.
+One source sitewide: `oa-slider.js` (version constant at its top, loader `window.oaLoadSwiper`). Never add a second copy or version. A bump means re-testing every slider: product, homepage menu, both hero feeds, the content group feeds.
 
 ### Greeting Animation
 
