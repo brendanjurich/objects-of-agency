@@ -227,5 +227,5 @@ A bubble follows the mouse and shows a label. Set on any hover target with
 ## No knobs
 
 `oa-configurator.js`, `oa-all-products.js` (`data-filter-*` are CMS-matched
-hooks), `oa-infinite-grid.js`, `oa-whatsapp.js` — their look is Designer
+hooks), `oa-infinite-grid.js`, `oa-whatsapp.js`, `oa-content-group.js` — their look is Designer
 classes; nothing is tuned by attribute.

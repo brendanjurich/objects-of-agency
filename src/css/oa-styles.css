@@ -784,6 +784,39 @@ html:not(.hero-playing) .hero_feed_greetings .greeting {
 }
 
 /* ============================================================
+   CONTENT GROUP FEEDS — SWIPER CREATIVE (oa-content-group.js)
+   ============================================================ */
+/* Same glue as the hero feeds. gap:0 — the Designer's flex gap on the wrap
+   would offset every creative transform; the container clips slides anyway. */
+.content_group_feed-images .content_group_slide-wrap {
+  overflow: visible !important;
+  transition-timing-function: var(--ease-oa) !important;
+  gap: 0;
+}
+
+/* Webflow transition:all + z-index:1 on inner break the creative effect
+   (see hero_feed_right_slide-inner). */
+.content_group_slide-inner {
+  transition: none !important;
+  z-index: auto !important;
+}
+
+.swiper-creative .content_group_slide {
+  backface-visibility: hidden;
+  overflow: hidden;
+  pointer-events: none;
+  transition-property: opacity, transform !important;
+}
+.swiper-creative .content_group_slide.swiper-slide-active {
+  pointer-events: auto;
+}
+
+/* Restore vertical page scroll over the feed (see hero_feed_right note). */
+.content_group_feed-images.swiper-vertical {
+  touch-action: auto;
+}
+
+/* ============================================================
    HERO FEED MAP
    ============================================================ */
 /* No Swiper 3D — apply directly so element's own border-radius is respected */
