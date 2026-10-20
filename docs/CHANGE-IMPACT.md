@@ -57,3 +57,18 @@ drawer only hides the row. To stage a category or type empty on purpose, add
 contract runs when someone runs it, so after any CMS pass that touches slugs or
 Filter Tags, run it against staging. It also fails if `.piece-drawer_row_wrap`
 is gone from the page or `--swatch--oa-umber` from the site CSS.
+
+---
+
+## Nav search dropdown — sitewide, `oa-global.js` (`initNavSearch`)
+
+Found by `form[action="/search"]` inside a `.w-dropdown`; watches the toggle's `w--open`.
+Every row fails soft: Webflow's own dropdown keeps working, only the input focus and the
+`aria-haspopup` removal stop.
+
+| CMS / Designer edit | Effect on the dropdown | Action | Status |
+|---|---|---|---|
+| Restyle the toggle, panel or field | None | None | Safe |
+| Move the search form out of its Dropdown | Focus fix and `aria-haspopup` removal stop | Tell Claude; `initNavSearch` needs a new anchor | Coordinate |
+| Change the form's Action from `/search` | Same, and search itself breaks | Put it back | Coordinate |
+| Swap the field for a non-`type="search"` input | Focus fix stops | Tell Claude | Coordinate |
