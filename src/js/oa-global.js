@@ -523,6 +523,33 @@ function initNavAnchorLinks() {
   }, true); // capture — must run before Webflow's delegated anchor-scroll handler
 }
 
+// The nav's search field sits inside a Webflow dropdown (nested Menu component,
+// so twice per page: desktop + mobile). Webflow gets two things wrong for a
+// search popup, both verified live 20-10-2026:
+//   1. Opening it leaves focus on the toggle, so a keyboard user must Tab again
+//      to reach the only thing in the panel.
+//   2. It stamps aria-haspopup="menu" on the toggle, so screen readers announce
+//      a menu that holds a form. Without it the toggle is a plain disclosure
+//      button (aria-expanded alone), which is what this is.
+// Found by the form's action, which Webflow owns — no Designer hook. Runs via
+// Webflow.push so the dropdown module has already set the attribute. On mobile
+// the toggle is hidden and the field sits open in the menu: the observer never
+// fires there. Escape and outside-click close stay Webflow's.
+function initNavSearch() {
+  document.querySelectorAll('.w-dropdown form[action="/search"]').forEach(function (form) {
+    const toggle = form.closest('.w-dropdown').querySelector('.w-dropdown-toggle');
+    const input = form.querySelector('input[type="search"]');
+    if (!toggle || !input) return;
+    toggle.removeAttribute('aria-haspopup');
+    let wasOpen = false; // focus on the open edge only, not on every class change while open
+    new MutationObserver(function () {
+      const open = toggle.classList.contains('w--open');
+      if (open && !wasOpen) requestAnimationFrame(function () { input.focus({ preventScroll: true }); });
+      wasOpen = open;
+    }).observe(toggle, { attributes: true, attributeFilter: ['class'] });
+  });
+}
+
 // One tile-slide behaviour, two consumers: the nav dropdown links (class hooks,
 // all four directions) and the directional list on /about (data hooks, with
 // data-type choosing the axis — "y" for a stacked list, "x", or "all").
@@ -722,8 +749,10 @@ document.addEventListener('DOMContentLoaded', function () {
 // scroll handler, so the .off() actually has something to remove.
 if (window.Webflow && typeof window.Webflow.push === 'function') {
   window.Webflow.push(stripOrphanScrollHandler);
+  window.Webflow.push(initNavSearch);
 } else {
   window.addEventListener('load', stripOrphanScrollHandler);
+  window.addEventListener('load', initNavSearch);
 }
 
 // The old Lumos slider patches are gone from here. Product speed 800/700 moved

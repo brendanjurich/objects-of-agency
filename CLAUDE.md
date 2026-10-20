@@ -18,7 +18,7 @@ keys, tokens, or `.env` files.**
 | File | Purpose | Delivery |
 |------|---------|----------|
 | `src/js/oa-homepage.js` | Homepage hero carousels (hero_feed_top, hero_feed_right) + Bunny background video. Swiper via `window.oaLoadSwiper` (oa-slider.js); picks the HEVC or H.264 encode via `canPlayType` (`HEVC_CODEC` constant, pinned to the encode). Dispatches `oa:hero-media-ready` for the loader gate. | Raw file → CDN |
-| `src/js/oa-global.js` | GSAP fail-open guard, loader, page transitions, slideshow (data-slideshow), nav animations, custom eases, Lenis smooth scroll, Email Direct mailto assembly (`data-oa-email`). | Raw file → CDN |
+| `src/js/oa-global.js` | GSAP fail-open guard, loader, page transitions, slideshow (data-slideshow), nav animations, custom eases, Lenis smooth scroll, Email Direct mailto assembly (`data-oa-email`), nav search dropdown (`initNavSearch`: focus the input on open, drop `aria-haspopup`). | Raw file → CDN |
 | `src/js/oa-slider.js` | Lumos slider init (product + homepage menu). Loads the Swiper 12.2.0 bundle from jsDelivr when a slider exists and exposes the loader as `window.oaLoadSwiper` — the **single Swiper source sitewide**. | Raw file → CDN |
 | `src/js/oa-configurator.js` | Cascading slider, pricing engine, summary, `?cfg=` restore (read through `window.oaSaved.parseCfg`; sets radios before the slider starts), sticky panel mask `[data-oa-stuck-mask]` (first child of `.config_wrap_left`; `.is-active` only while stuck — at rest it would cover the title). | Raw file → CDN |
 | `src/js/oa-saved-items.js` | Saved Items: storage, nav badge, `/saved-items` list, Share and "Email me this list". Hooks and flows: file header. **Owns the saved configuration:** `oa-brief.js` and `oa-configurator.js` read it only through `window.oaSaved` (`current`, `forRequest`, `sameConfig`, `editHref`, `parseCfg`), never its storage keys or link formats — **swap all three together** (first tag after v1.0.249). Option-group order is the share-link index — **append-only**, here and in `items.ts` (`npm test` pins it). Its pre-hide in `oa-styles.css` holds until it adds `.oa-saved-ready` to `<html>` — **ship both on the same tag**. Click handlers are capture-phase so `oa-global.js`'s page-leave sees `defaultPrevented`. Never set the email modal's display (breaks `showModal()`). Prices never reach the server (W07). | Raw file → CDN |
@@ -118,6 +118,7 @@ ScrollTrigger consumers (e.g. `oa-text-reveal.js`) run through the Lenis↔Scrol
 - **Grid row height** when an element spans multiple rows is controlled by that element's **aspect ratio**, not by padding on siblings. Change the spanning element's aspect ratio first.
 - **FOUC prevention** pattern: hide elements with `opacity:0; visibility:hidden` before init, restore when `.swiper-initialized` (or equivalent initialized class) is added to the container.
 - Webflow Designer vs. published site: CSS class changes in Designer apply immediately; script changes require a CDN re-tag + URL update + publish.
+- **Site search is Webflow native** (`/search` utility page, no API). Its index refreshes only 12h after a **full-site** publish; a single-item CMS publish never reindexes. **Adding or renaming a product = full-site publish + Settings → Search → Index now** (allowed every 12h), or the piece is missing from search.
 
 ---
 
