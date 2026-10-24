@@ -113,6 +113,52 @@ dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
   z-index: 3;
 }
 
+/* The rolling counter's window: one line tall, so only the current number of the engine's
+   0–12 column shows as the column slides. Type and spacing are Designer knobs. */
+[data-oa-brief-drawer-counter-number] {
+  overflow: hidden;
+  height: 1lh;
+}
+[data-oa-brief-drawer-counter-number] > span,
+[data-oa-brief-drawer-counter-number] > span > span {
+  display: block;
+}
+
+/* The Back/Continue row spans the answers column above the piece tags (its z-index is a Designer
+   knob), so a long tag list runs under its empty end and the hover-to-remove cursor, which hit-tests
+   with elementFromPoint, finds the row instead of the tag. The row lets the pointer through; its
+   buttons take it back. */
+[data-oa-brief-nav] {
+  pointer-events: none;
+}
+[data-oa-brief-nav] [data-button] {
+  pointer-events: auto;
+}
+
+/* Done and Max share one cell of the roll window, so it is as tall and wide as the larger of
+   the two; Max waits below the clip until the engine rolls it up at the piece cap. */
+[data-oa-brief-drawer-done-roll] {
+  display: grid;
+  overflow: hidden;
+}
+[data-oa-brief-drawer-done-roll] > * {
+  grid-area: 1 / 1;
+}
+[data-oa-brief-drawer-done-roll] [data-oa-brief-drawer-done-max] {
+  transform: translateY(100%);
+}
+
+/* The count in words, for screen readers only: it names the Done bar and announces each pick. */
+[data-oa-brief-drawer-sr] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 /* Each level's content ends in the Done bar's height (--oa-drawer-done, set by the engine),
    so its last row scrolls clear of the bar instead of ending underneath it. */
 [data-oa-brief-drawer-level] > :not([data-oa-brief-drawer-edge]):not([data-oa-brief-drawer-level]):not([data-oa-brief-drawer-done])::after {

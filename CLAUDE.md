@@ -118,7 +118,7 @@ ScrollTrigger consumers (e.g. `oa-text-reveal.js`) run through the Lenis↔Scrol
 - **Grid row height** when an element spans multiple rows is controlled by that element's **aspect ratio**, not by padding on siblings. Change the spanning element's aspect ratio first.
 - **FOUC prevention** pattern: hide elements with `opacity:0; visibility:hidden` before init, restore when `.swiper-initialized` (or equivalent initialized class) is added to the container.
 - Webflow Designer vs. published site: CSS class changes in Designer apply immediately; script changes require a CDN re-tag + URL update + publish.
-- **Site search is Webflow native** (`/search` utility page, no API). Its index refreshes only 12h after a **full-site** publish; a single-item CMS publish never reindexes. **Adding or renaming a product = full-site publish + Settings → Search → Index now** (allowed every 12h), or the piece is missing from search.
+- **Site search is Webflow native** (`/search` utility page, no API). Its index refreshes only **3 days** after a **full-site** publish (this site's plan; Webflow's docs quote 12h for Premium); a single-item CMS publish never reindexes. **Adding or renaming a product = full-site publish + Settings → Search → Index now** (once a day at most; the panel shows when it unlocks), or the piece is missing from search for days. Search result bindings (title, URL, image) aren't exposed to the Data API/MCP — bind them in the Designer.
 
 ---
 

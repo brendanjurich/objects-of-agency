@@ -4,7 +4,7 @@
 //     --local  serves this checkout's src/js/oa-brief.js and src/css/oa-brief.css in place of
 //              the tagged files, so a change can be walked before it is tagged
 // Run each release in both browsers at 1440×900 and 390×844 and read the JSON for: l1 (the
-// category rows, in map order), focus after each step, done ("Done · 1"), the shared tick
+// category rows, in map order), focus after each step, done ("Done · 1"; with the counter hooks done stays "Done" and doneSr reads "Done · 1", counter "shown"), the shared tick
 // (nestedPressed, ocPressed "true"), the edge strip closing two levels, colours
 // (rest/hover/selected/unselected = text / tick stroke / tick opacity / aria-pressed), errors.
 // Gotchas it already handles: the who step advances on its own once a radio is picked; a radio
@@ -64,6 +64,9 @@ await btn('Coffee').click(); await wait(800); out.focusCoffee = await focus();
 out.backLabel = await page.evaluate(([D, id]) => document.getElementById(id).querySelector('[' + D + '-back]').textContent.trim(), [D, await sheetOf('Coffee')]);
 await btn('ViewFinder Noir Nest').click(); await wait(200);
 out.done = (await page.locator('[' + D + '-done-text]').textContent()).trim();
+// With the counter hooks the label stays Done; the count goes to the screen-reader line.
+out.doneSr = await page.evaluate(D => document.querySelector('[' + D + '-sr]')?.textContent ?? null, D);
+out.counter = await page.evaluate(D => { const c = document.querySelector('[' + D + '-counter]'); return c ? (getComputedStyle(c).display === 'none' ? 'hidden' : 'shown') : null; }, D);
 await page.keyboard.press('Escape'); await wait(800);
 out.escFocus = await focus();
 out.coffeeClosed = !(await visible(await sheetOf('Coffee')));

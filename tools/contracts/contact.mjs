@@ -11,7 +11,9 @@ export default {
   // v1.0.257: the drawer goes category-first — map, branch row, list="categories", cat + tags slots.
   // v1.0.259: the month field is a Select the engine fills; the old month input is free text in Safari.
   // v1.0.260: the month select's open list is styled, with the directional hover tile.
-  engines: { 'oa-brief.js': 260, 'oa-saved-items.js': 254 },
+  // v1.0.263: the Done bar's count rolls in its own counter; the label stays Done.
+  // v1.0.264: Done rolls up to Max at the cap. v1.0.265 (CSS): the Back/Continue row lets the pointer through.
+  engines: { 'oa-brief.js': 264, 'oa-saved-items.js': 254 },
   attrs: [
     ['endpoint knob', 'data-oa-brief-endpoint'],
     // controls and regions
@@ -22,6 +24,7 @@ export default {
     ['piece tags', 'data-oa-brief-pieces'], ['piece drawer opener', 'data-oa-brief-piece-open'],
     ['sent heading', 'data-oa-brief-sent-heading'], ['sent body', 'data-oa-brief-sent-body'],
     ['ref line', 'data-oa-brief-ref-line'],
+    ['Back/Continue row (lets the pointer through to the piece tags)', 'data-oa-brief-nav'],
     // the piece drawer. Every part is a hook the engine walks; a missing one makes it
     // warn and skip, and the visitor has no way to name a piece.
     ['drawer <dialog>', 'data-oa-brief-drawer'], ['drawer backdrop', 'data-oa-brief-drawer-backdrop'],
@@ -32,7 +35,9 @@ export default {
     ['CMS item category slug (nested Categories list)', 'data-oa-brief-drawer-cat'],
     ['CMS item Filter Tags', 'data-oa-brief-drawer-tags'],
     ['piece row template', 'data-oa-brief-drawer-piece-row'], ['row text slot', 'data-oa-brief-drawer-text'],
-    ['Done bar', 'data-oa-brief-drawer-done'], ['"Something else" row', 'data-oa-brief-drawer-other-toggle'],
+    ['Done bar', 'data-oa-brief-drawer-done'], ['Done bar counter', 'data-oa-brief-drawer-counter'],
+    ['counter number (the line it rolls in)', 'data-oa-brief-drawer-counter-number'],
+    ['Done/Max roll window', 'data-oa-brief-drawer-done-roll'], ['Max label', 'data-oa-brief-drawer-done-max'], ['"Something else" row', 'data-oa-brief-drawer-other-toggle'],
     ['drawer anchor (the box it opens over)', 'data-oa-brief-drawer-anchor'],
     ['drawer image box (grows to the open level)', 'data-oa-brief-drawer-box'],
   ],

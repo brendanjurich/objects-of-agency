@@ -375,6 +375,11 @@
   //   [data-oa-brief-drawer-other-toggle] the "Something else" row; [data-oa-brief-drawer-other] holds
   //                                       its field and [data-oa-brief-drawer-other-add]
   //   [data-oa-brief-drawer-done]         the Done bar; [data-oa-brief-drawer-done-text] its label
+  //   [data-oa-brief-drawer-counter]      optional, in the Done bar: the rolling count, hidden at 0;
+  //                                       [data-oa-brief-drawer-counter-number] the line it rolls in
+  //   [data-oa-brief-drawer-done-roll]    optional: a window holding the Done label and
+  //                                       [data-oa-brief-drawer-done-max] (its text is Designer copy),
+  //                                       which rolls up in place of Done at the piece cap
   //   Per level: [data-oa-brief-drawer-edge], [data-oa-brief-drawer-back],
   //   [data-oa-brief-drawer-title], [data-oa-brief-drawer-list]
   //   Templates (inside a u-display-none wrapper, so they still publish):
@@ -388,7 +393,8 @@
   //   CMS source: [data-oa-brief-drawer-item], holding [data-oa-brief-drawer-name], one
   //   [data-oa-brief-drawer-cat] per category (its slug, from a nested Categories list) and
   //   [data-oa-brief-drawer-tags] (Filter Tags)
-  // Knobs on the root, in seconds: data-oa-brief-drawer-enter (0.5), -exit (0.35), -stagger (0.03).
+  // Knobs on the root, in seconds: data-oa-brief-drawer-enter (0.5), -exit (0.35), -stagger (0.03),
+  // -roll (1.4, the counter).
   // Copy knobs: data-oa-brief-drawer-done-text, -drawer-count-text, -drawer-full-text.
   const MAX_PIECES = 12; // brief-intake keeps the first 12
   function addPiece(v) {
@@ -426,6 +432,37 @@
     let still = false;
     if (g) g.matchMedia().add('(prefers-reduced-motion: reduce)', () => { still = true; return () => { still = false; }; });
     const animate = () => !!g && !still;
+    // Rolling counter beside Done (optional): the number slot is a one-line window over a column
+    // of 0–MAX_PIECES, and the column slides. With it the Done label stays put, and the count copy
+    // knobs reach screen readers only, through a hidden live line that names the Done button.
+    const counter = $('[' + D + '-counter]', dlg);
+    const counterNum = counter && $('[' + D + '-counter-number]', counter);
+    let column = null, live = null, shown = null;
+    if (counterNum) {
+      column = document.createElement('span');
+      for (let i = 0; i <= MAX_PIECES; i++) { const s = document.createElement('span'); s.textContent = i; column.appendChild(s); }
+      counterNum.textContent = ''; counterNum.appendChild(column);
+      counter.setAttribute('aria-hidden', 'true');
+      live = document.createElement('span'); live.setAttribute(D + '-sr', ''); live.setAttribute('aria-live', 'polite');
+      counter.parentNode.appendChild(live);
+      if (doneText) { doneText.removeAttribute('aria-live'); doneText.setAttribute('aria-hidden', 'true'); }
+    }
+    // At the cap the Done label rolls up to Max (Designer text) inside the roll window, on the
+    // counter's curve, so the two land together. Max is decoration: the count lines carry "max".
+    const doneMax = doneText && $('[' + D + '-done-max]', dlg);
+    const doneRoll = doneMax && $('[' + D + '-done-roll]', dlg);
+    let maxShown = null;
+    if (doneMax) doneMax.setAttribute('aria-hidden', 'true');
+    const ROLL_D = knob('drawer-roll', 1.4);
+    // Expo out, matched to the reference roll (28k.studio/work): the number lands almost at once,
+    // then settles over a long tail, so a quick run of taps still reads as one count climbing.
+    const ROLL_EASE = g && window.CustomEase ? window.CustomEase.create('oa-counter-roll', '0.16, 1, 0.3, 1') : 'expo.out';
+    // y:0 drops the px translate GSAP parses from oa-brief.css's pre-roll transform on Max.
+    const roll = (els, ys, move) => els.forEach((el, i) => {
+      if (move) g.to(el, { y: 0, yPercent: ys[i], duration: ROLL_D, ease: ROLL_EASE, overwrite: true });
+      else if (g) g.set(el, { y: 0, yPercent: ys[i], overwrite: true });
+      else el.style.transform = 'translateY(' + ys[i] + '%)';
+    });
     // Shown/hidden without GSAP too: inline visibility + opacity, the same props autoAlpha writes.
     const vis = (els, on) => [].concat(els).forEach(el => {
       if (!el) return; if (g) g.killTweensOf(el);
@@ -717,8 +754,18 @@
         b.disabled = full && !on;
       });
       const other = $('[' + D + '-other-toggle]', dlg); if (other) other.disabled = full;
-      if (doneText) setText(doneText, full ? fill(copy('drawer-full-text', 'Done · {n} max'), { n: MAX_PIECES })
-        : n ? fill(copy('drawer-count-text', 'Done · {n}'), { n: n }) : copy('drawer-done-text', 'Done'));
+      const label = full ? fill(copy('drawer-full-text', 'Done · {n} max'), { n: MAX_PIECES })
+        : n ? fill(copy('drawer-count-text', 'Done · {n}'), { n: n }) : copy('drawer-done-text', 'Done');
+      if (doneText) setText(doneText, column ? copy('drawer-done-text', 'Done') : label);
+      // Up into Max at the cap, back down to Done below it. First paint and reduced motion land in place.
+      if (doneRoll) { roll([doneText, doneMax], full ? [-100, 0] : [0, 100], animate() && maxShown !== null && maxShown !== full); maxShown = full; }
+      if (!column) return;
+      setText(live, label);
+      setHidden(counter, !n);
+      // Up for a piece added, down for one removed. yPercent of the column's own height needs no
+      // measuring, so a change made while the drawer is shut (a tag removed) lands right too.
+      roll([column], [-100 * n / (MAX_PIECES + 1)], animate() && shown !== null && shown !== n);
+      shown = n;
     };
 
     // ---- "Something else": a field shown in place, so the keyboard only comes when asked for
