@@ -169,6 +169,7 @@ boundary. Set on `[data-legal-toc-accordion]`.
 | `data-oa-brief-drawer-enter` | `0.5` | Piece drawer slide-in, and the image box growing with it. |
 | `data-oa-brief-drawer-exit` | `0.35` | Piece drawer slide-out, and the image box settling back with it. |
 | `data-oa-brief-drawer-stagger` | `0.03` | Gap between drawer rows landing. |
+| `data-oa-brief-drawer-roll` | `1.4` | Done bar counter rolling to the new count. |
 
 **Copy**, also on the root. `{n}`, `{N}`, `{name}` and `{ref}` are filled in.
 Wording: `docs/brief-copy-deck.md`. Knobs marked *per branch* can take an
@@ -179,8 +180,8 @@ audience suffix — `-client`, `-home`, `-venue`, `-looking` (e.g.
 |---|---|---|
 | `data-oa-brief-progress-text` | `Question {n} of {N}` | Progress line above each step. |
 | `data-oa-brief-drawer-done-text` | `Done` | Drawer Done bar, nothing picked. |
-| `data-oa-brief-drawer-count-text` | `Done · {n}` | Drawer Done bar, pieces picked. |
-| `data-oa-brief-drawer-full-text` | `Done · {n} max` | Drawer Done bar at the piece cap. |
+| `data-oa-brief-drawer-count-text` | `Done · {n}` | Drawer Done bar, pieces picked. With the counter hooks, screen readers only. |
+| `data-oa-brief-drawer-full-text` | `Done · {n} max` | Drawer Done bar at the piece cap. With the counter hooks, screen readers only. |
 | `data-oa-brief-sent-text` | `Sent. Thank you, {name}.` | Sent heading. *Per branch.* |
 | `data-oa-brief-sent-body-text` | one per audience, in file | Sent body. *Per branch.* |
 | `data-oa-brief-ref-text` | `Your reference is {ref}.` | Reference line on the sent screen (never shown to just-looking). *Per branch.* |

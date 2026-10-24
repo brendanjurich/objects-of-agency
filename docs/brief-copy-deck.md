@@ -115,7 +115,8 @@ Chips (multi; "not sure" clears the others):
   sheet title: the category or type name (engine)
 - No "whole series" / "whole category" row
 - Fixed rows: Custom cabinetry · Something else → field placeholder "Name the piece", button "Add"
-- Done bar: Done → Done · {n} (`data-oa-brief-drawer-count-text`) → Done · {n} max at 12 (`data-oa-brief-drawer-full-text`)
+- Done bar: Done → Done · {n} (`data-oa-brief-drawer-count-text`) → Done · {n} max at 12 (`data-oa-brief-drawer-full-text`).
+  With the counter (`data-oa-brief-drawer-counter`) the label stays Done, the number rolls beside it, and those two lines are screen-reader only
 
 Source: the Products CMS collection (piece names, Categories, Filter Tags), Residential filtered out. Free text only via
 "Something else". Payload unchanged: `pieces` is a list of names.

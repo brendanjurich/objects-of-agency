@@ -113,6 +113,28 @@ dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
   z-index: 3;
 }
 
+/* The rolling counter's window: one line tall, so only the current number of the engine's
+   0–12 column shows as the column slides. Type and spacing are Designer knobs. */
+[data-oa-brief-drawer-counter-number] {
+  overflow: hidden;
+  height: 1lh;
+}
+[data-oa-brief-drawer-counter-number] > span,
+[data-oa-brief-drawer-counter-number] > span > span {
+  display: block;
+}
+
+/* The count in words, for screen readers only: it names the Done bar and announces each pick. */
+[data-oa-brief-drawer-sr] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 /* Each level's content ends in the Done bar's height (--oa-drawer-done, set by the engine),
    so its last row scrolls clear of the bar instead of ending underneath it. */
 [data-oa-brief-drawer-level] > :not([data-oa-brief-drawer-edge]):not([data-oa-brief-drawer-level]):not([data-oa-brief-drawer-done])::after {
