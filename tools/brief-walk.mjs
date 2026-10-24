@@ -1,8 +1,14 @@
 // Brief piece-drawer walk on staging: answers the brief up to the piece step, opens the drawer
 // and drives it the way a visitor does, printing one JSON line of observations. Dev-only.
-//   node tools/brief-walk.mjs [chromium|webkit] [width] [height] [--local]
+//   node tools/brief-walk.mjs [chromium|webkit] [width] [height] [--local] [--full] [--patch <file.mjs>]
 //     --local  serves this checkout's src/js/oa-brief.js and src/css/oa-brief.css in place of
 //              the tagged files, so a change can be walked before it is tagged
+//     --full   fills the brief to the piece cap through "Something else" before the closing checks
+//     --patch  edits the served page before it loads, for Designer markup not yet published: a
+//              module whose default export is [[from, to], ...] string replacements (each must match)
+// Closing checks, on whatever tags the walk leaves (use --full for the long-list case):
+// tagsOnTop (every tag is the element under the pointer, so the remove cursor finds it) and
+// cardFits (the image box ends at or below the tag list).
 // Run each release in both browsers at 1440×900 and 390×844 and read the JSON for: l1 (the
 // category rows, in map order), focus after each step, done ("Done · 1"; with the counter hooks done stays "Done" and doneSr reads "Done · 1", counter "shown"), the shared tick
 // (nestedPressed, ocPressed "true"), the edge strip closing two levels, colours
@@ -14,8 +20,9 @@ import { chromium, webkit } from 'playwright';
 import { readFileSync } from 'node:fs';
 
 const args = process.argv.slice(2);
-const local = args.includes('--local');
-const [bname = 'chromium', w = '1440', h = '900'] = args.filter(a => a !== '--local');
+const local = args.includes('--local'), full = args.includes('--full');
+const patchAt = args.indexOf('--patch'), patchFile = patchAt >= 0 ? args[patchAt + 1] : null;
+const [bname = 'chromium', w = '1440', h = '900'] = args.filter((a, i) => !a.startsWith('--') && !(patchAt >= 0 && i === patchAt + 1));
 const D = 'data-oa-brief-drawer';
 
 const browser = await { chromium, webkit }[bname].launch();
@@ -26,6 +33,17 @@ if (local) await page.route(/objects-of-agency@[^/]+\/src\/(js|css)\/oa-brief\.(
   const f = r.request().url().endsWith('.js') ? 'src/js/oa-brief.js' : 'src/css/oa-brief.css';
   r.fulfill({ body: readFileSync(new URL('../' + f, import.meta.url), 'utf8'), contentType: f.endsWith('.js') ? 'application/javascript' : 'text/css' });
 });
+if (patchFile) {
+  const edits = (await import(new URL(patchFile, 'file://' + process.cwd() + '/').href)).default;
+  await page.route(/oa-v5\.webflow\.io\/contact/, async r => {
+    const res = await r.fetch(); let body = await res.text();
+    for (const [from, to] of edits) {
+      if (!body.includes(from)) throw new Error('--patch: no match for ' + JSON.stringify(from).slice(0, 80));
+      body = body.replace(from, to);
+    }
+    r.fulfill({ response: res, body });
+  });
+}
 await page.goto('https://oa-v5.webflow.io/contact?_=' + Date.now(), { waitUntil: 'load' });
 await page.waitForTimeout(2500);
 
@@ -94,7 +112,25 @@ await page.keyboard.press('Escape'); await wait(900);
 
 out.closed = await page.evaluate(D => !document.querySelector('dialog[' + D + ']').open, D);
 out.focusAfterClose = await focus();
+if (full) {
+  await page.locator('[data-oa-brief-piece-open] button, [data-oa-brief-piece-open]').filter({ visible: true }).first().click(); await wait(900);
+  for (let i = 1; await page.evaluate(() => document.querySelectorAll('[data-oa-brief-pieces] [data-oa-brief-piece-name]').length) < 12; i++) {
+    await page.locator(`[${D}-other-toggle]`).click(); await wait(250);
+    await page.locator(`[${D}-other] input`).fill('Walk piece ' + i); await page.keyboard.press('Enter'); await wait(250);
+  }
+  out.doneFull = await page.evaluate(D => document.querySelector('[' + D + '-sr]')?.textContent ?? document.querySelector('[' + D + '-done-text]').textContent.trim(), D);
+  await page.locator(`[${D}-done]`).click(); await wait(1200);
+}
 out.tags = await page.evaluate(() => [...document.querySelectorAll('[data-oa-brief-pieces] [data-oa-brief-piece-name]')].map(e => e.textContent.trim()));
+// Each tag scrolled into view first: elementFromPoint only sees the viewport.
+out.tagsOnTop = [];
+for (const t of await page.locator('[data-oa-brief-pieces] [data-oa-brief-piece-name]').all()) {
+  await t.scrollIntoViewIfNeeded(); await wait(100);
+  const onTop = await t.evaluate(n => { const r = n.getBoundingClientRect(), e = document.elementFromPoint(r.left + Math.min(20, r.width / 2), r.top + r.height / 2); return !!e && n.contains(e); });
+  if (!onTop) out.tagsOnTop.push((await t.textContent()).trim());
+}
+out.tagsOnTop = out.tagsOnTop.length ? 'covered: ' + out.tagsOnTop.join(', ') : 'all';
+out.cardFits = await page.evaluate(D => { const b = document.querySelector('[' + D + '-box]'), t = document.querySelector('[data-oa-brief-pieces]'); if (!b || !t || !t.getClientRects().length) return 'n/a'; const d = b.getBoundingClientRect().bottom - t.getBoundingClientRect().bottom; return d >= -0.5 ? true : 'list overflows the card by ' + Math.round(-d) + 'px'; }, D);
 out.errors = errors;
 console.log(JSON.stringify(out));
 await browser.close();
