@@ -124,6 +124,19 @@ dialog[data-oa-brief-drawer][data-oa-brief-drawer-opener-hover]::backdrop {
   display: block;
 }
 
+/* Done and Max share one cell of the roll window, so it is as tall and wide as the larger of
+   the two; Max waits below the clip until the engine rolls it up at the piece cap. */
+[data-oa-brief-drawer-done-roll] {
+  display: grid;
+  overflow: hidden;
+}
+[data-oa-brief-drawer-done-roll] > * {
+  grid-area: 1 / 1;
+}
+[data-oa-brief-drawer-done-roll] [data-oa-brief-drawer-done-max] {
+  transform: translateY(100%);
+}
+
 /* The count in words, for screen readers only: it names the Done bar and announces each pick. */
 [data-oa-brief-drawer-sr] {
   position: absolute;

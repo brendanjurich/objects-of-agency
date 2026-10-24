@@ -116,7 +116,7 @@ Chips (multi; "not sure" clears the others):
 - No "whole series" / "whole category" row
 - Fixed rows: Custom cabinetry · Something else → field placeholder "Name the piece", button "Add"
 - Done bar: Done → Done · {n} (`data-oa-brief-drawer-count-text`) → Done · {n} max at 12 (`data-oa-brief-drawer-full-text`).
-  With the counter (`data-oa-brief-drawer-counter`) the label stays Done, the number rolls beside it, and those two lines are screen-reader only
+  With the counter (`data-oa-brief-drawer-counter`) the label stays Done, the number rolls beside it, and those two lines are screen-reader only. At 12, Done rolls up to Max (Designer text in `data-oa-brief-drawer-done-max`, inside `data-oa-brief-drawer-done-roll`); keep it a word without descenders — the window is cap height (Lumos text trim)
 
 Source: the Products CMS collection (piece names, Categories, Filter Tags), Residential filtered out. Free text only via
 "Something else". Payload unchanged: `pieces` is a list of names.
