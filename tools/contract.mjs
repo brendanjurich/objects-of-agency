@@ -58,6 +58,11 @@ export async function loadManifest(page) {
 //   url        default (staging) URL
 //   engines    { 'oa-brief.js': 190 } — each script must load at or above that tag
 //   attrs      [[label, attribute]] that must appear in the served DOM
+//   pending    [[label, attribute]] a tagged script reads before the Designer has it: absent is a
+//              note, present fails until it moves to attrs (and engines is bumped), so the commit
+//              that recaptures the fixture promotes it
+//   single     [attribute] read with querySelector: anything but exactly one in the DOM fails, so a
+//              Designer duplicate carrying the hook along can't take the script's read
 //   inputs     input/textarea names a script reads
 //   checks     (html, ctx) => void, page-specific; ctx = { has, count, names, check, note, css }
 export async function checkPage(manifest, html, { css = false } = {}) {
@@ -80,6 +85,14 @@ export async function checkPage(manifest, html, { css = false } = {}) {
   }
   for (const [label, attr] of manifest.attrs || [])
     check(label, has(new RegExp(attr + '="')), has(new RegExp(attr + '="')) ? '' : `[${attr}] ABSENT from served DOM`);
+  for (const [label, attr] of manifest.pending || []) {
+    if (has(new RegExp(attr + '="'))) check(label + ' (pending)', false, `[${attr}] is published: move it to attrs and bump engines`);
+    else note(`pending, not in the Designer yet: ${label} [${attr}]`);
+  }
+  for (const attr of manifest.single || []) {
+    const n = count(new RegExp(attr + '="', 'g'));
+    check(`[${attr}] exactly once`, n === 1, n === 1 ? '' : n + ' found');
+  }
   for (const n of manifest.inputs || [])
     check('input name="' + n + '"', names.has(n), names.has(n) ? '' : 'ABSENT from served DOM');
   const ph = placeholders(html);

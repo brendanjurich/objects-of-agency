@@ -41,6 +41,15 @@ export default {
     ['drawer anchor (the box it opens over)', 'data-oa-brief-drawer-anchor'],
     ['drawer image box (grows to the open level)', 'data-oa-brief-drawer-box'],
   ],
+  // Read with querySelector: a duplicate (say, a Done label copied with its hook) takes the read.
+  single: ['data-oa-brief-progress', 'data-oa-brief-status', 'data-oa-brief-summary',
+    'data-oa-brief-pieces', 'data-oa-brief-piece-open', 'data-oa-brief-nav',
+    'data-oa-brief-drawer', 'data-oa-brief-drawer-backdrop', 'data-oa-brief-drawer-anchor',
+    'data-oa-brief-drawer-box', 'data-oa-brief-drawer-panel', 'data-oa-brief-drawer-map',
+    'data-oa-brief-drawer-sheet', 'data-oa-brief-drawer-branch-row', 'data-oa-brief-drawer-piece-row',
+    'data-oa-brief-drawer-other-toggle', 'data-oa-brief-drawer-done', 'data-oa-brief-drawer-done-text',
+    'data-oa-brief-drawer-done-roll', 'data-oa-brief-drawer-done-max',
+    'data-oa-brief-drawer-counter', 'data-oa-brief-drawer-counter-number'],
   inputs: ['audience', 'after', 'bespoke', 'setting', 'quantity', 'timing', 'timing_date', 'budget', 'materials', 'interest', 'note', 'email', 'practice'],
 
   async checks(html, { has, count, names, check, note, css }) {

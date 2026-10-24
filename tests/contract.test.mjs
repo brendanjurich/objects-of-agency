@@ -42,6 +42,22 @@ for (const page of PAGES) {
   });
 }
 
+test('a pending hook is a note while absent and fails once published', async () => {
+  const m = { ...(await loadManifest('contact')), pending: [['future hook', 'data-oa-brief-future']] };
+  const html = fixture('contact');
+  const absent = await checkPage(m, html);
+  assert.deepEqual(failed(absent), []);
+  assert.ok(absent.notes.some(n => n.includes('[data-oa-brief-future]')));
+  const published = await checkPage(m, html.replace('<body', '<body data-oa-brief-future=""'));
+  assert.ok(failed(published).includes('future hook (pending)'));
+});
+
+test('contact: a single-read hook duplicated by the Designer fails', async () => {
+  const m = await loadManifest('contact');
+  const html = fixture('contact').replace('data-oa-brief-drawer-done-max=""', 'data-oa-brief-drawer-done-max="" data-oa-brief-drawer-done-text=""');
+  assert.ok(failed(await checkPage(m, html)).includes('[data-oa-brief-drawer-done-text] exactly once'));
+});
+
 test('saved-items: one row missing its config line fails', async () => {
   const m = await loadManifest('saved-items');
   const r = await checkPage(m, fixture('saved-items').replace('data-oa-saved-line="Timber"', 'data-removed="Timber"'));
